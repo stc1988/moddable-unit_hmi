@@ -1,0 +1,9 @@
+{
+	"modules": {
+		"*": ["./*"],
+		"timer": "$(MODDABLE)/typings/timer",
+		"embedded:io/*": "$(MODDABLE)/typings/embedded_io/*",
+		"embedded:provider/*": "$(MODDABLE)/typings/embedded_provider/*"
+	},
+	"preload": ["angle"]
+}

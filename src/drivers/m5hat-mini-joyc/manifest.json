@@ -1,0 +1,3 @@
+{
+	"include": ["./manifest_include.json", "./manifest_module.json"]
+}
