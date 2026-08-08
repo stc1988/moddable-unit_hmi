@@ -1,5 +1,5 @@
 {
-	"include": ["../joystick-input/manifest.json"],
+	"include": ["../../input/joystick/manifest.json"],
 	"modules": {
 		"unit/joystick": "./joyStick",
 		"embedded:io/*": "$(MODDABLE)/typings/embedded_io/*",

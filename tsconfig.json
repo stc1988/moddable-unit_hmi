@@ -15,6 +15,9 @@
 		"noImplicitThis": false,
 		"strictNullChecks": false,
 		"paths": {
+			"input/analog": ["./src/input/analog/analogInput"],
+			"input/polling": ["./src/input/polling/pollingInput"],
+			"joystick/input": ["./src/input/joystick/joystickInput"],
 			"unit/angle": ["./src/drivers/angle/angle"],
 			"unit/fader": ["./src/drivers/fader/fader"],
 			"unit/joystick": ["./src/drivers/joyStick/joyStick"],

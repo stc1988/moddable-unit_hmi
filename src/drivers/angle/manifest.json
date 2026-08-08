@@ -1,5 +1,5 @@
 {
-	"include": ["../analog-input/manifest.json", "../polling-input/manifest.json"],
+	"include": ["../../input/analog/manifest.json", "../../input/polling/manifest.json"],
 	"modules": {
 		"unit/angle": "./angle",
 		"embedded:io/*": "$(MODDABLE)/typings/embedded_io/*",

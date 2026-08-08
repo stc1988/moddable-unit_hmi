@@ -1,6 +1,7 @@
 # Driver architecture
 
-The input drivers share behavior by responsibility instead of by bus or product family.
+The input drivers share behavior by responsibility instead of by bus or product family. Product drivers live under
+`src/drivers`; reusable input infrastructure lives separately under `src/input`.
 
 ```text
 Product driver       Angle / Fader       Joystick / JoyStick2 / MiniJoyC
