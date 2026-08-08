@@ -15,6 +15,11 @@
 		"noImplicitThis": false,
 		"strictNullChecks": false,
 		"paths": {
+			"unit/angle": ["./src/drivers/angle/angle"],
+			"unit/fader": ["./src/drivers/fader/fader"],
+			"unit/joystick": ["./src/drivers/joyStick/joyStick"],
+			"unit/joystick2": ["./src/drivers/joyStick2/joyStick2"],
+			"hat/mini-joyc": ["./src/drivers/m5hat-mini-joyc/miniJoyC"],
 			"*": [
 				"./node_modules/@moddable/typings/*",
 				"./node_modules/@moddable/typings/ble/*",

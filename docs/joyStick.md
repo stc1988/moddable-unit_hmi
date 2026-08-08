@@ -18,7 +18,7 @@ port. `io` can inject a compatible I2C constructor for another provider or for t
 - `start()`, `stop()`, and `close()` control polling and the I2C resource explicitly.
 
 ```ts
-import JoyStick from "joyStick";
+import JoyStick from "unit/joystick";
 
 const joystick = new JoyStick({ deadband: 2 });
 

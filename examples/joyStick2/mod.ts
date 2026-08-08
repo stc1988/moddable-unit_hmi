@@ -1,4 +1,4 @@
-import JoyStick2 from "joyStick2";
+import JoyStick2 from "unit/joystick2";
 
 export async function main(): Promise<void> {
 	const joystick = new JoyStick2({ deadband: 2 });

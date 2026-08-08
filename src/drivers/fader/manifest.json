@@ -1,10 +1,10 @@
 {
 	"include": ["../analog-input/manifest.json", "../polling-input/manifest.json"],
 	"modules": {
-		"*": ["./*"],
+		"unit/fader": "./fader",
 		"neopixel": "$(MODDABLE)/typings/neopixel",
 		"embedded:io/*": "$(MODDABLE)/typings/embedded_io/*",
 		"embedded:provider/*": "$(MODDABLE)/typings/embedded_provider/*"
 	},
-	"preload": ["fader"]
+	"preload": ["unit/fader"]
 }

@@ -22,7 +22,7 @@ Pass `sensor: { pin }` to the constructor when using another controller. The yel
 - `start()`, `stop()`, and `close()` control polling and the analog input resource explicitly.
 
 ```ts
-import Angle from "angle";
+import Angle from "unit/angle";
 
 const angle = new Angle({ deadband: 4 });
 

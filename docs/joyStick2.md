@@ -19,7 +19,7 @@ inject a compatible SMBus constructor for another provider or for testing.
 `JoyStick2#setLed(r, g, b)` accepts RGB component values even though the device stores them in BGR register order: blue at `0x30`, green at `0x31`, and red at `0x32`.
 
 ```ts
-import JoyStick2 from "joyStick2";
+import JoyStick2 from "unit/joystick2";
 
 const joystick = new JoyStick2({ deadband: 2 });
 

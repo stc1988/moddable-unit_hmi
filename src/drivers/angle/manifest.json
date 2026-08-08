@@ -1,9 +1,9 @@
 {
 	"include": ["../analog-input/manifest.json", "../polling-input/manifest.json"],
 	"modules": {
-		"*": ["./*"],
+		"unit/angle": "./angle",
 		"embedded:io/*": "$(MODDABLE)/typings/embedded_io/*",
 		"embedded:provider/*": "$(MODDABLE)/typings/embedded_provider/*"
 	},
-	"preload": ["angle"]
+	"preload": ["unit/angle"]
 }

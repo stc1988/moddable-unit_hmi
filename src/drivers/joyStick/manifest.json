@@ -1,9 +1,9 @@
 {
 	"include": ["../joystick-input/manifest.json"],
 	"modules": {
-		"*": ["./*"],
+		"unit/joystick": "./joyStick",
 		"embedded:io/*": "$(MODDABLE)/typings/embedded_io/*",
 		"embedded:provider/*": "$(MODDABLE)/typings/embedded_provider/*"
 	},
-	"preload": ["joyStick"]
+	"preload": ["unit/joystick"]
 }

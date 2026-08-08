@@ -1,4 +1,4 @@
-import MiniJoyC from "miniJoyC";
+import MiniJoyC from "hat/mini-joyc";
 
 export async function main(): Promise<void> {
 	const joystick = new MiniJoyC({ pollingInterval: 30, deadband: 2, readMode: "pos8" });

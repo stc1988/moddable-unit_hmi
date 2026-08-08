@@ -1,4 +1,4 @@
-import Fader from "fader";
+import Fader from "unit/fader";
 
 export async function main(): Promise<void> {
 	const fader = new Fader({ deadband: 4 });

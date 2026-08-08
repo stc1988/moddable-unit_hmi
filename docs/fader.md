@@ -43,7 +43,7 @@ The serial chain runs up the right column and back down the left column. The coo
 | 6 | 6 | 7 |
 
 ```ts
-import Fader from "fader";
+import Fader from "unit/fader";
 
 const fader = new Fader({ deadband: 4, brightness: 128 });
 

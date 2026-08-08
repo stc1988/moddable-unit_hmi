@@ -7,7 +7,7 @@ The defaults use the HAT I2C port on M5StickC Plus, address `0x54`, and a 200 kH
 ## Basic usage
 
 ```ts
-import MiniJoyC from "miniJoyC";
+import MiniJoyC from "hat/mini-joyc";
 
 const joystick = new MiniJoyC({ deadband: 2, readMode: "pos8" });
 

@@ -1,7 +1,7 @@
 {
 	"include": ["../joystick-input/manifest.json"],
 	"modules": {
-		"*": ["./*"],
+		"hat/mini-joyc": "./miniJoyC",
 		"embedded:io/*": "$(MODDABLE)/typings/embedded_io/*",
 		"embedded:provider/*": "$(MODDABLE)/typings/embedded_provider/*"
 	}
