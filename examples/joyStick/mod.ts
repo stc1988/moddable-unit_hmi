@@ -1,13 +1,13 @@
 import JoyStick from "joyStick";
 
 export async function main(): Promise<void> {
-	const joystick = new JoyStick();
+	const joystick = new JoyStick({ deadband: 2 });
 
-	joystick.onPoll = ({ x, y }) => {
-		trace(`[JoyStick] x=${x}\ty=${y}\n`);
+	joystick.onChange = ({ x, y, pressed }) => {
+		trace(`[JoyStick] x=${x}\ty=${y}\tpressed=${pressed}\n`);
 	};
 
-	joystick.onPush = (pressed) => {
+	joystick.onButtonChange = (pressed) => {
 		trace(`[JoyStick] button pressed: ${pressed}\n`);
 	};
 }

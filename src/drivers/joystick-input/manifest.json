@@ -1,0 +1,7 @@
+{
+	"modules": {
+		"joystick/input": "./joystickInput",
+		"timer": "$(MODDABLE)/typings/timer"
+	},
+	"preload": ["joystick/input"]
+}

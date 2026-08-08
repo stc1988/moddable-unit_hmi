@@ -1,5 +1,12 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
+import JoystickInput, {
+	type JoystickButtonChangeCallback,
+	type JoystickChangeCallback,
+	type JoystickInputOptions,
+	type JoystickPosition,
+	type JoystickState,
+} from "joystick/input";
 import Timer from "timer";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
@@ -13,10 +20,8 @@ const SMBusConstructor = SMBus as unknown as SMBusIO;
 export type MiniJoyCReadMode = "adc" | "pos8" | "pos10";
 export type MiniJoyCCalibrationIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
-export interface MiniJoyCPosition {
-	x: number;
-	y: number;
-}
+export type MiniJoyCPosition = JoystickPosition;
+export type MiniJoyCState = JoystickState;
 
 export interface MiniJoyCCalibration {
 	xMin: number;
@@ -27,20 +32,17 @@ export interface MiniJoyCCalibration {
 	yCenter: number;
 }
 
-export interface MiniJoyCOptions {
+export interface MiniJoyCOptions extends JoystickInputOptions<MiniJoyCState> {
 	address?: number;
 	data?: I2COptions["data"];
 	clock?: I2COptions["clock"];
 	hz?: number;
 	io?: SMBusIO;
-	pollingInterval?: number;
 	readMode?: MiniJoyCReadMode;
-	onPoll?: MiniJoyCPollCallback;
-	onButtonPressed?: MiniJoyCButtonPressedCallback;
 }
 
-export type MiniJoyCPollCallback = (position: MiniJoyCPosition) => void;
-export type MiniJoyCButtonPressedCallback = () => void;
+export type MiniJoyCChangeCallback = JoystickChangeCallback<MiniJoyCState>;
+export type MiniJoyCButtonChangeCallback = JoystickButtonChangeCallback;
 
 // https://docs.m5stack.com/en/hat/MiniJoyC
 export default class MiniJoyC {
@@ -67,28 +69,17 @@ export default class MiniJoyC {
 		Y_CENTER: 5,
 	} as const;
 
-	#bus: SMBus;
+	#bus?: SMBus;
 	#io: SMBusIO;
 	#busOptions: Omit<SMBusOptions, "address">;
 	#address: number;
-	#timer?: ReturnType<typeof Timer.repeat>;
-	#onPoll: MiniJoyCPollCallback | null;
-	#onButtonPressed: MiniJoyCButtonPressedCallback | null;
-	#buttonState = false;
-	#lastPosition?: MiniJoyCPosition;
+	#input: JoystickInput<MiniJoyCState>;
 
-	pollingInterval: number;
 	readMode: MiniJoyCReadMode;
 
 	constructor(options: MiniJoyCOptions = {}) {
 		const hat = (device.I2C as typeof device.I2C & { hat: I2COptions }).hat;
 
-		this.pollingInterval = MiniJoyC.#integerInRange(
-			options.pollingInterval ?? 30,
-			"pollingInterval",
-			1,
-			Number.MAX_SAFE_INTEGER,
-		);
 		this.readMode = MiniJoyC.#readMode(options.readMode ?? "pos8");
 		this.#address = MiniJoyC.#integerInRange(options.address ?? MiniJoyC.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		this.#io = options.io ?? SMBusConstructor;
@@ -99,46 +90,66 @@ export default class MiniJoyC {
 		};
 		this.#bus = this.#openBus(this.#address);
 		Timer.delay(10);
-
-		this.#onPoll = options.onPoll ?? null;
-		this.#onButtonPressed = options.onButtonPressed ?? null;
-		this.#updatePollingState();
+		try {
+			this.#input = new JoystickInput(this, this, "MiniJoyC", options);
+		} catch (error) {
+			this.#bus.close();
+			this.#bus = undefined;
+			throw error;
+		}
 	}
 
 	close(): void {
-		this.stop();
-		this.#bus.close();
+		this.#input.close();
+		this.#bus?.close();
+		this.#bus = undefined;
 	}
 
 	start(): void {
-		if (this.#timer) return;
-		this.#timer = Timer.repeat(() => {
-			this.#pollTick();
-		}, this.pollingInterval);
+		this.#input.start();
 	}
 
 	stop(): void {
-		if (!this.#timer) return;
-		Timer.clear(this.#timer);
-		this.#timer = undefined;
+		this.#input.stop();
 	}
 
-	set onPoll(callback: MiniJoyCPollCallback | null | undefined) {
-		this.#onPoll = typeof callback === "function" ? callback : null;
-		this.#updatePollingState();
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
 	}
 
-	get onPoll(): MiniJoyCPollCallback | null {
-		return this.#onPoll;
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
 	}
 
-	set onButtonPressed(callback: MiniJoyCButtonPressedCallback | null | undefined) {
-		this.#onButtonPressed = typeof callback === "function" ? callback : null;
-		this.#updatePollingState();
+	set deadband(value: number) {
+		this.#input.deadband = value;
 	}
 
-	get onButtonPressed(): MiniJoyCButtonPressedCallback | null {
-		return this.#onButtonPressed;
+	get deadband(): number {
+		return this.#input.deadband;
+	}
+
+	set onChange(callback: MiniJoyCChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
+	}
+
+	get onChange(): MiniJoyCChangeCallback | null {
+		return this.#input.onChange;
+	}
+
+	set onButtonChange(callback: MiniJoyCButtonChangeCallback | null | undefined) {
+		this.#input.onButtonChange = callback;
+	}
+
+	get onButtonChange(): MiniJoyCButtonChangeCallback | null {
+		return this.#input.onButtonChange;
+	}
+
+	read(): MiniJoyCState {
+		return {
+			...this.readXY(),
+			pressed: this.isButtonPressed(),
+		};
 	}
 
 	readXY(mode: MiniJoyCReadMode = this.readMode): MiniJoyCPosition {
@@ -178,7 +189,7 @@ export default class MiniJoyC {
 	}
 
 	setLed(r: number, g: number, b: number): void {
-		this.#bus.writeBuffer(
+		this.#activeBus.writeBuffer(
 			MiniJoyC.REGISTER.RGB_LED,
 			Uint8Array.of(
 				MiniJoyC.#integerInRange(r, "r", 0, 0xff),
@@ -193,7 +204,7 @@ export default class MiniJoyC {
 	}
 
 	readCalibrationValues(): MiniJoyCCalibration {
-		const data = new Uint8Array(this.#bus.readBuffer(MiniJoyC.REGISTER.CALIBRATION, 12));
+		const data = new Uint8Array(this.#activeBus.readBuffer(MiniJoyC.REGISTER.CALIBRATION, 12));
 		return {
 			xMin: MiniJoyC.#wordLE(data, 0),
 			xMax: MiniJoyC.#wordLE(data, 2),
@@ -205,7 +216,7 @@ export default class MiniJoyC {
 	}
 
 	writeCalibration(index: MiniJoyCCalibrationIndex, value: number): void {
-		this.#bus.writeUint16(
+		this.#activeBus.writeUint16(
 			MiniJoyC.REGISTER.CALIBRATION + MiniJoyC.#calibrationIndex(index) * 2,
 			MiniJoyC.#calibrationValue(value),
 			false,
@@ -221,7 +232,7 @@ export default class MiniJoyC {
 		MiniJoyC.#setWordLE(data, 6, MiniJoyC.#calibrationValue(values.yMax));
 		MiniJoyC.#setWordLE(data, 8, MiniJoyC.#calibrationValue(values.xCenter));
 		MiniJoyC.#setWordLE(data, 10, MiniJoyC.#calibrationValue(values.yCenter));
-		this.#bus.writeBuffer(MiniJoyC.REGISTER.CALIBRATION, data);
+		this.#activeBus.writeBuffer(MiniJoyC.REGISTER.CALIBRATION, data);
 		Timer.delay(1000);
 	}
 
@@ -237,8 +248,8 @@ export default class MiniJoyC {
 		const nextAddress = MiniJoyC.#integerInRange(address, "address", 1, 0x7f);
 		if (nextAddress === this.#address) return;
 
-		this.#bus.writeUint8(MiniJoyC.REGISTER.I2C_ADDRESS, nextAddress);
-		this.#bus.close();
+		this.#activeBus.writeUint8(MiniJoyC.REGISTER.I2C_ADDRESS, nextAddress);
+		this.#activeBus.close();
 		this.#address = nextAddress;
 		this.#bus = this.#openBus(nextAddress);
 		Timer.delay(10);
@@ -251,45 +262,17 @@ export default class MiniJoyC {
 		});
 	}
 
-	#updatePollingState(): void {
-		if (this.#onPoll || this.#onButtonPressed) this.start();
-		else this.stop();
-	}
-
-	#pollTick(): void {
-		try {
-			if (this.#onPoll) {
-				const position = this.readXY();
-				if (this.#shouldDispatchPoll(position)) this.#onPoll(position);
-			}
-
-			if (this.#onButtonPressed) {
-				const pressed = this.isButtonPressed();
-				if (pressed && !this.#buttonState) this.#onButtonPressed();
-				this.#buttonState = pressed;
-			}
-		} catch (error) {
-			trace(`[MiniJoyC][ERROR] poll failed: ${error instanceof Error ? error.message : String(error)}\n`);
-		}
-	}
-
-	#shouldDispatchPoll(position: MiniJoyCPosition): boolean {
-		if (!this.#lastPosition) {
-			this.#lastPosition = position;
-			return true;
-		}
-
-		const changed = this.#lastPosition.x !== position.x || this.#lastPosition.y !== position.y;
-		if (changed) this.#lastPosition = position;
-		return changed;
-	}
-
 	#readByte(register: number): number {
-		return this.#bus.readUint8(register) & 0xff;
+		return this.#activeBus.readUint8(register) & 0xff;
 	}
 
 	#readWordLE(register: number): number {
-		return this.#bus.readUint16(register, false) & 0xffff;
+		return this.#activeBus.readUint16(register, false) & 0xffff;
+	}
+
+	get #activeBus(): SMBus {
+		if (!this.#bus) throw new Error("joystick is closed");
+		return this.#bus;
 	}
 
 	static #readMode(value: string): MiniJoyCReadMode {

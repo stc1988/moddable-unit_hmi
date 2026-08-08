@@ -1,16 +1,17 @@
 import MiniJoyC from "miniJoyC";
 
 export async function main(): Promise<void> {
-	const joystick = new MiniJoyC({ pollingInterval: 30, readMode: "pos8" });
+	const joystick = new MiniJoyC({ pollingInterval: 30, deadband: 2, readMode: "pos8" });
 	let ledOn = false;
 
 	trace(`[MiniJoyC] firmware=${joystick.getFirmwareVersion()}\taddress=0x${joystick.getI2CAddress().toString(16)}\n`);
 
-	joystick.onPoll = ({ x, y }) => {
-		trace(`[MiniJoyC] x=${x}\ty=${y}\n`);
+	joystick.onChange = ({ x, y, pressed }) => {
+		trace(`[MiniJoyC] x=${x}\ty=${y}\tpressed=${pressed}\n`);
 	};
 
-	joystick.onButtonPressed = () => {
+	joystick.onButtonChange = (pressed) => {
+		if (!pressed) return;
 		ledOn = !ledOn;
 		joystick.setLed(0, ledOn ? 128 : 0, ledOn ? 255 : 0);
 		trace("[MiniJoyC] button pressed\n");

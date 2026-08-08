@@ -1,6 +1,12 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import Timer from "timer";
+import JoystickInput, {
+	type JoystickButtonChangeCallback,
+	type JoystickChangeCallback,
+	type JoystickInputOptions,
+	type JoystickPosition,
+	type JoystickState,
+} from "joystick/input";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -9,21 +15,16 @@ type SMBusOptions = I2COptions & { stop?: boolean };
 // Narrow the constructor to the object accepted by the runtime implementation.
 const SMBusConstructor = SMBus as unknown as new (options: SMBusOptions) => SMBus;
 
-export interface JoyStick2Position {
-	x: number;
-	y: number;
-}
+export type JoyStick2Position = JoystickPosition;
+export type JoyStick2State = JoystickState;
 
-export interface JoyStick2Options {
-	pollingInterval?: number;
+export interface JoyStick2Options extends JoystickInputOptions<JoyStick2State> {
 	data?: I2COptions["data"];
 	clock?: I2COptions["clock"];
-	onPoll?: JoyStick2PollCallback;
-	onPush?: JoyStick2PushCallback;
 }
 
-export type JoyStick2PollCallback = (position: JoyStick2Position) => void;
-export type JoyStick2PushCallback = (pushed: boolean) => void;
+export type JoyStick2ChangeCallback = JoystickChangeCallback<JoyStick2State>;
+export type JoyStick2ButtonChangeCallback = JoystickButtonChangeCallback;
 
 // https://docs.m5stack.com/ja/unit/Unit-JoyStick2
 export default class JoyStick2 {
@@ -40,93 +41,76 @@ export default class JoyStick2 {
 		I2C_ADDRESS_REG: 0xff,
 	} as const;
 
-	#bus: SMBus;
-	#timer?: ReturnType<typeof Timer.repeat>;
-	#onPoll: JoyStick2PollCallback | null;
-	#onPush: JoyStick2PushCallback | null;
-	#buttonState = false;
-	#lastPosition?: JoyStick2Position;
-
-	pollingInterval: number;
+	#bus?: SMBus;
+	#input: JoystickInput<JoyStick2State>;
 
 	constructor(options: JoyStick2Options = {}) {
-		this.pollingInterval = options.pollingInterval ?? 30;
 		this.#bus = new SMBusConstructor({
 			address: 0x63,
-			data: device.I2C.default.data ?? options.data,
-			clock: device.I2C.default.clock ?? options.clock,
+			data: options.data ?? device.I2C.default.data,
+			clock: options.clock ?? device.I2C.default.clock,
 			hz: 400_000,
 		});
-
-		this.#onPoll = options.onPoll ?? null;
-		this.#onPush = options.onPush ?? null;
+		try {
+			this.#input = new JoystickInput(this, this, "JoyStick2", options);
+		} catch (error) {
+			this.#bus.close();
+			this.#bus = undefined;
+			throw error;
+		}
 	}
 
 	close(): void {
-		this.stop();
-		this.#bus.close();
+		this.#input.close();
+		this.#bus?.close();
+		this.#bus = undefined;
 	}
 
 	start(): void {
-		if (this.#timer) return;
-		this.#timer = Timer.repeat(() => {
-			this.#pollTick();
-		}, this.pollingInterval);
+		this.#input.start();
 	}
 
 	stop(): void {
-		if (!this.#timer) return;
-		Timer.clear(this.#timer);
-		this.#timer = undefined;
+		this.#input.stop();
 	}
 
-	set onPoll(callback: JoyStick2PollCallback | null | undefined) {
-		this.#onPoll = typeof callback === "function" ? callback : null;
-		this.#updatePollingState();
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
 	}
 
-	get onPoll(): JoyStick2PollCallback | null {
-		return this.#onPoll;
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
 	}
 
-	set onPush(callback: JoyStick2PushCallback | null | undefined) {
-		this.#onPush = typeof callback === "function" ? callback : null;
-		this.#updatePollingState();
+	set deadband(value: number) {
+		this.#input.deadband = value;
 	}
 
-	get onPush(): JoyStick2PushCallback | null {
-		return this.#onPush;
+	get deadband(): number {
+		return this.#input.deadband;
 	}
 
-	#updatePollingState(): void {
-		if (this.#onPoll || this.#onPush) this.start();
-		else this.stop();
+	set onChange(callback: JoyStick2ChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
 	}
 
-	#pollTick(): void {
-		try {
-			const position = this.readXY();
-			const pushed = this.isButtonPushed();
-
-			if (this.#onPoll && this.#shouldDispatchPoll(position)) this.#onPoll(position);
-			if (this.#onPush && pushed !== this.#buttonState) {
-				this.#onPush(pushed);
-				this.#buttonState = pushed;
-			}
-		} catch (error) {
-			trace(`[JoyStick2][ERROR] poll failed: ${error instanceof Error ? error.message : String(error)}\n`);
-		}
+	get onChange(): JoyStick2ChangeCallback | null {
+		return this.#input.onChange;
 	}
 
-	#shouldDispatchPoll(position: JoyStick2Position): boolean {
-		if (!this.#lastPosition) {
-			this.#lastPosition = position;
-			return true;
-		}
+	set onButtonChange(callback: JoyStick2ButtonChangeCallback | null | undefined) {
+		this.#input.onButtonChange = callback;
+	}
 
-		const changed = this.#lastPosition.x !== position.x || this.#lastPosition.y !== position.y;
-		if (changed) this.#lastPosition = position;
-		return changed;
+	get onButtonChange(): JoyStick2ButtonChangeCallback | null {
+		return this.#input.onButtonChange;
+	}
+
+	read(): JoyStick2State {
+		return {
+			...this.readXY(),
+			pressed: this.isButtonPressed(),
+		};
 	}
 
 	readXY(): JoyStick2Position {
@@ -134,7 +118,7 @@ export default class JoyStick2 {
 	}
 
 	#readMappedValue8bit(): JoyStick2Position {
-		const words = this.#bus.readUint16(JoyStick2.REGISTER.OFFSET_ADC_VALUE_8BITS_REG, true);
+		const words = this.#activeBus.readUint16(JoyStick2.REGISTER.OFFSET_ADC_VALUE_8BITS_REG, true);
 		const x = (words >> 8) & 0xff;
 		const y = words & 0xff;
 
@@ -144,13 +128,19 @@ export default class JoyStick2 {
 		};
 	}
 
-	isButtonPushed(): boolean {
-		return this.#bus.readUint8(JoyStick2.REGISTER.BUTTON_REG) === 0;
+	isButtonPressed(): boolean {
+		return this.#activeBus.readUint8(JoyStick2.REGISTER.BUTTON_REG) === 0;
 	}
 
 	setLed(r: number, g: number, b: number): void {
-		this.#bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG, b);
-		this.#bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 1, g);
-		this.#bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 2, r);
+		const bus = this.#activeBus;
+		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG, b);
+		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 1, g);
+		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 2, r);
+	}
+
+	get #activeBus(): SMBus {
+		if (!this.#bus) throw new Error("joystick is closed");
+		return this.#bus;
 	}
 }

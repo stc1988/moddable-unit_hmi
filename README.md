@@ -40,23 +40,24 @@ mcrun -dl -m -p esp32/m5stick_cplus
 ```js
 import MiniJoyC from "miniJoyC";
 
-const joystick = new MiniJoyC({ pollingInterval: 30, readMode: "pos8" });
+const joystick = new MiniJoyC({ pollingInterval: 30, deadband: 2, readMode: "pos8" });
 
-joystick.onPoll = ({ x, y }) => {
-	trace(`x=${x}\ty=${y}\n`);
+joystick.onChange = ({ x, y, pressed }) => {
+	trace(`x=${x}\ty=${y}\tpressed=${pressed}\n`);
 };
 
-joystick.onButtonPressed = () => {
-	joystick.setLed(0, 128, 255);
+joystick.onButtonChange = (pressed) => {
+	joystick.setLed(0, pressed ? 128 : 0, pressed ? 255 : 0);
 };
 ```
 
 ## Event Model
 
-Assigning `onPoll` or `onButtonPressed` starts polling automatically. Polling stops when both callbacks are cleared, and can also be controlled explicitly with `start()` and `stop()`.
+All joystick drivers expose the same state and callback model. `read()` always returns the current `{ x, y, pressed }` state. Assigning `onChange` or `onButtonChange` starts polling automatically. Polling stops when both callbacks are cleared, and can also be controlled explicitly with `start()` and `stop()`.
 
-- `onPoll(position)` runs for the first sample and whenever X or Y changes.
-- `onButtonPressed()` runs on the button's released-to-pressed transition.
+- `onChange(state)` runs for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
+- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
+- `deadband` is measured in each device's native axis units and defaults to `0`.
 
 Polling errors are reported through the Moddable debug channel without stopping the timer.
 
@@ -64,8 +65,9 @@ Polling errors are reported through the Moddable debug channel without stopping 
 
 ### MiniJoyC
 
-`new MiniJoyC(options)` accepts `address`, `data`, `clock`, `hz`, `pollingInterval`, `readMode`, `onPoll`, and `onButtonPressed`. The M5StickC Plus HAT pins, I2C address `0x54`, 200 kHz bus speed, 30 ms polling, and `pos8` mode are used by default.
+`new MiniJoyC(options)` accepts `address`, `data`, `clock`, `hz`, `pollingInterval`, `deadband`, `readMode`, `onChange`, and `onButtonChange`. The M5StickC Plus HAT pins, I2C address `0x54`, 200 kHz bus speed, 30 ms polling, zero deadband, and `pos8` mode are used by default.
 
+- `read()` reads and returns `{ x, y, pressed }` using the selected position mode.
 - `readXY(mode?)` reads both axes using `adc`, `pos8`, or `pos10` mode.
 - `readADC()`, `readPosition8Bit()`, and `readPosition10Bit()` read a specific representation. Position readings are returned as signed values.
 - `isButtonPressed()` returns the current button state.
