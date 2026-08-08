@@ -11,9 +11,18 @@ import JoystickInput, {
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
 
+export interface JoyStick2IOInstance {
+	readUint8(register: number): number;
+	writeUint8(register: number, value: number): void;
+	readUint16(register: number, bigEndian?: boolean): number;
+	close(): void;
+}
+
+export type JoyStick2IO = new (options: SMBusOptions) => JoyStick2IOInstance;
+
 // @moddable/typings 8.3.1 declares the SMBus options as a tuple intersection.
 // Narrow the constructor to the object accepted by the runtime implementation.
-const SMBusConstructor = SMBus as unknown as new (options: SMBusOptions) => SMBus;
+const SMBusConstructor = SMBus as unknown as JoyStick2IO;
 
 export type JoyStick2Position = JoystickPosition;
 export type JoyStick2State = JoystickState;
@@ -21,6 +30,7 @@ export type JoyStick2State = JoystickState;
 export interface JoyStick2Options extends JoystickInputOptions<JoyStick2State> {
 	data?: I2COptions["data"];
 	clock?: I2COptions["clock"];
+	io?: JoyStick2IO;
 }
 
 export type JoyStick2ChangeCallback = JoystickChangeCallback<JoyStick2State>;
@@ -41,11 +51,12 @@ export default class JoyStick2 {
 		I2C_ADDRESS_REG: 0xff,
 	} as const;
 
-	#bus?: SMBus;
+	#bus?: JoyStick2IOInstance;
 	#input: JoystickInput<JoyStick2State>;
 
 	constructor(options: JoyStick2Options = {}) {
-		this.#bus = new SMBusConstructor({
+		const IO = options.io ?? SMBusConstructor;
+		this.#bus = new IO({
 			address: 0x63,
 			data: options.data ?? device.I2C.default.data,
 			clock: options.clock ?? device.I2C.default.clock,
@@ -139,7 +150,7 @@ export default class JoyStick2 {
 		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 2, r);
 	}
 
-	get #activeBus(): SMBus {
+	get #activeBus(): JoyStick2IOInstance {
 		if (!this.#bus) throw new Error("joystick is closed");
 		return this.#bus;
 	}

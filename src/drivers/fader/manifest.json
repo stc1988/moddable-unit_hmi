@@ -1,8 +1,8 @@
 {
+	"include": ["../analog-input/manifest.json", "../polling-input/manifest.json"],
 	"modules": {
 		"*": ["./*"],
 		"neopixel": "$(MODDABLE)/typings/neopixel",
-		"timer": "$(MODDABLE)/typings/timer",
 		"embedded:io/*": "$(MODDABLE)/typings/embedded_io/*",
 		"embedded:provider/*": "$(MODDABLE)/typings/embedded_provider/*"
 	},

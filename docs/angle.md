@@ -9,7 +9,8 @@ The default targets the analog input on Port B of M5Stack CoreS3:
 | --- | --- |
 | Analog output (white wire) | 8 |
 
-Pass `analogPin` to the constructor when using another controller. The yellow wire is not connected by Unit Angle.
+Pass `sensor: { pin }` to the constructor when using another controller. The yellow wire is not connected by Unit Angle.
+`sensor.io` can inject another analog I/O constructor; Moddable's `embedded:io/analog` implementation is the default.
 
 ## API
 
@@ -28,4 +29,10 @@ const angle = new Angle({ deadband: 4 });
 angle.onChange = ({ raw, position }) => {
 	trace(`raw=${raw}, position=${position}\n`);
 };
+```
+
+For a different pin:
+
+```ts
+const angle = new Angle({ sensor: { pin: 36 } });
 ```

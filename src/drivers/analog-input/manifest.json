@@ -1,0 +1,6 @@
+{
+	"modules": {
+		"input/analog": "./analogInput"
+	},
+	"preload": ["input/analog"]
+}

@@ -9,7 +9,9 @@ The defaults target Port B on M5Stack CoreS3:
 | RGB data (yellow wire) | 9 |
 | Analog input (white wire) | 8 |
 
-Pass `analogPin` and `ledPin` to the constructor when using another controller. For example, the original M5Stack Core uses GPIO 36 and GPIO 26 respectively.
+Pass `sensor: { pin }` and `leds: { pin }` to the constructor when using another controller. For example, the original
+M5Stack Core uses GPIO 36 and GPIO 26 respectively. `sensor.io` and `leds.io` can inject compatible I/O constructors;
+Moddable's Analog and NeoPixel implementations are the defaults.
 
 The shared host in `examples/manifest.json` includes the Moddable SDK NeoPixel native module. Build that host before running `examples/fader` as a mod; no project-specific native code is required.
 

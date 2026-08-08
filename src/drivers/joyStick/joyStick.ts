@@ -9,12 +9,20 @@ import JoystickInput, {
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 
+export interface JoyStickIOInstance {
+	read(byteLength: number, stop?: boolean): ArrayBuffer;
+	close(): void;
+}
+
+export type JoyStickIO = new (options: I2COptions) => JoyStickIOInstance;
+
 export type JoyStickPosition = JoystickPosition;
 export type JoyStickState = JoystickState;
 
 export interface JoyStickOptions extends JoystickInputOptions<JoyStickState> {
 	data?: I2COptions["data"];
 	clock?: I2COptions["clock"];
+	io?: JoyStickIO;
 }
 
 export type JoyStickChangeCallback = JoystickChangeCallback<JoyStickState>;
@@ -25,11 +33,12 @@ export default class JoyStick {
 	static readonly DEFAULT_ADDRESS = 0x52;
 	static readonly STATE_LENGTH = 3;
 
-	#bus?: I2C;
+	#bus?: JoyStickIOInstance;
 	#input: JoystickInput<JoyStickState>;
 
 	constructor(options: JoyStickOptions = {}) {
-		this.#bus = new I2C({
+		const IO = options.io ?? I2C;
+		this.#bus = new IO({
 			address: JoyStick.DEFAULT_ADDRESS,
 			data: options.data ?? device.I2C.default.data,
 			clock: options.clock ?? device.I2C.default.clock,
@@ -108,7 +117,7 @@ export default class JoyStick {
 		return this.read().pressed;
 	}
 
-	get #activeBus(): I2C {
+	get #activeBus(): JoyStickIOInstance {
 		if (!this.#bus) throw new Error("joystick is closed");
 		return this.#bus;
 	}

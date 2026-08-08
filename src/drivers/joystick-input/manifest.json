@@ -1,7 +1,7 @@
 {
+	"include": ["../polling-input/manifest.json"],
 	"modules": {
-		"joystick/input": "./joystickInput",
-		"timer": "$(MODDABLE)/typings/timer"
+		"joystick/input": "./joystickInput"
 	},
 	"preload": ["joystick/input"]
 }

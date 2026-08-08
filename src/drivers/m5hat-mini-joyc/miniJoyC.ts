@@ -11,11 +11,22 @@ import Timer from "timer";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
-type SMBusIO = new (options: SMBusOptions) => SMBus;
+
+export interface MiniJoyCIOInstance {
+	readUint8(register: number): number;
+	writeUint8(register: number, value: number): void;
+	readUint16(register: number, bigEndian?: boolean): number;
+	writeUint16(register: number, value: number, bigEndian?: boolean): void;
+	readBuffer(register: number, byteLength: number): ArrayBuffer;
+	writeBuffer(register: number, buffer: ByteBuffer): void;
+	close(): void;
+}
+
+export type MiniJoyCIO = new (options: SMBusOptions) => MiniJoyCIOInstance;
 
 // @moddable/typings 8.3.1 declares the SMBus options as a tuple intersection.
 // Narrow the constructor to the object accepted by the runtime implementation.
-const SMBusConstructor = SMBus as unknown as SMBusIO;
+const SMBusConstructor = SMBus as unknown as MiniJoyCIO;
 
 export type MiniJoyCReadMode = "adc" | "pos8" | "pos10";
 export type MiniJoyCCalibrationIndex = 0 | 1 | 2 | 3 | 4 | 5;
@@ -37,7 +48,7 @@ export interface MiniJoyCOptions extends JoystickInputOptions<MiniJoyCState> {
 	data?: I2COptions["data"];
 	clock?: I2COptions["clock"];
 	hz?: number;
-	io?: SMBusIO;
+	io?: MiniJoyCIO;
 	readMode?: MiniJoyCReadMode;
 }
 
@@ -69,8 +80,8 @@ export default class MiniJoyC {
 		Y_CENTER: 5,
 	} as const;
 
-	#bus?: SMBus;
-	#io: SMBusIO;
+	#bus?: MiniJoyCIOInstance;
+	#io: MiniJoyCIO;
 	#busOptions: Omit<SMBusOptions, "address">;
 	#address: number;
 	#input: JoystickInput<MiniJoyCState>;
@@ -255,7 +266,7 @@ export default class MiniJoyC {
 		Timer.delay(10);
 	}
 
-	#openBus(address: number): SMBus {
+	#openBus(address: number): MiniJoyCIOInstance {
 		return new this.#io({
 			...this.#busOptions,
 			address,
@@ -270,7 +281,7 @@ export default class MiniJoyC {
 		return this.#activeBus.readUint16(register, false) & 0xffff;
 	}
 
-	get #activeBus(): SMBus {
+	get #activeBus(): MiniJoyCIOInstance {
 		if (!this.#bus) throw new Error("joystick is closed");
 		return this.#bus;
 	}

@@ -1,6 +1,7 @@
 import Analog from "embedded:io/analog";
+import AnalogInput, { type AnalogIO } from "input/analog";
+import PollingInput from "input/polling";
 import NeoPixel from "neopixel";
-import Timer from "timer";
 
 export interface FaderSample {
 	raw: number;
@@ -8,8 +9,14 @@ export interface FaderSample {
 }
 
 export interface FaderOptions {
-	analogPin?: number;
-	ledPin?: number;
+	sensor?: {
+		io?: AnalogIO;
+		pin?: number;
+	};
+	leds?: {
+		io?: FaderLedIOConstructor;
+		pin?: number;
+	};
 	pollingInterval?: number;
 	deadband?: number;
 	brightness?: number;
@@ -19,6 +26,17 @@ export interface FaderOptions {
 export type FaderChangeCallback = (sample: FaderSample) => void;
 export type FaderLedColumn = "left" | "right";
 
+export interface FaderLedIO {
+	brightness: number;
+	close(): void;
+	update(): void;
+	makeRGB(r: number, g: number, b: number): number;
+	setPixel(index: number, color: number): void;
+	fill(color: number): void;
+}
+
+export type FaderLedIOConstructor = new (options: { pin: number; length: number; order: string }) => FaderLedIO;
+
 // https://docs.m5stack.com/ja/unit/fader
 export default class Fader {
 	static readonly LED_COUNT = 14;
@@ -27,56 +45,80 @@ export default class Fader {
 	static readonly DEFAULT_ANALOG_PIN = 8;
 	static readonly DEFAULT_LED_PIN = 9;
 
-	#analog: Analog;
-	#leds: NeoPixel;
-	#timer?: ReturnType<typeof Timer.repeat>;
-	#onChange: FaderChangeCallback | null;
-	#lastRaw?: number;
-
-	pollingInterval: number;
-	deadband: number;
+	#sensor: AnalogInput;
+	#leds: FaderLedIO;
+	#polling: PollingInput<FaderSample>;
+	#deadband: number;
+	#closed = false;
 
 	constructor(options: FaderOptions = {}) {
-		this.pollingInterval = Fader.#nonNegativeInteger(options.pollingInterval ?? 30, "pollingInterval", 1);
-		this.deadband = Fader.#nonNegativeInteger(options.deadband ?? 0, "deadband");
-
-		this.#analog = new Analog({ pin: options.analogPin ?? Fader.DEFAULT_ANALOG_PIN });
-		this.#leds = new NeoPixel({
-			length: Fader.LED_COUNT,
-			pin: options.ledPin ?? Fader.DEFAULT_LED_PIN,
-			order: "GRB",
+		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
+		const sensor = new AnalogInput({
+			io: options.sensor?.io ?? Analog,
+			pin: options.sensor?.pin ?? Fader.DEFAULT_ANALOG_PIN,
+			invert: true,
 		});
-		this.#leds.brightness = Fader.#colorComponent(options.brightness ?? 128, "brightness");
-		this.#onChange = options.onChange ?? null;
-		this.#updatePollingState();
+		let leds: FaderLedIO | undefined;
+		try {
+			const LedIO = options.leds?.io ?? NeoPixel;
+			leds = new LedIO({
+				length: Fader.LED_COUNT,
+				pin: options.leds?.pin ?? Fader.DEFAULT_LED_PIN,
+				order: "GRB",
+			});
+			leds.brightness = Fader.#colorComponent(options.brightness ?? 128, "brightness");
+			this.#polling = new PollingInput(this, sensor, "Fader", {
+				pollingInterval: options.pollingInterval,
+				onChange: options.onChange,
+				changed: (sample, previous) => Math.abs(sample.raw - previous.raw) > this.#deadband,
+			});
+			this.#sensor = sensor;
+			this.#leds = leds;
+		} catch (error) {
+			leds?.close();
+			sensor.close();
+			throw error;
+		}
 	}
 
 	close(): void {
-		this.stop();
-		this.#analog.close();
+		if (this.#closed) return;
+		this.#closed = true;
+		this.#polling.close();
+		this.#sensor.close();
 		this.#leds.close();
 	}
 
 	start(): void {
-		if (this.#timer) return;
-		this.#timer = Timer.repeat(() => {
-			this.#pollTick();
-		}, this.pollingInterval);
+		this.#polling.start();
 	}
 
 	stop(): void {
-		if (!this.#timer) return;
-		Timer.clear(this.#timer);
-		this.#timer = undefined;
+		this.#polling.stop();
 	}
 
 	set onChange(callback: FaderChangeCallback | null | undefined) {
-		this.#onChange = typeof callback === "function" ? callback : null;
-		this.#updatePollingState();
+		this.#polling.onChange = callback;
 	}
 
 	get onChange(): FaderChangeCallback | null {
-		return this.#onChange;
+		return this.#polling.onChange;
+	}
+
+	set pollingInterval(value: number) {
+		this.#polling.pollingInterval = value;
+	}
+
+	get pollingInterval(): number {
+		return this.#polling.pollingInterval;
+	}
+
+	set deadband(value: number) {
+		this.#deadband = PollingInput.nonNegativeInteger(value, "deadband");
+	}
+
+	get deadband(): number {
+		return this.#deadband;
 	}
 
 	get brightness(): number {
@@ -89,16 +131,11 @@ export default class Fader {
 	}
 
 	read(): number {
-		return this.#analog.read();
+		return this.#sensor.readRaw();
 	}
 
 	readSample(): FaderSample {
-		const raw = this.read();
-		const maximum = (1 << this.#analog.resolution) - 1;
-		return {
-			raw,
-			position: (maximum - raw) / maximum,
-		};
+		return this.#sensor.read();
 	}
 
 	static ledIndex(column: FaderLedColumn, level: number): number {
@@ -146,31 +183,9 @@ export default class Fader {
 		this.#leds.update();
 	}
 
-	#updatePollingState(): void {
-		if (this.#onChange) this.start();
-		else this.stop();
-	}
-
-	#pollTick(): void {
-		try {
-			const sample = this.readSample();
-			if (this.#lastRaw === undefined || Math.abs(sample.raw - this.#lastRaw) > this.deadband) {
-				this.#lastRaw = sample.raw;
-				this.#onChange?.(sample);
-			}
-		} catch (error) {
-			trace(`[Fader][ERROR] poll failed: ${error instanceof Error ? error.message : String(error)}\n`);
-		}
-	}
-
 	static #colorComponent(value: number, name: string): number {
 		if (!Number.isFinite(value)) throw new RangeError(`${name} must be a finite number`);
 		return Math.round(Math.max(0, Math.min(255, value)));
-	}
-
-	static #nonNegativeInteger(value: number, name: string, minimum = 0): number {
-		if (!Number.isInteger(value) || value < minimum) throw new RangeError(`${name} must be an integer >= ${minimum}`);
-		return value;
 	}
 
 	static #validateLevel(level: number): void {

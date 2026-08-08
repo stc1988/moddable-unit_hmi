@@ -1,8 +1,12 @@
 # JoyStick2
 
-The driver is implemented in TypeScript under `src/drivers/joyStick2` and exports `JoyStick2Options`, `JoyStick2Position`, `JoyStick2State`, `JoyStick2ChangeCallback`, and `JoyStick2ButtonChangeCallback` for typed applications.
+The driver is implemented in TypeScript under `src/drivers/joyStick2` and exports `JoyStick2Options`, `JoyStick2IO`,
+`JoyStick2Position`, `JoyStick2State`, `JoyStick2ChangeCallback`, and `JoyStick2ButtonChangeCallback` for typed applications.
 
 The `examples/joyStick2` application is also written in TypeScript and demonstrates typed polling, button events, and LED updates.
+
+The defaults use Port A on the selected Moddable device. Pass `data` and `clock` to select another I2C port. `io` can
+inject a compatible SMBus constructor for another provider or for testing.
 
 - `read()` returns the current `{ x, y, pressed }` state. It performs separate coordinate and button register reads.
 - `readXY()` reads the calibrated signed 8-bit coordinates from registers `0x60` and `0x61`. Both axes use the device's native directions and return values in the range documented by M5Stack (`-127` to `127`).
