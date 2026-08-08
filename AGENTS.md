@@ -13,6 +13,25 @@ This document is a developer- and AI-oriented overview of the repository. It sum
 
 ## Architecture Summary
 
+Input behavior is shared by responsibility rather than by product family or hardware bus. `PollingInput<State>` owns the
+timer and callback lifecycle for every input driver. `JoystickInput` adds joystick-specific state comparison and button
+semantics. `AnalogInput` supplies normalized samples to Angle and Fader. Register maps, calibration, LED protocols, and
+other device-specific behavior remain in each product driver. See `docs/architecture.md` for the layer boundaries and I/O
+injection points.
+
+### Event Model
+
+All joystick drivers must expose the same state and callback model. `read()` returns the current `{ x, y, pressed }` state.
+Assigning `onChange` or `onButtonChange` starts polling automatically. Polling stops when both callbacks are cleared, and
+can also be controlled explicitly with `start()` and `stop()`.
+
+- `onChange(state)` runs for the first sample, when either axis moves by more than `deadband`, or when the button state
+  changes.
+- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
+- `deadband` is measured in each device's native axis units and defaults to `0`.
+
+Polling errors are reported through the Moddable debug channel without stopping the timer. Angle and Fader use the same
+callback lifecycle; their change comparison operates on the raw analog value supplied by `AnalogInput`.
 
 ## Sequences
 

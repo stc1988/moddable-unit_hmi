@@ -35,20 +35,6 @@ cd ../m5hat-mini-joyc
 mcrun -dl -m -p esp32/m5stick_cplus
 ```
 
-## Event Model
-
-All joystick drivers expose the same state and callback model. `read()` always returns the current `{ x, y, pressed }` state. Assigning `onChange` or `onButtonChange` starts polling automatically. Polling stops when both callbacks are cleared, and can also be controlled explicitly with `start()` and `stop()`.
-
-- `onChange(state)` runs for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
-- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
-- `deadband` is measured in each device's native axis units and defaults to `0`.
-
-Polling errors are reported through the Moddable debug channel without stopping the timer.
-
-Angle and Fader use the same event lifecycle. Their normalized samples are supplied by a shared analog-input layer,
-while all input drivers use the same polling layer. See [Driver architecture](docs/architecture.md) for the boundaries and
-extension points.
-
 ## Examples
 
 - [Unit Angle](examples/angle) — reports the raw ADC value and normalized knob position.
