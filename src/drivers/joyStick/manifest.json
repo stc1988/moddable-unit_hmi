@@ -5,5 +5,5 @@
 		"embedded:io/*": "$(MODDABLE)/typings/embedded_io/*",
 		"embedded:provider/*": "$(MODDABLE)/typings/embedded_provider/*"
 	},
-	"preload": ["unitJoystick"]
+	"preload": ["joyStick"]
 }

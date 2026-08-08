@@ -3,44 +3,44 @@ import Timer from "timer";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 
-export interface UnitJoystickPosition {
+export interface JoyStickPosition {
 	x: number;
 	y: number;
 }
 
-export interface UnitJoystickState extends UnitJoystickPosition {
+export interface JoyStickState extends JoyStickPosition {
 	pressed: boolean;
 }
 
-export interface UnitJoystickOptions {
+export interface JoyStickOptions {
 	pollingInterval?: number;
 	data?: I2COptions["data"];
 	clock?: I2COptions["clock"];
-	onPoll?: UnitJoystickPollCallback;
-	onPush?: UnitJoystickPushCallback;
+	onPoll?: JoyStickPollCallback;
+	onPush?: JoyStickPushCallback;
 }
 
-export type UnitJoystickPollCallback = (position: UnitJoystickPosition) => void;
-export type UnitJoystickPushCallback = (pressed: boolean) => void;
+export type JoyStickPollCallback = (position: JoyStickPosition) => void;
+export type JoyStickPushCallback = (pressed: boolean) => void;
 
 // https://docs.m5stack.com/ja/unit/joystick_1.1
-export default class UnitJoystick {
+export default class JoyStick {
 	static readonly DEFAULT_ADDRESS = 0x52;
 	static readonly STATE_LENGTH = 3;
 
 	#bus: I2C;
 	#timer?: ReturnType<typeof Timer.repeat>;
-	#onPoll: UnitJoystickPollCallback | null;
-	#onPush: UnitJoystickPushCallback | null;
+	#onPoll: JoyStickPollCallback | null;
+	#onPush: JoyStickPushCallback | null;
 	#buttonState = false;
-	#lastPosition?: UnitJoystickPosition;
+	#lastPosition?: JoyStickPosition;
 
 	pollingInterval: number;
 
-	constructor(options: UnitJoystickOptions = {}) {
-		this.pollingInterval = UnitJoystick.#positiveInteger(options.pollingInterval ?? 30, "pollingInterval");
+	constructor(options: JoyStickOptions = {}) {
+		this.pollingInterval = JoyStick.#positiveInteger(options.pollingInterval ?? 30, "pollingInterval");
 		this.#bus = new I2C({
-			address: UnitJoystick.DEFAULT_ADDRESS,
+			address: JoyStick.DEFAULT_ADDRESS,
 			data: options.data ?? device.I2C.default.data,
 			clock: options.clock ?? device.I2C.default.clock,
 			hz: 400_000,
@@ -68,26 +68,26 @@ export default class UnitJoystick {
 		this.#timer = undefined;
 	}
 
-	set onPoll(callback: UnitJoystickPollCallback | null | undefined) {
+	set onPoll(callback: JoyStickPollCallback | null | undefined) {
 		this.#onPoll = typeof callback === "function" ? callback : null;
 		this.#updatePollingState();
 	}
 
-	get onPoll(): UnitJoystickPollCallback | null {
+	get onPoll(): JoyStickPollCallback | null {
 		return this.#onPoll;
 	}
 
-	set onPush(callback: UnitJoystickPushCallback | null | undefined) {
+	set onPush(callback: JoyStickPushCallback | null | undefined) {
 		this.#onPush = typeof callback === "function" ? callback : null;
 		this.#updatePollingState();
 	}
 
-	get onPush(): UnitJoystickPushCallback | null {
+	get onPush(): JoyStickPushCallback | null {
 		return this.#onPush;
 	}
 
-	read(): UnitJoystickState {
-		const data = new Uint8Array(this.#bus.read(UnitJoystick.STATE_LENGTH));
+	read(): JoyStickState {
+		const data = new Uint8Array(this.#bus.read(JoyStick.STATE_LENGTH));
 		return {
 			x: data[0],
 			y: data[1],
@@ -95,7 +95,7 @@ export default class UnitJoystick {
 		};
 	}
 
-	readXY(): UnitJoystickPosition {
+	readXY(): JoyStickPosition {
 		const { x, y } = this.read();
 		return { x, y };
 	}
@@ -119,11 +119,11 @@ export default class UnitJoystick {
 
 			this.#buttonState = state.pressed;
 		} catch (error) {
-			trace(`[UnitJoystick][ERROR] poll failed: ${error instanceof Error ? error.message : String(error)}\n`);
+			trace(`[JoyStick][ERROR] poll failed: ${error instanceof Error ? error.message : String(error)}\n`);
 		}
 	}
 
-	#shouldDispatchPoll(position: UnitJoystickPosition): boolean {
+	#shouldDispatchPoll(position: JoyStickPosition): boolean {
 		if (!this.#lastPosition) {
 			this.#lastPosition = position;
 			return true;

@@ -1,6 +1,6 @@
 # Unit Joystick v1.1
 
-The TypeScript driver in `src/drivers/unitJoystick` supports the M5Stack Unit Joystick v1.1 (U024-C). It reads the X/Y axes and push button over I2C at the device's fixed address, `0x52`.
+The TypeScript driver in `src/drivers/joyStick` supports the M5Stack Unit Joystick v1.1 (U024-C). It reads the X/Y axes and push button over I2C at the device's fixed address, `0x52`.
 
 The defaults use Port A on the selected Moddable device. Pass `data` and `clock` to the constructor when using another I2C port.
 
@@ -16,9 +16,9 @@ The defaults use Port A on the selected Moddable device. Pass `data` and `clock`
 - `start()`, `stop()`, and `close()` control polling and the I2C resource explicitly.
 
 ```ts
-import UnitJoystick from "unitJoystick";
+import JoyStick from "joyStick";
 
-const joystick = new UnitJoystick();
+const joystick = new JoyStick();
 
 joystick.onPoll = ({ x, y }) => {
 	trace(`x=${x}, y=${y}\n`);

@@ -82,7 +82,7 @@ The built-in 200 mAh battery powers the HAT but has no battery-status register i
 
 - [Unit Angle](examples/angle) — reports the raw ADC value and normalized knob position.
 - [Unit Fader](examples/fader) — reads the slider and displays its position on the 14 RGB LEDs.
-- [Unit Joystick v1.1](examples/unitJoystick) — reports joystick and button changes over I2C.
+- [Unit Joystick v1.1](examples/joyStick) — reports joystick and button changes over I2C.
 - [Unit JoyStick2](examples/joyStick2) — reports joystick and button changes and controls its RGB LED.
 - [M5Stack Mini JoyC HAT](examples/m5hat-mini-joyc) — reports joystick and button changes and toggles its RGB LED.
 

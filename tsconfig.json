@@ -24,7 +24,7 @@
 				"./src/drivers/fader/*",
 				"./src/drivers/joyStick2/*",
 				"./src/drivers/m5hat-mini-joyc/*",
-				"./src/drivers/unitJoystick/*"
+				"./src/drivers/joyStick/*"
 			],
 			"commodetto/*": ["./node_modules/@moddable/typings/commodetto/*"],
 			"dns/*": ["./node_modules/@moddable/typings/dns/*"],
