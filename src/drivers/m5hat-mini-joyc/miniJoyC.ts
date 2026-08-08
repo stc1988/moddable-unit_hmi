@@ -1,0 +1,331 @@
+import type I2C from "embedded:io/i2c";
+import SMBus from "embedded:io/smbus";
+import Timer from "timer";
+
+type I2COptions = ConstructorParameters<typeof I2C>[0];
+type SMBusOptions = I2COptions & { stop?: boolean };
+type SMBusIO = new (options: SMBusOptions) => SMBus;
+
+// @moddable/typings 8.3.1 declares the SMBus options as a tuple intersection.
+// Narrow the constructor to the object accepted by the runtime implementation.
+const SMBusConstructor = SMBus as unknown as SMBusIO;
+
+export type MiniJoyCReadMode = "adc" | "pos8" | "pos10";
+export type MiniJoyCCalibrationIndex = 0 | 1 | 2 | 3 | 4 | 5;
+
+export interface MiniJoyCPosition {
+	x: number;
+	y: number;
+}
+
+export interface MiniJoyCCalibration {
+	xMin: number;
+	xMax: number;
+	yMin: number;
+	yMax: number;
+	xCenter: number;
+	yCenter: number;
+}
+
+export interface MiniJoyCOptions {
+	address?: number;
+	data?: I2COptions["data"];
+	clock?: I2COptions["clock"];
+	hz?: number;
+	io?: SMBusIO;
+	pollingInterval?: number;
+	readMode?: MiniJoyCReadMode;
+	onPoll?: MiniJoyCPollCallback;
+	onButtonPressed?: MiniJoyCButtonPressedCallback;
+}
+
+export type MiniJoyCPollCallback = (position: MiniJoyCPosition) => void;
+export type MiniJoyCButtonPressedCallback = () => void;
+
+// https://docs.m5stack.com/en/hat/MiniJoyC
+export default class MiniJoyC {
+	static readonly DEFAULT_ADDRESS = 0x54;
+	static readonly DEFAULT_HZ = 200_000;
+
+	static readonly REGISTER = {
+		ADC_VALUE: 0x00,
+		POSITION_10_BIT: 0x10,
+		POSITION_8_BIT: 0x20,
+		BUTTON: 0x30,
+		RGB_LED: 0x40,
+		CALIBRATION: 0x50,
+		FIRMWARE_VERSION: 0xfe,
+		I2C_ADDRESS: 0xff,
+	} as const;
+
+	static readonly CALIBRATION = {
+		X_MIN: 0,
+		X_MAX: 1,
+		Y_MIN: 2,
+		Y_MAX: 3,
+		X_CENTER: 4,
+		Y_CENTER: 5,
+	} as const;
+
+	#bus: SMBus;
+	#io: SMBusIO;
+	#busOptions: Omit<SMBusOptions, "address">;
+	#address: number;
+	#timer?: ReturnType<typeof Timer.repeat>;
+	#onPoll: MiniJoyCPollCallback | null;
+	#onButtonPressed: MiniJoyCButtonPressedCallback | null;
+	#buttonState = false;
+	#lastPosition?: MiniJoyCPosition;
+
+	pollingInterval: number;
+	readMode: MiniJoyCReadMode;
+
+	constructor(options: MiniJoyCOptions = {}) {
+		const hat = (device.I2C as typeof device.I2C & { hat: I2COptions }).hat;
+
+		this.pollingInterval = MiniJoyC.#integerInRange(
+			options.pollingInterval ?? 30,
+			"pollingInterval",
+			1,
+			Number.MAX_SAFE_INTEGER,
+		);
+		this.readMode = MiniJoyC.#readMode(options.readMode ?? "pos8");
+		this.#address = MiniJoyC.#integerInRange(options.address ?? MiniJoyC.DEFAULT_ADDRESS, "address", 1, 0x7f);
+		this.#io = options.io ?? SMBusConstructor;
+		this.#busOptions = {
+			data: options.data ?? hat.data,
+			clock: options.clock ?? hat.clock,
+			hz: MiniJoyC.#integerInRange(options.hz ?? MiniJoyC.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+		};
+		this.#bus = this.#openBus(this.#address);
+		Timer.delay(10);
+
+		this.#onPoll = options.onPoll ?? null;
+		this.#onButtonPressed = options.onButtonPressed ?? null;
+		this.#updatePollingState();
+	}
+
+	close(): void {
+		this.stop();
+		this.#bus.close();
+	}
+
+	start(): void {
+		if (this.#timer) return;
+		this.#timer = Timer.repeat(() => {
+			this.#pollTick();
+		}, this.pollingInterval);
+	}
+
+	stop(): void {
+		if (!this.#timer) return;
+		Timer.clear(this.#timer);
+		this.#timer = undefined;
+	}
+
+	set onPoll(callback: MiniJoyCPollCallback | null | undefined) {
+		this.#onPoll = typeof callback === "function" ? callback : null;
+		this.#updatePollingState();
+	}
+
+	get onPoll(): MiniJoyCPollCallback | null {
+		return this.#onPoll;
+	}
+
+	set onButtonPressed(callback: MiniJoyCButtonPressedCallback | null | undefined) {
+		this.#onButtonPressed = typeof callback === "function" ? callback : null;
+		this.#updatePollingState();
+	}
+
+	get onButtonPressed(): MiniJoyCButtonPressedCallback | null {
+		return this.#onButtonPressed;
+	}
+
+	readXY(mode: MiniJoyCReadMode = this.readMode): MiniJoyCPosition {
+		switch (MiniJoyC.#readMode(mode)) {
+			case "adc":
+				return this.readADC();
+			case "pos8":
+				return this.readPosition8Bit();
+			case "pos10":
+				return this.readPosition10Bit();
+		}
+	}
+
+	readADC(): MiniJoyCPosition {
+		return {
+			x: this.#readWordLE(MiniJoyC.REGISTER.ADC_VALUE),
+			y: this.#readWordLE(MiniJoyC.REGISTER.ADC_VALUE + 2),
+		};
+	}
+
+	readPosition8Bit(): MiniJoyCPosition {
+		return {
+			x: MiniJoyC.#signed8(this.#readByte(MiniJoyC.REGISTER.POSITION_8_BIT)),
+			y: MiniJoyC.#signed8(this.#readByte(MiniJoyC.REGISTER.POSITION_8_BIT + 1)),
+		};
+	}
+
+	readPosition10Bit(): MiniJoyCPosition {
+		return {
+			x: MiniJoyC.#signed16(this.#readWordLE(MiniJoyC.REGISTER.POSITION_10_BIT)),
+			y: MiniJoyC.#signed16(this.#readWordLE(MiniJoyC.REGISTER.POSITION_10_BIT + 2)),
+		};
+	}
+
+	isButtonPressed(): boolean {
+		return this.#readByte(MiniJoyC.REGISTER.BUTTON) !== 0;
+	}
+
+	setLed(r: number, g: number, b: number): void {
+		this.#bus.writeBuffer(
+			MiniJoyC.REGISTER.RGB_LED,
+			Uint8Array.of(
+				MiniJoyC.#integerInRange(r, "r", 0, 0xff),
+				MiniJoyC.#integerInRange(g, "g", 0, 0xff),
+				MiniJoyC.#integerInRange(b, "b", 0, 0xff),
+			),
+		);
+	}
+
+	readCalibration(index: MiniJoyCCalibrationIndex): number {
+		return this.#readWordLE(MiniJoyC.REGISTER.CALIBRATION + MiniJoyC.#calibrationIndex(index) * 2);
+	}
+
+	readCalibrationValues(): MiniJoyCCalibration {
+		const data = new Uint8Array(this.#bus.readBuffer(MiniJoyC.REGISTER.CALIBRATION, 12));
+		return {
+			xMin: MiniJoyC.#wordLE(data, 0),
+			xMax: MiniJoyC.#wordLE(data, 2),
+			yMin: MiniJoyC.#wordLE(data, 4),
+			yMax: MiniJoyC.#wordLE(data, 6),
+			xCenter: MiniJoyC.#wordLE(data, 8),
+			yCenter: MiniJoyC.#wordLE(data, 10),
+		};
+	}
+
+	writeCalibration(index: MiniJoyCCalibrationIndex, value: number): void {
+		this.#bus.writeUint16(
+			MiniJoyC.REGISTER.CALIBRATION + MiniJoyC.#calibrationIndex(index) * 2,
+			MiniJoyC.#calibrationValue(value),
+			false,
+		);
+		Timer.delay(1000);
+	}
+
+	writeCalibrationValues(values: MiniJoyCCalibration): void {
+		const data = new Uint8Array(12);
+		MiniJoyC.#setWordLE(data, 0, MiniJoyC.#calibrationValue(values.xMin));
+		MiniJoyC.#setWordLE(data, 2, MiniJoyC.#calibrationValue(values.xMax));
+		MiniJoyC.#setWordLE(data, 4, MiniJoyC.#calibrationValue(values.yMin));
+		MiniJoyC.#setWordLE(data, 6, MiniJoyC.#calibrationValue(values.yMax));
+		MiniJoyC.#setWordLE(data, 8, MiniJoyC.#calibrationValue(values.xCenter));
+		MiniJoyC.#setWordLE(data, 10, MiniJoyC.#calibrationValue(values.yCenter));
+		this.#bus.writeBuffer(MiniJoyC.REGISTER.CALIBRATION, data);
+		Timer.delay(1000);
+	}
+
+	getFirmwareVersion(): number {
+		return this.#readByte(MiniJoyC.REGISTER.FIRMWARE_VERSION);
+	}
+
+	getI2CAddress(): number {
+		return this.#readByte(MiniJoyC.REGISTER.I2C_ADDRESS);
+	}
+
+	setI2CAddress(address: number): void {
+		const nextAddress = MiniJoyC.#integerInRange(address, "address", 1, 0x7f);
+		if (nextAddress === this.#address) return;
+
+		this.#bus.writeUint8(MiniJoyC.REGISTER.I2C_ADDRESS, nextAddress);
+		this.#bus.close();
+		this.#address = nextAddress;
+		this.#bus = this.#openBus(nextAddress);
+		Timer.delay(10);
+	}
+
+	#openBus(address: number): SMBus {
+		return new this.#io({
+			...this.#busOptions,
+			address,
+		});
+	}
+
+	#updatePollingState(): void {
+		if (this.#onPoll || this.#onButtonPressed) this.start();
+		else this.stop();
+	}
+
+	#pollTick(): void {
+		try {
+			if (this.#onPoll) {
+				const position = this.readXY();
+				if (this.#shouldDispatchPoll(position)) this.#onPoll(position);
+			}
+
+			if (this.#onButtonPressed) {
+				const pressed = this.isButtonPressed();
+				if (pressed && !this.#buttonState) this.#onButtonPressed();
+				this.#buttonState = pressed;
+			}
+		} catch (error) {
+			trace(`[MiniJoyC][ERROR] poll failed: ${error instanceof Error ? error.message : String(error)}\n`);
+		}
+	}
+
+	#shouldDispatchPoll(position: MiniJoyCPosition): boolean {
+		if (!this.#lastPosition) {
+			this.#lastPosition = position;
+			return true;
+		}
+
+		const changed = this.#lastPosition.x !== position.x || this.#lastPosition.y !== position.y;
+		if (changed) this.#lastPosition = position;
+		return changed;
+	}
+
+	#readByte(register: number): number {
+		return this.#bus.readUint8(register) & 0xff;
+	}
+
+	#readWordLE(register: number): number {
+		return this.#bus.readUint16(register, false) & 0xffff;
+	}
+
+	static #readMode(value: string): MiniJoyCReadMode {
+		if (value !== "adc" && value !== "pos8" && value !== "pos10")
+			throw new RangeError('readMode must be "adc", "pos8", or "pos10"');
+		return value;
+	}
+
+	static #calibrationIndex(value: number): MiniJoyCCalibrationIndex {
+		return MiniJoyC.#integerInRange(value, "calibration index", 0, 5) as MiniJoyCCalibrationIndex;
+	}
+
+	static #calibrationValue(value: number): number {
+		return MiniJoyC.#integerInRange(value, "calibration value", 0, 4095);
+	}
+
+	static #integerInRange(value: number, name: string, minimum: number, maximum: number): number {
+		if (!Number.isInteger(value) || value < minimum || value > maximum)
+			throw new RangeError(`${name} must be an integer from ${minimum} to ${maximum}`);
+		return value;
+	}
+
+	static #signed8(value: number): number {
+		return value & 0x80 ? value - 0x100 : value;
+	}
+
+	static #signed16(value: number): number {
+		return value & 0x8000 ? value - 0x1_0000 : value;
+	}
+
+	static #wordLE(data: Uint8Array, offset: number): number {
+		return data[offset] | (data[offset + 1] << 8);
+	}
+
+	static #setWordLE(data: Uint8Array, offset: number, value: number): void {
+		data[offset] = value;
+		data[offset + 1] = value >> 8;
+	}
+}
