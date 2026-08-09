@@ -4,13 +4,13 @@ The input drivers share behavior by responsibility instead of by bus or product 
 `src/drivers/unit` or `src/drivers/hat`; reusable input infrastructure lives separately under `src/input`.
 
 ```text
-Product driver       Angle / Fader       Joystick / JoyStick2 / MiniJoyC
-                            |                         |
-Input semantics      AnalogInput                 JoystickInput
-                            |                         |
-Polling lifecycle    +----------- PollingInput<State> -----------+
-                            |                         |
-Hardware I/O         embedded:io/analog       embedded:io/smbus
+Product driver       Angle / Fader       Scroll       Joystick / JoyStick2 / MiniJoyC
+                            |                |                    |
+Input semantics      AnalogInput            |              JoystickInput
+                            |                |                    |
+Polling lifecycle    +---------------- PollingInput<State> ----------------+
+                            |                |                    |
+Hardware I/O         embedded:io/analog  embedded:io/smbus  embedded:io/smbus
 ```
 
 ## PollingInput
@@ -30,9 +30,13 @@ joystick drivers therefore share event behavior without attempting to merge thei
 direction. Both use `PollingInput` for event delivery.
 
 Angle accepts `sensor: { io, pin }`. Fader accepts the same `sensor` option and `leds: { io, pin }`. Joystick v1.1,
-JoyStick2, and Mini JoyC accept an `io` bus constructor. These entries are constructors compatible with the required
-operation subset, so tests and other boards can inject alternative I/O without changing product logic. The corresponding
-Moddable I/O implementations remain the defaults.
+JoyStick2, Scroll, and Mini JoyC accept an `io` bus constructor. These entries are constructors compatible with the
+required operation subset, so tests and other boards can inject alternative I/O without changing product logic. The
+corresponding Moddable I/O implementations remain the defaults.
+
+Scroll uses `PollingInput` directly because its state is a signed encoder value plus a button rather than a two-axis
+joystick. It provides the same automatic callback lifecycle and separate button-transition callback without introducing
+joystick axis semantics.
 
 ## Deliberate boundaries
 

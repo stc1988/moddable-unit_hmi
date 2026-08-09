@@ -22,6 +22,7 @@
 			"unit/fader": ["./src/drivers/unit/fader/fader"],
 			"unit/joystick": ["./src/drivers/unit/joystick/joystick"],
 			"unit/joystick2": ["./src/drivers/unit/joystick2/joystick2"],
+			"unit/scroll": ["./src/drivers/unit/scroll/scroll"],
 			"hat/mini-joyc": ["./src/drivers/hat/mini-joyc/mini-joyc"],
 			"*": [
 				"./node_modules/@moddable/typings/*",
@@ -32,6 +33,7 @@
 				"./src/drivers/unit/fader/*",
 				"./src/drivers/unit/joystick/*",
 				"./src/drivers/unit/joystick2/*",
+				"./src/drivers/unit/scroll/*",
 				"./src/drivers/hat/mini-joyc/*"
 			],
 			"commodetto/*": ["./node_modules/@moddable/typings/commodetto/*"],
