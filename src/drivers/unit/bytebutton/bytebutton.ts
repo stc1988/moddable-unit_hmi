@@ -164,12 +164,12 @@ export default class ByteButton {
 	}
 
 	readButtons(): number {
-		return this.#activeBus.readUint8(ByteButton.REGISTER.BUTTONS) & 0xff;
+		return ~this.#activeBus.readUint8(ByteButton.REGISTER.BUTTONS) & 0xff;
 	}
 
 	readButton(button: number): boolean {
 		const index = ByteButton.#buttonIndex(button);
-		return this.#activeBus.readUint8(ByteButton.REGISTER.BUTTON_VALUES + index) !== 0;
+		return this.#activeBus.readUint8(ByteButton.REGISTER.BUTTON_VALUES + index) === 0;
 	}
 
 	setLedBrightness(led: number, brightness: number): void {

@@ -25,7 +25,8 @@ byteButton.onButtonChange = (button, pressed) => {
 
 ## Buttons and callbacks
 
-- `read()` returns `{ buttons }`, where bit 0 through bit 7 represent buttons 0 through 7. A set bit means pressed.
+- `read()` returns `{ buttons }`, where bit 0 through bit 7 represent buttons 0 through 7. The hardware's active-low
+  values are normalized so that a set bit means pressed.
 - `readButtons()` returns the button bit mask directly.
 - `readButton(button)` reads an individual button register and returns its pressed state.
 - `onChange(state)` runs for the first sample and whenever the button mask changes.
