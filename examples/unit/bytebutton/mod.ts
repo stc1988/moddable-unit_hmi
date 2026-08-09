@@ -1,0 +1,20 @@
+import ByteButton from "unit/bytebutton";
+
+export async function main(): Promise<void> {
+	const byteButton = new ByteButton();
+
+	byteButton.setLedMode(ByteButton.LED_MODE.MANUAL);
+	for (let led = 0; led < ByteButton.LED_COUNT; led++) {
+		byteButton.setLedBrightness(led, 64);
+		byteButton.setLed(led, 0, 0, led === 8 ? 64 : 0);
+	}
+
+	byteButton.onChange = ({ buttons }) => {
+		trace(`[ByteButton] buttons=0b${buttons.toString(2).padStart(8, "0")}\n`);
+	};
+
+	byteButton.onButtonChange = (button, pressed) => {
+		trace(`[ByteButton] button=${button}\tpressed=${pressed}\n`);
+		byteButton.setLed(button, 0, pressed ? 255 : 0, 0);
+	};
+}
