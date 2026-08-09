@@ -1,7 +1,0 @@
-{
-	"include": ["../../input/joystick/manifest.json"],
-	"modules": {
-		"unit/joystick2": "./joyStick2"
-	},
-	"preload": ["unit/joystick2"]
-}

@@ -1,9 +1,9 @@
 # JoyStick2
 
-The driver is implemented in TypeScript under `src/drivers/joyStick2` and exports `JoyStick2Options`, `JoyStick2IO`,
+The driver is implemented in TypeScript under `src/drivers/unit/joystick2` and exports `JoyStick2Options`, `JoyStick2IO`,
 `JoyStick2Position`, `JoyStick2State`, `JoyStick2ChangeCallback`, and `JoyStick2ButtonChangeCallback` for typed applications.
 
-The `examples/joyStick2` application is also written in TypeScript and demonstrates typed polling, button events, and LED updates.
+The `examples/unit/joystick2` application is also written in TypeScript and demonstrates typed polling, button events, and LED updates.
 
 The defaults use Port A on the selected Moddable device. Pass `data` and `clock` to select another I2C port. `io` can
 inject a compatible SMBus constructor for another provider or for testing.

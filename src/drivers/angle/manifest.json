@@ -1,7 +1,0 @@
-{
-	"include": ["../../input/analog/manifest.json", "../../input/polling/manifest.json"],
-	"modules": {
-		"unit/angle": "./angle"
-	},
-	"preload": ["unit/angle"]
-}

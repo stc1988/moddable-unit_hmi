@@ -1,6 +1,6 @@
 # Fader
 
-The TypeScript driver in `src/drivers/fader` supports the M5Stack Unit Fader (U123): its analog slider input and the two columns of seven SK6812 RGB LEDs.
+The TypeScript driver in `src/drivers/unit/fader` supports the M5Stack Unit Fader (U123): its analog slider input and the two columns of seven SK6812 RGB LEDs.
 
 The defaults target Port B on M5Stack CoreS3:
 
@@ -13,7 +13,7 @@ Pass `sensor: { pin }` and `leds: { pin }` to the constructor when using another
 M5Stack Core uses GPIO 36 and GPIO 26 respectively. `sensor.io` and `leds.io` can inject compatible I/O constructors;
 Moddable's Analog and NeoPixel implementations are the defaults.
 
-The shared host in `examples/manifest.json` includes the Moddable SDK NeoPixel native module. Build that host before running `examples/fader` as a mod; no project-specific native code is required.
+The shared host in `examples/manifest.json` includes the Moddable SDK NeoPixel native module. Build that host before running `examples/unit/fader` as a mod; no project-specific native code is required.
 
 ## API
 

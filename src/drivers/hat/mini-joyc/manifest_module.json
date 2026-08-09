@@ -1,0 +1,6 @@
+{
+	"include": ["../../../input/joystick/manifest.json"],
+	"modules": {
+		"hat/mini-joyc": "./mini-joyc"
+	}
+}

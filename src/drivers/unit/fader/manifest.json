@@ -1,5 +1,5 @@
 {
-	"include": ["../../input/analog/manifest.json", "../../input/polling/manifest.json"],
+	"include": ["../../../input/analog/manifest.json", "../../../input/polling/manifest.json"],
 	"modules": {
 		"unit/fader": "./fader",
 		"neopixel": "$(MODDABLE)/typings/neopixel"

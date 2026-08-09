@@ -1,6 +1,6 @@
 # Angle
 
-The TypeScript driver in `src/drivers/angle` supports the M5Stack Unit Angle (U005), a 10 kΩ rotary
+The TypeScript driver in `src/drivers/unit/angle` supports the M5Stack Unit Angle (U005), a 10 kΩ rotary
 potentiometer with a 0–2500 mV analog output.
 
 The default targets the analog input on Port B of M5Stack CoreS3:
