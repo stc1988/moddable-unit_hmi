@@ -5,6 +5,7 @@
 | Product | Category | Interface | Documentation | Features |
 | --- | --- | --- | --- | --- |
 | M5Stack Unit 8Angle | Unit | I2C / SMBus | [Driver](docs/unit/8angle.md) / [M5Stack](https://docs.m5stack.com/en/unit/8Angle) | 8 potentiometers, toggle switch, 9 RGB LEDs |
+| M5Stack Unit 8Encoder | Unit | I2C / SMBus | [Driver](docs/unit/8encoder.md) / [M5Stack](https://docs.m5stack.com/en/unit/8Encoder) | 8 rotary encoders, 8 push buttons, toggle switch, 9 RGB LEDs |
 | M5Stack Unit Angle | Unit | Analog | [Driver](docs/unit/angle.md) / [M5Stack](https://docs.m5stack.com/ja/unit/angle) | 10 kΩ rotary potentiometer |
 | M5Stack Unit ByteButton | Unit | I2C / SMBus | [Driver](docs/unit/bytebutton.md) / [M5Stack](https://docs.m5stack.com/ja/unit/Unit%20ByteButton) | 8 capacitive buttons, 9 RGB LEDs |
 | M5Stack Unit ByteSwitch | Unit | I2C / SMBus | [Driver](docs/unit/byteswitch.md) / [M5Stack](https://docs.m5stack.com/en/unit/Unit%20ByteSwitch) | 8 toggle switches, 9 RGB LEDs |
@@ -42,6 +43,7 @@ mcrun -dl -m -p esp32/m5stick_cplus
 ## Examples
 
 - [Unit 8Angle](examples/unit/8angle) — reports eight potentiometers and the toggle switch with RGB feedback.
+- [Unit 8Encoder](examples/unit/8encoder) — reports eight rotary encoders, push buttons, and the toggle switch with RGB feedback.
 - [Unit Angle](examples/unit/angle) — reports the raw ADC value and normalized knob position.
 - [Unit ByteButton](examples/unit/bytebutton) — reports eight-button changes and provides RGB feedback.
 - [Unit ByteSwitch](examples/unit/byteswitch) — reports eight-switch changes and provides RGB feedback.

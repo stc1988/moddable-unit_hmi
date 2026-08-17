@@ -1,0 +1,7 @@
+{
+	"include": ["../../../input/polling/manifest.json"],
+	"modules": {
+		"unit/8encoder": "./8encoder"
+	},
+	"preload": ["unit/8encoder"]
+}
