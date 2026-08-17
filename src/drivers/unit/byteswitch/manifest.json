@@ -1,0 +1,7 @@
+{
+	"include": ["../../../input/polling/manifest.json"],
+	"modules": {
+		"unit/byteswitch": "./byteswitch"
+	},
+	"preload": ["unit/byteswitch"]
+}
