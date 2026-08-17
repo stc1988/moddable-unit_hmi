@@ -1,0 +1,7 @@
+{
+	"include": ["../../../input/polling/manifest.json"],
+	"modules": {
+		"unit/8angle": "./8angle"
+	},
+	"preload": ["unit/8angle"]
+}

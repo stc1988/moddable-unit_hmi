@@ -4,13 +4,13 @@ The input drivers share behavior by responsibility instead of by bus or product 
 `src/drivers/unit` or `src/drivers/hat`; reusable input infrastructure lives separately under `src/input`.
 
 ```text
-Product driver       Angle / Fader    Scroll / ByteButton / ByteSwitch    Joystick / JoyStick2 / MiniJoyC
-                            |                       |                                |
-Input semantics      AnalogInput                   |                          JoystickInput
-                            |                       |                                |
-Polling lifecycle    +----------------------- PollingInput<State> ------------------------+
-                            |                       |                                |
-Hardware I/O         embedded:io/analog       embedded:io/smbus                 embedded:io/smbus
+Product driver       Angle / Fader    8Angle / Scroll / ByteButton / ByteSwitch    Joystick / JoyStick2 / MiniJoyC
+                            |                           |                                    |
+Input semantics      AnalogInput                       |                              JoystickInput
+                            |                           |                                    |
+Polling lifecycle    +--------------------------- PollingInput<State> ----------------------------+
+                            |                           |                                    |
+Hardware I/O         embedded:io/analog           embedded:io/smbus                     embedded:io/smbus
 ```
 
 ## PollingInput
@@ -29,14 +29,14 @@ joystick drivers therefore share event behavior without attempting to merge thei
 `{ raw, position }` sample, with optional direction inversion. Angle uses the normal direction; Fader uses the inverted
 direction. Both use `PollingInput` for event delivery.
 
-Angle accepts `sensor: { io, pin }`. Fader accepts the same `sensor` option and `leds: { io, pin }`. Joystick v1.1,
-JoyStick2, Scroll, ByteButton, ByteSwitch, and Mini JoyC accept an `io` bus constructor. These entries are constructors
-compatible with the required operation subset, so tests and other boards can inject alternative I/O without changing
-product logic. The corresponding Moddable I/O implementations remain the defaults.
+Angle accepts `sensor: { io, pin }`. Fader accepts the same `sensor` option and `leds: { io, pin }`. 8Angle, Joystick
+v1.1, JoyStick2, Scroll, ByteButton, ByteSwitch, and Mini JoyC accept an `io` bus constructor. These entries are
+constructors compatible with the required operation subset, so tests and other boards can inject alternative I/O without
+changing product logic. The corresponding Moddable I/O implementations remain the defaults.
 
-Scroll, ByteButton, and ByteSwitch use `PollingInput` directly because their state is not a two-axis joystick. They
-provide the same automatic callback lifecycle and separate input-transition callbacks without introducing joystick axis
-semantics.
+8Angle, Scroll, ByteButton, and ByteSwitch use `PollingInput` directly because their state is not a two-axis joystick.
+They provide the same automatic callback lifecycle and separate input-transition callbacks without introducing joystick
+axis semantics.
 
 ## Deliberate boundaries
 
