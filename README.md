@@ -4,17 +4,17 @@
 
 | Product | Category | Interface | Documentation | Features |
 | --- | --- | --- | --- | --- |
-| M5Stack Unit 8Angle | Unit | I2C | [Driver](docs/unit/8angle.md) / [M5Stack](https://docs.m5stack.com/en/unit/8Angle) | 8 potentiometers, toggle switch, 9 RGB LEDs |
-| M5Stack Unit 8Encoder | Unit | I2C | [Driver](docs/unit/8encoder.md) / [M5Stack](https://docs.m5stack.com/en/unit/8Encoder) | 8 rotary encoders, 8 push buttons, toggle switch, 9 RGB LEDs |
-| M5Stack Unit Angle | Unit | Analog | [Driver](docs/unit/angle.md) / [M5Stack](https://docs.m5stack.com/ja/unit/angle) | 10 kΩ rotary potentiometer |
-| M5Stack Unit ByteButton | Unit | I2C | [Driver](docs/unit/bytebutton.md) / [M5Stack](https://docs.m5stack.com/ja/unit/Unit%20ByteButton) | 8 capacitive buttons, 9 RGB LEDs |
-| M5Stack Unit ByteSwitch | Unit | I2C | [Driver](docs/unit/byteswitch.md) / [M5Stack](https://docs.m5stack.com/en/unit/Unit%20ByteSwitch) | 8 toggle switches, 9 RGB LEDs |
-| M5Stack Unit Encoder | Unit | I2C | [Driver](docs/unit/encoder.md) / [M5Stack](https://docs.m5stack.com/en/unit/encoder) | Rotary encoder, push button, 2 RGB LEDs |
-| M5Stack Unit Fader | Unit | Analog / NeoPixel | [Driver](docs/unit/fader.md) / [M5Stack](https://docs.m5stack.com/ja/unit/fader) | 35 mm slider, 14x SK6812 RGB LED |
-| M5Stack Unit Joystick v1.1 | Unit | I2C | [Driver](docs/unit/joystick.md) / [M5Stack](https://docs.m5stack.com/ja/unit/joystick_1.1) | Joystick (X/Y), Button |
-| M5Stack Unit JoyStick2 | Unit | I2C | [Driver](docs/unit/joystick2.md) / [M5Stack](https://docs.m5stack.com/ja/unit/Unit-JoyStick2) | Hall-effect joystick (X/Y), Button, RGB LED |
-| M5Stack Unit Scroll | Unit | I2C | [Driver](docs/unit/scroll.md) / [M5Stack](https://docs.m5stack.com/ja/unit/UNIT-Scroll) | Rotary encoder, Button, RGB LED |
-| M5Stack Mini JoyC HAT | HAT | I2C | [Driver](docs/hat/mini-joyc.md) / [M5Stack](https://docs.m5stack.com/en/hat/MiniJoyC) | Joystick (X/Y), Button, RGB LED, Battery |
+| M5Stack Unit 8Angle | Unit | I2C | [Driver](docs/unit/8angle.md) / [M5Stack](https://docs.m5stack.com/en/unit/8Angle) | • 8 potentiometers<br>• Toggle switch<br>• 9 RGB LEDs |
+| M5Stack Unit 8Encoder | Unit | I2C | [Driver](docs/unit/8encoder.md) / [M5Stack](https://docs.m5stack.com/en/unit/8Encoder) | • 8 rotary encoders<br>• 8 push buttons<br>• Toggle switch<br>• 9 RGB LEDs |
+| M5Stack Unit Angle | Unit | Analog | [Driver](docs/unit/angle.md) / [M5Stack](https://docs.m5stack.com/ja/unit/angle) | • 10 kΩ rotary potentiometer |
+| M5Stack Unit ByteButton | Unit | I2C | [Driver](docs/unit/bytebutton.md) / [M5Stack](https://docs.m5stack.com/ja/unit/Unit%20ByteButton) | • 8 capacitive buttons<br>• 9 RGB LEDs |
+| M5Stack Unit ByteSwitch | Unit | I2C | [Driver](docs/unit/byteswitch.md) / [M5Stack](https://docs.m5stack.com/en/unit/Unit%20ByteSwitch) | • 8 toggle switches<br>• 9 RGB LEDs |
+| M5Stack Unit Encoder | Unit | I2C | [Driver](docs/unit/encoder.md) / [M5Stack](https://docs.m5stack.com/en/unit/encoder) | • Rotary encoder<br>• Push button<br>• 2 RGB LEDs |
+| M5Stack Unit Fader | Unit | Analog / NeoPixel | [Driver](docs/unit/fader.md) / [M5Stack](https://docs.m5stack.com/ja/unit/fader) | • 35 mm slider<br>• 14x SK6812 RGB LEDs |
+| M5Stack Unit Joystick v1.1 | Unit | I2C | [Driver](docs/unit/joystick.md) / [M5Stack](https://docs.m5stack.com/ja/unit/joystick_1.1) | • Joystick (X/Y)<br>• Button |
+| M5Stack Unit JoyStick2 | Unit | I2C | [Driver](docs/unit/joystick2.md) / [M5Stack](https://docs.m5stack.com/ja/unit/Unit-JoyStick2) | • Hall-effect joystick (X/Y)<br>• Button<br>• RGB LED |
+| M5Stack Unit Scroll | Unit | I2C | [Driver](docs/unit/scroll.md) / [M5Stack](https://docs.m5stack.com/ja/unit/UNIT-Scroll) | • Rotary encoder<br>• Button<br>• RGB LED |
+| M5Stack Mini JoyC HAT | HAT | I2C | [Driver](docs/hat/mini-joyc.md) / [M5Stack](https://docs.m5stack.com/en/hat/MiniJoyC) | • Joystick (X/Y)<br>• Button<br>• RGB LED<br>• Battery |
 
 
 ## Setup
