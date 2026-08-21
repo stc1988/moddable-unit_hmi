@@ -7,7 +7,7 @@ export async function main(): Promise<void> {
 		const lit = Math.round(position * Fader.LEVEL_COUNT);
 
 		for (let level = 0; level < Fader.LEVEL_COUNT; level++) {
-			fader.setLevel(level, 0, level < lit ? 128 : 0, level < lit ? 255 : 0, false);
+			fader.setLevel(level, { r: 0, g: level < lit ? 128 : 0, b: level < lit ? 255 : 0 }, false);
 		}
 		fader.show();
 

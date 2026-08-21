@@ -7,7 +7,7 @@ import JoystickInput, {
 	type JoystickPosition,
 	type JoystickState,
 } from "joystick/input";
-import { I2CBusResource } from "hmi/util";
+import { I2CBusResource, integerInRange, type RGBColor } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -145,11 +145,11 @@ export default class JoyStick2 {
 		return this.#activeBus.readUint8(JoyStick2.REGISTER.BUTTON_REG) === 0;
 	}
 
-	setLed(r: number, g: number, b: number): void {
+	setLed(color: RGBColor): void {
 		const bus = this.#activeBus;
-		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG, b);
-		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 1, g);
-		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 2, r);
+		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG, integerInRange(color.b, "b", 0, 0xff));
+		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 1, integerInRange(color.g, "g", 0, 0xff));
+		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 2, integerInRange(color.r, "r", 0, 0xff));
 	}
 
 	get #activeBus(): JoyStick2IOInstance {

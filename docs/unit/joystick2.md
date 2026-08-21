@@ -16,7 +16,7 @@ inject a compatible I2C constructor for another provider or for testing.
 - `pollingInterval` defaults to `30` milliseconds and `deadband` defaults to `0` native axis units.
 - Assigning either callback starts polling. Clearing both callbacks stops it.
 
-`JoyStick2#setLed(r, g, b)` accepts RGB component values even though the device stores them in BGR register order: blue at `0x30`, green at `0x31`, and red at `0x32`.
+`JoyStick2#setLed({ r, g, b })` accepts RGB component values even though the device stores them in BGR register order: blue at `0x30`, green at `0x31`, and red at `0x32`.
 
 ```ts
 import JoyStick2 from "unit/joystick2";
@@ -28,6 +28,6 @@ joystick.onChange = ({ x, y, pressed }) => {
 };
 
 joystick.onButtonChange = (pressed) => {
-	joystick.setLed(pressed ? 255 : 0, 0, pressed ? 0 : 255);
+	joystick.setLed({ r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 255 });
 };
 ```

@@ -16,7 +16,7 @@ joystick.onChange = ({ x, y, pressed }) => {
 };
 
 joystick.onButtonChange = (pressed) => {
-	joystick.setLed(0, pressed ? 128 : 0, pressed ? 255 : 0);
+	joystick.setLed({ r: 0, g: pressed ? 128 : 0, b: pressed ? 255 : 0 });
 };
 ```
 
@@ -55,10 +55,10 @@ Use `read()` from an application-owned control loop when a state is required eve
 
 ## RGB LED
 
-`setLed(r, g, b)` sets the RGB LED. Each component must be an integer from `0` through `255`.
+`setLed({ r, g, b })` sets the RGB LED. Each component must be an integer from `0` through `255`.
 
 ```ts
-joystick.setLed(255, 0, 0);
+joystick.setLed({ r: 255, g: 0, b: 0 });
 ```
 
 ## Calibration

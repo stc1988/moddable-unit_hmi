@@ -9,6 +9,6 @@ export async function main(): Promise<void> {
 
 	joystick.onButtonChange = (pressed) => {
 		trace(`[JoyStick2] button pressed: ${pressed}\n`);
-		joystick.setLed(pressed ? 255 : 0, 0, pressed ? 0 : 255);
+		joystick.setLed({ r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 255 });
 	};
 }

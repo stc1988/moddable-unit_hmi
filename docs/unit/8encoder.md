@@ -19,7 +19,7 @@ encoder8.onChange = ({ encoders, buttons, switchOn }) => {
 };
 
 encoder8.onEncoderChange = (encoder, value) => {
-	encoder8.setLed(encoder, value < 0 ? 64 : 0, value > 0 ? 64 : 0, 0);
+	encoder8.setLed(encoder, { r: value < 0 ? 64 : 0, g: value > 0 ? 64 : 0, b: 0 });
 };
 ```
 
@@ -56,9 +56,9 @@ Encoder and button indices range from `0` through `7`.
 LED indices `0` through `7` correspond to the rotary encoders. LED `Encoder8.SWITCH_LED` (`8`) corresponds to the toggle
 switch.
 
-- `setLed(led, r, g, b)` sets one LED.
+- `setLed(led, { r, g, b })` sets one LED.
 - `getLed(led)` returns `{ r, g, b }`.
-- `setAllLeds(r, g, b)` sets all nine LEDs in one transaction.
+- `setAllLeds({ r, g, b })` sets all nine LEDs in one transaction.
 
 RGB components accept `0` through `255`.
 

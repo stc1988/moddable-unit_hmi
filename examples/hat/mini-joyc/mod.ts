@@ -13,7 +13,7 @@ export async function main(): Promise<void> {
 	joystick.onButtonChange = (pressed) => {
 		if (!pressed) return;
 		ledOn = !ledOn;
-		joystick.setLed(0, ledOn ? 128 : 0, ledOn ? 255 : 0);
+		joystick.setLed({ r: 0, g: ledOn ? 128 : 0, b: ledOn ? 255 : 0 });
 		trace("[MiniJoyC] button pressed\n");
 	};
 }

@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { callbackOrNull, I2CBusResource, integerInRange } from "hmi/util";
+import { callbackOrNull, I2CBusResource, integerInRange, type RGBColor } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -28,10 +28,7 @@ export interface Angle8State {
 	switchOn: boolean;
 }
 
-export interface Angle8Color {
-	r: number;
-	g: number;
-	b: number;
+export interface Angle8Color extends RGBColor {
 	brightness: number;
 }
 
@@ -212,13 +209,13 @@ export default class Angle8 {
 		return this.#activeBus.readUint8(Angle8.REGISTER.SWITCH) !== 0;
 	}
 
-	setLed(led: number, r: number, g: number, b: number, brightness = 100): void {
+	setLed(led: number, color: RGBColor, brightness = 100): void {
 		this.#activeBus.writeBuffer(
 			Angle8.REGISTER.RGB_LED + Angle8.#ledIndex(led) * 4,
 			Uint8Array.of(
-				Angle8.#byte(r, "r"),
-				Angle8.#byte(g, "g"),
-				Angle8.#byte(b, "b"),
+				Angle8.#byte(color.r, "r"),
+				Angle8.#byte(color.g, "g"),
+				Angle8.#byte(color.b, "b"),
 				integerInRange(brightness, "brightness", 0, 100),
 			),
 		);

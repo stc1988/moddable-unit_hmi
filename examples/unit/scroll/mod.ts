@@ -9,6 +9,6 @@ export async function main(): Promise<void> {
 
 	scroll.onButtonChange = (pressed) => {
 		trace(`[Scroll] button pressed: ${pressed}\n`);
-		scroll.setLed(pressed ? 255 : 0, pressed ? 64 : 0, pressed ? 0 : 32);
+		scroll.setLed({ r: pressed ? 255 : 0, g: pressed ? 64 : 0, b: pressed ? 0 : 32 });
 	};
 }

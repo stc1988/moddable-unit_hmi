@@ -19,7 +19,7 @@ byteButton.onChange = ({ buttons }) => {
 };
 
 byteButton.onButtonChange = (button, pressed) => {
-	byteButton.setLed(button, 0, pressed ? 255 : 0, 0);
+	byteButton.setLed(button, { r: 0, g: pressed ? 255 : 0, b: 0 });
 };
 ```
 
@@ -42,11 +42,11 @@ the I2C resource.
 LED indices are `0` through `8`; LEDs 0 through 7 correspond to the buttons and LED 8 is the center status LED.
 
 - `setLedBrightness(led, brightness)` and `getLedBrightness(led)` access the per-LED brightness from `0` through `255`.
-- `setLed(led, r, g, b)` and `getLed(led)` access full RGB888 colors in manual mode.
-- `setLedCompact(led, r, g, b)` writes the protocol's compact RGB233 representation.
+- `setLed(led, { r, g, b })` and `getLed(led)` access full RGB888 colors in manual mode.
+- `setLedCompact(led, { r, g, b })` writes the protocol's compact RGB233 representation.
 - `setLedMode(ByteButton.LED_MODE.MANUAL)` displays the colors set with `setLed` or `setLedCompact`.
 - `setLedMode(ByteButton.LED_MODE.BUTTON)` lets the device select colors from each button's pressed state.
-- `setButtonLed(button, pressed, r, g, b)` and `getButtonLed(button, pressed)` configure those automatic colors.
+- `setButtonLed(button, pressed, { r, g, b })` and `getButtonLed(button, pressed)` configure those automatic colors.
 
 ## Device settings
 

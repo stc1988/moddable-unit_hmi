@@ -6,7 +6,7 @@ export async function main(): Promise<void> {
 	byteButton.setLedMode(ByteButton.LED_MODE.MANUAL);
 	for (let led = 0; led < ByteButton.LED_COUNT; led++) {
 		byteButton.setLedBrightness(led, 64);
-		byteButton.setLed(led, 0, 0, led === 8 ? 64 : 0);
+		byteButton.setLed(led, { r: 0, g: 0, b: led === 8 ? 64 : 0 });
 	}
 
 	byteButton.onChange = ({ buttons }) => {
@@ -15,6 +15,6 @@ export async function main(): Promise<void> {
 
 	byteButton.onButtonChange = (button, pressed) => {
 		trace(`[ByteButton] button=${button}\tpressed=${pressed}\n`);
-		byteButton.setLed(button, 0, pressed ? 255 : 0, 0);
+		byteButton.setLed(button, { r: 0, g: pressed ? 255 : 0, b: 0 });
 	};
 }

@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { callbackOrNull, I2CBusResource, integerInRange, signed16 } from "hmi/util";
+import { callbackOrNull, I2CBusResource, integerInRange, signed16, type RGBColor } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -28,11 +28,7 @@ export interface ScrollState {
 	pressed: boolean;
 }
 
-export interface ScrollColor {
-	r: number;
-	g: number;
-	b: number;
-}
+export type ScrollColor = RGBColor;
 
 export interface ScrollOptions {
 	address?: number;
@@ -177,14 +173,14 @@ export default class Scroll {
 		this.#activeBus.writeUint8(Scroll.REGISTER.RESET, 1);
 	}
 
-	setLed(r: number, g: number, b: number): void {
+	setLed(color: RGBColor): void {
 		this.#activeBus.writeBuffer(
 			Scroll.REGISTER.RGB_LED,
 			Uint8Array.of(
 				0,
-				integerInRange(r, "r", 0, 0xff),
-				integerInRange(g, "g", 0, 0xff),
-				integerInRange(b, "b", 0, 0xff),
+				integerInRange(color.r, "r", 0, 0xff),
+				integerInRange(color.g, "g", 0, 0xff),
+				integerInRange(color.b, "b", 0, 0xff),
 			),
 		);
 	}

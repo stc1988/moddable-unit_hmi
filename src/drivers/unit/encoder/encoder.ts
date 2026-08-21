@@ -1,7 +1,7 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
-import { callbackOrNull, I2CBusResource, integerInRange, signed16 } from "hmi/util";
+import { callbackOrNull, I2CBusResource, integerInRange, signed16, type RGBColor } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -174,22 +174,22 @@ export default class Encoder {
 		this.#activeBus.writeUint8(Encoder.REGISTER.MODE, integerInRange(mode, "mode", 0, 1));
 	}
 
-	setLed(led: number, r: number, g: number, b: number): void {
-		this.#writeLed(integerInRange(led, "led", 0, Encoder.LED_COUNT - 1) + 1, r, g, b);
+	setLed(led: number, color: RGBColor): void {
+		this.#writeLed(integerInRange(led, "led", 0, Encoder.LED_COUNT - 1) + 1, color);
 	}
 
-	setAllLeds(r: number, g: number, b: number): void {
-		this.#writeLed(0, r, g, b);
+	setAllLeds(color: RGBColor): void {
+		this.#writeLed(0, color);
 	}
 
-	#writeLed(index: number, r: number, g: number, b: number): void {
+	#writeLed(index: number, color: RGBColor): void {
 		this.#activeBus.writeBuffer(
 			Encoder.REGISTER.RGB_LED,
 			Uint8Array.of(
 				index,
-				integerInRange(r, "r", 0, 0xff),
-				integerInRange(g, "g", 0, 0xff),
-				integerInRange(b, "b", 0, 0xff),
+				integerInRange(color.r, "r", 0, 0xff),
+				integerInRange(color.g, "g", 0, 0xff),
+				integerInRange(color.b, "b", 0, 0xff),
 			),
 		);
 	}

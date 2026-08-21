@@ -46,7 +46,7 @@ I2C resource.
 LED indices `0` through `7` correspond to the potentiometers. LED `Angle8.SWITCH_LED` (`8`) corresponds to the toggle
 switch.
 
-- `setLed(led, r, g, b, brightness)` writes the LED color and brightness.
+- `setLed(led, { r, g, b }, brightness)` writes the LED color and brightness.
 - `getLed(led)` returns `{ r, g, b, brightness }`.
 - RGB components accept `0` through `255`; brightness accepts the protocol-defined range `0` through `100` and defaults
   to `100`.

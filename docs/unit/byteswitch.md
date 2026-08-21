@@ -19,7 +19,7 @@ byteSwitch.onChange = ({ switches }) => {
 };
 
 byteSwitch.onSwitchChange = (switchIndex, on) => {
-	byteSwitch.setLed(switchIndex, on ? 255 : 0, on ? 128 : 0, 0);
+	byteSwitch.setLed(switchIndex, { r: on ? 255 : 0, g: on ? 128 : 0, b: 0 });
 };
 ```
 
@@ -42,11 +42,11 @@ the I2C resource.
 LED indices are `0` through `8`; LEDs 0 through 7 correspond to the switches and LED 8 is the center status LED.
 
 - `setLedBrightness(led, brightness)` and `getLedBrightness(led)` access the per-LED brightness from `0` through `255`.
-- `setLed(led, r, g, b)` and `getLed(led)` access full RGB888 colors in manual mode.
-- `setLedCompact(led, r, g, b)` writes the protocol's compact RGB233 representation.
+- `setLed(led, { r, g, b })` and `getLed(led)` access full RGB888 colors in manual mode.
+- `setLedCompact(led, { r, g, b })` writes the protocol's compact RGB233 representation.
 - `setLedMode(ByteSwitch.LED_MODE.MANUAL)` displays the colors set with `setLed` or `setLedCompact`.
 - `setLedMode(ByteSwitch.LED_MODE.SWITCH)` lets the device select colors from each switch's state.
-- `setSwitchLed(switchIndex, on, r, g, b)` and `getSwitchLed(switchIndex, on)` configure those automatic colors.
+- `setSwitchLed(switchIndex, on, { r, g, b })` and `getSwitchLed(switchIndex, on)` configure those automatic colors.
 
 ## Device settings
 

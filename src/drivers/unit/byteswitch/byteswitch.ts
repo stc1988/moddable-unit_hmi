@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { callbackOrNull, I2CBusResource, integerInRange } from "hmi/util";
+import { callbackOrNull, I2CBusResource, integerInRange, type RGBColor } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -26,11 +26,7 @@ export interface ByteSwitchState {
 	switches: number;
 }
 
-export interface ByteSwitchColor {
-	r: number;
-	g: number;
-	b: number;
-}
+export type ByteSwitchColor = RGBColor;
 
 export type ByteSwitchLedMode = 0 | 1;
 
@@ -183,27 +179,27 @@ export default class ByteSwitch {
 		return this.#activeBus.readUint8(ByteSwitch.REGISTER.LED_BRIGHTNESS + ByteSwitch.#ledIndex(led)) & 0xff;
 	}
 
-	setLed(led: number, r: number, g: number, b: number): void {
-		this.#writeColor(ByteSwitch.REGISTER.LED_RGB888 + ByteSwitch.#ledIndex(led) * 4, r, g, b);
+	setLed(led: number, color: RGBColor): void {
+		this.#writeColor(ByteSwitch.REGISTER.LED_RGB888 + ByteSwitch.#ledIndex(led) * 4, color);
 	}
 
 	getLed(led: number): ByteSwitchColor {
 		return this.#readColor(ByteSwitch.REGISTER.LED_RGB888 + ByteSwitch.#ledIndex(led) * 4);
 	}
 
-	setLedCompact(led: number, r: number, g: number, b: number): void {
-		const red = ByteSwitch.#byte(r, "r");
-		const green = ByteSwitch.#byte(g, "g");
-		const blue = ByteSwitch.#byte(b, "b");
+	setLedCompact(led: number, color: RGBColor): void {
+		const red = ByteSwitch.#byte(color.r, "r");
+		const green = ByteSwitch.#byte(color.g, "g");
+		const blue = ByteSwitch.#byte(color.b, "b");
 		this.#activeBus.writeUint8(
 			ByteSwitch.REGISTER.LED_RGB233 + ByteSwitch.#ledIndex(led),
 			(red & 0xc0) | ((green & 0xe0) >> 2) | ((blue & 0xe0) >> 5),
 		);
 	}
 
-	setSwitchLed(switchIndex: number, on: boolean, r: number, g: number, b: number): void {
+	setSwitchLed(switchIndex: number, on: boolean, color: RGBColor): void {
 		const base = on ? ByteSwitch.REGISTER.SWITCH_ON_RGB888 : ByteSwitch.REGISTER.SWITCH_OFF_RGB888;
-		this.#writeColor(base + ByteSwitch.#switchIndex(switchIndex) * 4, r, g, b);
+		this.#writeColor(base + ByteSwitch.#switchIndex(switchIndex) * 4, color);
 	}
 
 	getSwitchLed(switchIndex: number, on: boolean): ByteSwitchColor {
@@ -270,10 +266,10 @@ export default class ByteSwitch {
 		this.#lastSwitches = state.switches;
 	}
 
-	#writeColor(register: number, r: number, g: number, b: number): void {
+	#writeColor(register: number, color: RGBColor): void {
 		this.#activeBus.writeBuffer(
 			register,
-			Uint8Array.of(ByteSwitch.#byte(b, "b"), ByteSwitch.#byte(g, "g"), ByteSwitch.#byte(r, "r"), 0),
+			Uint8Array.of(ByteSwitch.#byte(color.b, "b"), ByteSwitch.#byte(color.g, "g"), ByteSwitch.#byte(color.r, "r"), 0),
 		);
 	}
 

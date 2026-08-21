@@ -19,7 +19,7 @@ encoder.onChange = ({ value, pressed }) => {
 };
 
 encoder.onButtonChange = (pressed) => {
-	encoder.setLed(1, pressed ? 255 : 0, 0, pressed ? 0 : 64);
+	encoder.setLed(1, { r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 64 });
 };
 ```
 
@@ -50,8 +50,8 @@ official firmware if these operations are not available.
 
 The public LED indices are `0` and `1`; the driver translates them to the protocol's LED selectors `1` and `2`.
 
-- `setLed(led, r, g, b)` sets one LED.
-- `setAllLeds(r, g, b)` sets both LEDs in one command.
+- `setLed(led, { r, g, b })` sets one LED.
+- `setAllLeds({ r, g, b })` sets both LEDs in one command.
 
 RGB components accept integers from `0` through `255`.
 

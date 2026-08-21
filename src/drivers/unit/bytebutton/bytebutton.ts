@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { callbackOrNull, I2CBusResource, integerInRange } from "hmi/util";
+import { callbackOrNull, I2CBusResource, integerInRange, type RGBColor } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -26,11 +26,7 @@ export interface ByteButtonState {
 	buttons: number;
 }
 
-export interface ByteButtonColor {
-	r: number;
-	g: number;
-	b: number;
-}
+export type ByteButtonColor = RGBColor;
 
 export type ByteButtonLedMode = 0 | 1;
 
@@ -183,27 +179,27 @@ export default class ByteButton {
 		return this.#activeBus.readUint8(ByteButton.REGISTER.LED_BRIGHTNESS + ByteButton.#ledIndex(led)) & 0xff;
 	}
 
-	setLed(led: number, r: number, g: number, b: number): void {
-		this.#writeColor(ByteButton.REGISTER.LED_RGB888 + ByteButton.#ledIndex(led) * 4, r, g, b);
+	setLed(led: number, color: RGBColor): void {
+		this.#writeColor(ByteButton.REGISTER.LED_RGB888 + ByteButton.#ledIndex(led) * 4, color);
 	}
 
 	getLed(led: number): ByteButtonColor {
 		return this.#readColor(ByteButton.REGISTER.LED_RGB888 + ByteButton.#ledIndex(led) * 4);
 	}
 
-	setLedCompact(led: number, r: number, g: number, b: number): void {
-		const red = ByteButton.#byte(r, "r");
-		const green = ByteButton.#byte(g, "g");
-		const blue = ByteButton.#byte(b, "b");
+	setLedCompact(led: number, color: RGBColor): void {
+		const red = ByteButton.#byte(color.r, "r");
+		const green = ByteButton.#byte(color.g, "g");
+		const blue = ByteButton.#byte(color.b, "b");
 		this.#activeBus.writeUint8(
 			ByteButton.REGISTER.LED_RGB233 + ByteButton.#ledIndex(led),
 			(red & 0xc0) | ((green & 0xe0) >> 2) | ((blue & 0xe0) >> 5),
 		);
 	}
 
-	setButtonLed(button: number, pressed: boolean, r: number, g: number, b: number): void {
+	setButtonLed(button: number, pressed: boolean, color: RGBColor): void {
 		const base = pressed ? ByteButton.REGISTER.BUTTON_ON_RGB888 : ByteButton.REGISTER.BUTTON_OFF_RGB888;
-		this.#writeColor(base + ByteButton.#buttonIndex(button) * 4, r, g, b);
+		this.#writeColor(base + ByteButton.#buttonIndex(button) * 4, color);
 	}
 
 	getButtonLed(button: number, pressed: boolean): ByteButtonColor {
@@ -270,10 +266,10 @@ export default class ByteButton {
 		this.#lastButtons = state.buttons;
 	}
 
-	#writeColor(register: number, r: number, g: number, b: number): void {
+	#writeColor(register: number, color: RGBColor): void {
 		this.#activeBus.writeBuffer(
 			register,
-			Uint8Array.of(ByteButton.#byte(b, "b"), ByteButton.#byte(g, "g"), ByteButton.#byte(r, "r"), 0),
+			Uint8Array.of(ByteButton.#byte(color.b, "b"), ByteButton.#byte(color.g, "g"), ByteButton.#byte(color.r, "r"), 0),
 		);
 	}
 

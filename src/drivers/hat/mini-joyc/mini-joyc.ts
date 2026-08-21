@@ -7,7 +7,7 @@ import JoystickInput, {
 	type JoystickPosition,
 	type JoystickState,
 } from "joystick/input";
-import { I2CBusResource, integerInRange, signed8, signed16 } from "hmi/util";
+import { I2CBusResource, integerInRange, signed8, signed16, type RGBColor } from "hmi/util";
 import Timer from "timer";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
@@ -199,10 +199,14 @@ export default class MiniJoyC {
 		return this.#readByte(MiniJoyC.REGISTER.BUTTON) !== 0;
 	}
 
-	setLed(r: number, g: number, b: number): void {
+	setLed(color: RGBColor): void {
 		this.#activeBus.writeBuffer(
 			MiniJoyC.REGISTER.RGB_LED,
-			Uint8Array.of(integerInRange(r, "r", 0, 0xff), integerInRange(g, "g", 0, 0xff), integerInRange(b, "b", 0, 0xff)),
+			Uint8Array.of(
+				integerInRange(color.r, "r", 0, 0xff),
+				integerInRange(color.g, "g", 0, 0xff),
+				integerInRange(color.b, "b", 0, 0xff),
+			),
 		);
 	}
 

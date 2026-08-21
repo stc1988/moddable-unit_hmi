@@ -2,7 +2,14 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { callbackOrNull, I2CBusResource, integerInRange, signed32, signed32ToLittleEndian } from "hmi/util";
+import {
+	callbackOrNull,
+	I2CBusResource,
+	integerInRange,
+	signed32,
+	signed32ToLittleEndian,
+	type RGBColor,
+} from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -30,11 +37,7 @@ export interface Encoder8State {
 	switchOn: boolean;
 }
 
-export interface Encoder8Color {
-	r: number;
-	g: number;
-	b: number;
-}
+export type Encoder8Color = RGBColor;
 
 export interface Encoder8Options {
 	address?: number;
@@ -257,10 +260,10 @@ export default class Encoder8 {
 		return this.#activeBus.readUint8(Encoder8.REGISTER.SWITCH) !== 0;
 	}
 
-	setLed(led: number, r: number, g: number, b: number): void {
+	setLed(led: number, color: RGBColor): void {
 		this.#activeBus.writeBuffer(
 			Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3,
-			Uint8Array.of(Encoder8.#byte(r, "r"), Encoder8.#byte(g, "g"), Encoder8.#byte(b, "b")),
+			Uint8Array.of(Encoder8.#byte(color.r, "r"), Encoder8.#byte(color.g, "g"), Encoder8.#byte(color.b, "b")),
 		);
 	}
 
@@ -269,10 +272,10 @@ export default class Encoder8 {
 		return { r: data[0], g: data[1], b: data[2] };
 	}
 
-	setAllLeds(r: number, g: number, b: number): void {
-		const red = Encoder8.#byte(r, "r");
-		const green = Encoder8.#byte(g, "g");
-		const blue = Encoder8.#byte(b, "b");
+	setAllLeds(color: RGBColor): void {
+		const red = Encoder8.#byte(color.r, "r");
+		const green = Encoder8.#byte(color.g, "g");
+		const blue = Encoder8.#byte(color.b, "b");
 		const data = new Uint8Array(Encoder8.LED_COUNT * 3);
 		for (let offset = 0; offset < data.length; offset += 3) {
 			data[offset] = red;

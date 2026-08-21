@@ -19,7 +19,7 @@ scroll.onChange = ({ value, pressed }) => {
 };
 
 scroll.onButtonChange = (pressed) => {
-	scroll.setLed(pressed ? 255 : 0, 0, pressed ? 0 : 64);
+	scroll.setLed({ r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 64 });
 };
 ```
 
@@ -41,7 +41,7 @@ the I2C resource.
 
 - `setEncoder(value)` writes a signed 16-bit accumulated encoder value.
 - `resetEncoder()` resets the accumulated encoder value.
-- `setLed(r, g, b)` sets the built-in LED. Each component must be an integer from `0` through `255`.
+- `setLed({ r, g, b })` sets the built-in LED. Each component must be an integer from `0` through `255`.
 - `getLed()` returns the current `{ r, g, b }` LED value.
 
 ## Device information and address

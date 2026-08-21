@@ -2,6 +2,7 @@ import Analog from "embedded:io/analog";
 import AnalogInput, { type AnalogIO } from "input/analog";
 import PollingInput from "input/polling";
 import NeoPixel from "neopixel";
+import type { RGBColor } from "hmi/util";
 
 export interface FaderSample {
 	raw: number;
@@ -145,36 +146,44 @@ export default class Fader {
 		throw new RangeError('column must be "left" or "right"');
 	}
 
-	setLed(column: FaderLedColumn, level: number, r: number, g: number, b: number, update = true): void {
-		this.setPixel(Fader.ledIndex(column, level), r, g, b, update);
+	setLed(column: FaderLedColumn, level: number, color: RGBColor, update = true): void {
+		this.setPixel(Fader.ledIndex(column, level), color, update);
 	}
 
-	setLevel(level: number, r: number, g: number, b: number, update = true): void {
+	setLevel(level: number, color: RGBColor, update = true): void {
 		Fader.#validateLevel(level);
-		this.setLed("left", level, r, g, b, false);
-		this.setLed("right", level, r, g, b, false);
+		this.setLed("left", level, color, false);
+		this.setLed("right", level, color, false);
 		if (update) this.show();
 	}
 
-	fillColumn(column: FaderLedColumn, r: number, g: number, b: number, update = true): void {
-		for (let level = 0; level < Fader.LEVEL_COUNT; level++) this.setLed(column, level, r, g, b, false);
+	fillColumn(column: FaderLedColumn, color: RGBColor, update = true): void {
+		for (let level = 0; level < Fader.LEVEL_COUNT; level++) this.setLed(column, level, color, false);
 		if (update) this.show();
 	}
 
-	setPixel(index: number, r: number, g: number, b: number, update = true): void {
+	setPixel(index: number, color: RGBColor, update = true): void {
 		if (!Number.isInteger(index) || index < 0 || index >= Fader.LED_COUNT)
 			throw new RangeError(`index must be an integer from 0 to ${Fader.LED_COUNT - 1}`);
 
 		this.#leds.setPixel(
 			index,
-			this.#leds.makeRGB(Fader.#colorComponent(r, "r"), Fader.#colorComponent(g, "g"), Fader.#colorComponent(b, "b")),
+			this.#leds.makeRGB(
+				Fader.#colorComponent(color.r, "r"),
+				Fader.#colorComponent(color.g, "g"),
+				Fader.#colorComponent(color.b, "b"),
+			),
 		);
 		if (update) this.show();
 	}
 
-	fill(r: number, g: number, b: number): void {
+	fill(color: RGBColor): void {
 		this.#leds.fill(
-			this.#leds.makeRGB(Fader.#colorComponent(r, "r"), Fader.#colorComponent(g, "g"), Fader.#colorComponent(b, "b")),
+			this.#leds.makeRGB(
+				Fader.#colorComponent(color.r, "r"),
+				Fader.#colorComponent(color.g, "g"),
+				Fader.#colorComponent(color.b, "b"),
+			),
 		);
 		this.show();
 	}
