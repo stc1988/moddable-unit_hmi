@@ -1,4 +1,4 @@
 {
-	"include": ["./manifest_include.json", "./manifest_module.json"],
+	"include": ["./manifest_include.json", "./manifest_module.json", "../../../hmi/smbus/manifest.json"],
 	"preload": ["hat/mini-joyc"]
 }

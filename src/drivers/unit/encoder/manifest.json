@@ -1,5 +1,5 @@
 {
-	"include": ["../../../input/polling/manifest.json"],
+	"include": ["../../../input/polling/manifest.json", "../../../hmi/smbus/manifest.json"],
 	"modules": {
 		"unit/encoder": "./encoder"
 	},

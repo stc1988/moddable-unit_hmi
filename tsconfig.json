@@ -15,6 +15,7 @@
 		"noImplicitThis": false,
 		"strictNullChecks": false,
 		"paths": {
+			"hmi/smbus": ["./src/hmi/smbus/smbus"],
 			"hmi/util": ["./src/hmi/util/util"],
 			"input/analog": ["./src/input/analog/analogInput"],
 			"input/polling": ["./src/input/polling/pollingInput"],

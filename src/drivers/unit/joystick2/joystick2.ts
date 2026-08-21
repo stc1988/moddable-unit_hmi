@@ -1,6 +1,7 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import { integerInRange, type RGBColor, SMBusDevice } from "hmi/util";
+import { SMBusDevice } from "hmi/smbus";
+import { integerInRange, type RGBColor } from "hmi/util";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,

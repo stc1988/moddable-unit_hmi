@@ -1,6 +1,7 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import { callbackOrNull, integerInRange, type RGBColor, SMBusDevice, signed32, signed32ToLittleEndian } from "hmi/util";
+import { SMBusDevice } from "hmi/smbus";
+import { callbackOrNull, integerInRange, type RGBColor, signed32, signed32ToLittleEndian } from "hmi/util";
 import PollingInput from "input/polling";
 import Timer from "timer";
 
