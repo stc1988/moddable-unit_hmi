@@ -15,6 +15,7 @@
 		"noImplicitThis": false,
 		"strictNullChecks": false,
 		"paths": {
+			"encoder/input": ["./src/input/encoder/encoderInput"],
 			"hmi/smbus": ["./src/hmi/smbus/smbus"],
 			"hmi/util": ["./src/hmi/util/util"],
 			"unit/byte-panel": ["./src/drivers/unit/byte-panel/bytePanel"],

@@ -1,8 +1,12 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import PollingInput from "hmi/polling";
+import EncoderInput, {
+	type EncoderButtonChangeCallback as InputButtonChangeCallback,
+	type EncoderChangeCallback as InputChangeCallback,
+	type EncoderInputOptions,
+} from "encoder/input";
 import { SMBusDevice } from "hmi/smbus";
-import { callbackOrNull, integerInRange, type RGBColor, signed16 } from "hmi/util";
+import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -31,19 +35,16 @@ export interface EncoderState {
 
 export type EncoderMode = 0 | 1;
 
-export interface EncoderOptions {
+export interface EncoderOptions extends EncoderInputOptions<EncoderState> {
 	address?: number;
 	data?: I2COptions["data"];
 	clock?: I2COptions["clock"];
 	hz?: number;
 	io?: EncoderIO;
-	pollingInterval?: number;
-	onChange?: EncoderChangeCallback;
-	onButtonChange?: EncoderButtonChangeCallback;
 }
 
-export type EncoderChangeCallback = (state: EncoderState) => void;
-export type EncoderButtonChangeCallback = (pressed: boolean) => void;
+export type EncoderChangeCallback = InputChangeCallback<EncoderState>;
+export type EncoderButtonChangeCallback = InputButtonChangeCallback;
 
 // https://docs.m5stack.com/en/unit/encoder
 export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions> {
@@ -64,11 +65,7 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 		RESET: 0x40,
 	} as const;
 
-	#polling: PollingInput<EncoderState>;
-	#onChange: EncoderChangeCallback | null;
-	#onButtonChange: EncoderButtonChangeCallback | null;
-	#lastButtonState?: boolean;
-	#closed = false;
+	#input: EncoderInput<EncoderState>;
 
 	constructor(options: EncoderOptions = {}) {
 		super(
@@ -81,14 +78,8 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 			integerInRange(options.address ?? Encoder.DEFAULT_ADDRESS, "address", 1, 0x7f),
 			"encoder",
 		);
-		this.#onChange = callbackOrNull(options.onChange, "onChange");
-		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
 		try {
-			this.#polling = new PollingInput(this, this, "Encoder", {
-				pollingInterval: options.pollingInterval,
-				changed: (state, previous) => state.value !== previous.value || state.pressed !== previous.pressed,
-			});
-			this.#updatePollingState();
+			this.#input = new EncoderInput(this, this, "Encoder", options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -96,54 +87,40 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 	}
 
 	close(): void {
-		if (this.#closed) return;
-		this.#polling.close();
-		this.#closed = true;
-		this.#onChange = null;
-		this.#onButtonChange = null;
-		this.#lastButtonState = undefined;
+		this.#input.close();
 		super.close();
 	}
 
 	start(): void {
-		const wasRunning = this.#polling.running;
-		this.#polling.start();
-		if (!wasRunning) this.#lastButtonState = undefined;
+		this.#input.start();
 	}
 
 	stop(): void {
-		this.#polling.stop();
+		this.#input.stop();
 	}
 
 	set pollingInterval(value: number) {
-		this.#polling.pollingInterval = value;
+		this.#input.pollingInterval = value;
 	}
 
 	get pollingInterval(): number {
-		return this.#polling.pollingInterval;
+		return this.#input.pollingInterval;
 	}
 
 	set onChange(callback: EncoderChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onChange");
-		if (this.#closed && next) throw new Error("encoder is closed");
-		if (next !== this.#onChange) this.#polling.onChange = null;
-		this.#onChange = next;
-		this.#updatePollingState();
+		this.#input.onChange = callback;
 	}
 
 	get onChange(): EncoderChangeCallback | null {
-		return this.#onChange;
+		return this.#input.onChange;
 	}
 
 	set onButtonChange(callback: EncoderButtonChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onButtonChange");
-		if (this.#closed && next) throw new Error("encoder is closed");
-		this.#onButtonChange = next;
-		this.#updatePollingState();
+		this.#input.onButtonChange = callback;
 	}
 
 	get onButtonChange(): EncoderButtonChangeCallback | null {
-		return this.#onButtonChange;
+		return this.#input.onButtonChange;
 	}
 
 	read(): EncoderState {
@@ -192,19 +169,6 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 				integerInRange(color.b, "b", 0, 0xff),
 			),
 		);
-	}
-
-	#updatePollingState(): void {
-		const callback = this.#onChange || this.#onButtonChange ? this.#handleChange : null;
-		if (callback && !this.#polling.onChange) this.#lastButtonState = undefined;
-		this.#polling.onChange = callback;
-	}
-
-	#handleChange(state: EncoderState): void {
-		const buttonChanged = this.#lastButtonState !== undefined && state.pressed !== this.#lastButtonState;
-		this.#onChange?.call(this, state);
-		if (buttonChanged) this.#onButtonChange?.call(this, state.pressed);
-		this.#lastButtonState = state.pressed;
 	}
 
 	get #activeBus(): EncoderIOInstance {

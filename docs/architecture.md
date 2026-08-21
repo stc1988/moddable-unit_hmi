@@ -22,6 +22,7 @@ callbacks before the hardware layer is closed.
 
 `JoystickInput` adds joystick-specific axis deadband and button-transition semantics on top of this layer. The three I2C
 joystick drivers therefore share event behavior without attempting to merge their different registers or wire protocols.
+`EncoderInput` similarly owns `{ value, pressed }` comparison and button transitions for Encoder and Scroll.
 
 ByteButton and ByteSwitch share the same register layout and LED/configuration protocol. Their `BytePanel` base keeps
 that product-family protocol in one place while the public drivers retain button- and switch-specific names, input

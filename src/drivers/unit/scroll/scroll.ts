@@ -1,8 +1,12 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import PollingInput from "hmi/polling";
+import EncoderInput, {
+	type EncoderButtonChangeCallback as InputButtonChangeCallback,
+	type EncoderChangeCallback as InputChangeCallback,
+	type EncoderInputOptions,
+} from "encoder/input";
 import { SMBusDevice } from "hmi/smbus";
-import { callbackOrNull, integerInRange, type RGBColor, signed16 } from "hmi/util";
+import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 import Timer from "timer";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
@@ -31,19 +35,16 @@ export interface ScrollState {
 
 export type ScrollColor = RGBColor;
 
-export interface ScrollOptions {
+export interface ScrollOptions extends EncoderInputOptions<ScrollState> {
 	address?: number;
 	data?: I2COptions["data"];
 	clock?: I2COptions["clock"];
 	hz?: number;
 	io?: ScrollIO;
-	pollingInterval?: number;
-	onChange?: ScrollChangeCallback;
-	onButtonChange?: ScrollButtonChangeCallback;
 }
 
-export type ScrollChangeCallback = (state: ScrollState) => void;
-export type ScrollButtonChangeCallback = (pressed: boolean) => void;
+export type ScrollChangeCallback = InputChangeCallback<ScrollState>;
+export type ScrollButtonChangeCallback = InputButtonChangeCallback;
 
 // https://docs.m5stack.com/ja/unit/UNIT-Scroll
 export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> {
@@ -63,11 +64,7 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> 
 	} as const;
 
 	#address: number;
-	#polling: PollingInput<ScrollState>;
-	#onChange: ScrollChangeCallback | null;
-	#onButtonChange: ScrollButtonChangeCallback | null;
-	#lastButtonState?: boolean;
-	#closed = false;
+	#input: EncoderInput<ScrollState>;
 
 	constructor(options: ScrollOptions = {}) {
 		super(
@@ -81,14 +78,8 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> 
 			"scroll",
 		);
 		this.#address = integerInRange(options.address ?? Scroll.DEFAULT_ADDRESS, "address", 1, 0x7f);
-		this.#onChange = callbackOrNull(options.onChange, "onChange");
-		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
 		try {
-			this.#polling = new PollingInput(this, this, "Scroll", {
-				pollingInterval: options.pollingInterval,
-				changed: (state, previous) => state.value !== previous.value || state.pressed !== previous.pressed,
-			});
-			this.#updatePollingState();
+			this.#input = new EncoderInput(this, this, "Scroll", options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -96,53 +87,40 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> 
 	}
 
 	close(): void {
-		if (this.#closed) return;
-		this.#polling.close();
-		this.#closed = true;
-		this.#onChange = null;
-		this.#onButtonChange = null;
+		this.#input.close();
 		super.close();
 	}
 
 	start(): void {
-		const wasRunning = this.#polling.running;
-		this.#polling.start();
-		if (!wasRunning) this.#lastButtonState = undefined;
+		this.#input.start();
 	}
 
 	stop(): void {
-		this.#polling.stop();
+		this.#input.stop();
 	}
 
 	set pollingInterval(value: number) {
-		this.#polling.pollingInterval = value;
+		this.#input.pollingInterval = value;
 	}
 
 	get pollingInterval(): number {
-		return this.#polling.pollingInterval;
+		return this.#input.pollingInterval;
 	}
 
 	set onChange(callback: ScrollChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onChange");
-		if (this.#closed && next) throw new Error("scroll is closed");
-		if (next !== this.#onChange) this.#polling.onChange = null;
-		this.#onChange = next;
-		this.#updatePollingState();
+		this.#input.onChange = callback;
 	}
 
 	get onChange(): ScrollChangeCallback | null {
-		return this.#onChange;
+		return this.#input.onChange;
 	}
 
 	set onButtonChange(callback: ScrollButtonChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onButtonChange");
-		if (this.#closed && next) throw new Error("scroll is closed");
-		this.#onButtonChange = next;
-		this.#updatePollingState();
+		this.#input.onButtonChange = callback;
 	}
 
 	get onButtonChange(): ScrollButtonChangeCallback | null {
-		return this.#onButtonChange;
+		return this.#input.onButtonChange;
 	}
 
 	read(): ScrollState {
@@ -215,19 +193,6 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> 
 	enterBootloader(): void {
 		this.stop();
 		this.#activeBus.writeUint8(Scroll.REGISTER.JUMP_TO_BOOTLOADER, 1);
-	}
-
-	#updatePollingState(): void {
-		const callback = this.#onChange || this.#onButtonChange ? this.#handleChange : null;
-		if (callback && !this.#polling.onChange) this.#lastButtonState = undefined;
-		this.#polling.onChange = callback;
-	}
-
-	#handleChange(state: ScrollState): void {
-		const buttonChanged = this.#lastButtonState !== undefined && state.pressed !== this.#lastButtonState;
-		this.#onChange?.call(this, state);
-		if (buttonChanged) this.#onButtonChange?.call(this, state.pressed);
-		this.#lastButtonState = state.pressed;
 	}
 
 	get #activeBus(): ScrollIOInstance {
