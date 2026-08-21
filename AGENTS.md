@@ -70,3 +70,4 @@ When asking for changes, the following expectations apply:
 - Breaking API changes are acceptable.
 - If code changes, update documentation accordingly.
 - For implementation changes, run `npm run format` and `npm run lint`, then address reported lint findings.
+- Run `npx biome check .`, fix any reported issues, and rerun it to verify the changes.
