@@ -2,6 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
+import { integerInRange } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -85,12 +86,12 @@ export default class ByteSwitch {
 	#closed = false;
 
 	constructor(options: ByteSwitchOptions = {}) {
-		this.#address = ByteSwitch.#integerInRange(options.address ?? ByteSwitch.DEFAULT_ADDRESS, "address", 1, 0x7f);
+		this.#address = integerInRange(options.address ?? ByteSwitch.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		this.#io = options.io ?? SMBusConstructor;
 		this.#busOptions = {
 			data: options.data ?? device.I2C.default.data,
 			clock: options.clock ?? device.I2C.default.clock,
-			hz: ByteSwitch.#integerInRange(options.hz ?? ByteSwitch.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			hz: integerInRange(options.hz ?? ByteSwitch.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 		};
 		this.#onChange = ByteSwitch.#callback(options.onChange, "onChange");
 		this.#onSwitchChange = ByteSwitch.#callback(options.onSwitchChange, "onSwitchChange");
@@ -212,7 +213,7 @@ export default class ByteSwitch {
 	}
 
 	setLedMode(mode: ByteSwitchLedMode): void {
-		this.#activeBus.writeUint8(ByteSwitch.REGISTER.LED_MODE, ByteSwitch.#integerInRange(mode, "mode", 0, 1));
+		this.#activeBus.writeUint8(ByteSwitch.REGISTER.LED_MODE, integerInRange(mode, "mode", 0, 1));
 	}
 
 	getLedMode(): ByteSwitchLedMode {
@@ -243,7 +244,7 @@ export default class ByteSwitch {
 	}
 
 	setI2CAddress(address: number): void {
-		const nextAddress = ByteSwitch.#integerInRange(address, "address", 1, 0x7f);
+		const nextAddress = integerInRange(address, "address", 1, 0x7f);
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(ByteSwitch.REGISTER.I2C_ADDRESS, nextAddress);
@@ -294,26 +295,20 @@ export default class ByteSwitch {
 	}
 
 	static #switchIndex(value: number): number {
-		return ByteSwitch.#integerInRange(value, "switchIndex", 0, ByteSwitch.SWITCH_COUNT - 1);
+		return integerInRange(value, "switchIndex", 0, ByteSwitch.SWITCH_COUNT - 1);
 	}
 
 	static #ledIndex(value: number): number {
-		return ByteSwitch.#integerInRange(value, "led", 0, ByteSwitch.LED_COUNT - 1);
+		return integerInRange(value, "led", 0, ByteSwitch.LED_COUNT - 1);
 	}
 
 	static #byte(value: number, name: string): number {
-		return ByteSwitch.#integerInRange(value, name, 0, 0xff);
+		return integerInRange(value, name, 0, 0xff);
 	}
 
 	static #callback<Callback>(value: Callback | null | undefined, name: string): Callback | null {
 		if (value === undefined || value === null) return null;
 		if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-		return value;
-	}
-
-	static #integerInRange(value: number, name: string, minimum: number, maximum: number): number {
-		if (!Number.isInteger(value) || value < minimum || value > maximum)
-			throw new RangeError(`${name} must be an integer from ${minimum} to ${maximum}`);
 		return value;
 	}
 }

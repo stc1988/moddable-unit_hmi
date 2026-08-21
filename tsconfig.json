@@ -15,6 +15,7 @@
 		"noImplicitThis": false,
 		"strictNullChecks": false,
 		"paths": {
+			"hmi/util": ["./src/hmi/util/util"],
 			"input/analog": ["./src/input/analog/analogInput"],
 			"input/polling": ["./src/input/polling/pollingInput"],
 			"joystick/input": ["./src/input/joystick/joystickInput"],

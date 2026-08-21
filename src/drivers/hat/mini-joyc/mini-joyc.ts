@@ -7,6 +7,7 @@ import JoystickInput, {
 	type JoystickPosition,
 	type JoystickState,
 } from "joystick/input";
+import { integerInRange } from "hmi/util";
 import Timer from "timer";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
@@ -92,12 +93,12 @@ export default class MiniJoyC {
 		const hat = (device.I2C as typeof device.I2C & { hat: I2COptions }).hat;
 
 		this.readMode = MiniJoyC.#readMode(options.readMode ?? "pos8");
-		this.#address = MiniJoyC.#integerInRange(options.address ?? MiniJoyC.DEFAULT_ADDRESS, "address", 1, 0x7f);
+		this.#address = integerInRange(options.address ?? MiniJoyC.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		this.#io = options.io ?? SMBusConstructor;
 		this.#busOptions = {
 			data: options.data ?? hat.data,
 			clock: options.clock ?? hat.clock,
-			hz: MiniJoyC.#integerInRange(options.hz ?? MiniJoyC.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			hz: integerInRange(options.hz ?? MiniJoyC.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 		};
 		this.#bus = this.#openBus(this.#address);
 		Timer.delay(10);
@@ -202,11 +203,7 @@ export default class MiniJoyC {
 	setLed(r: number, g: number, b: number): void {
 		this.#activeBus.writeBuffer(
 			MiniJoyC.REGISTER.RGB_LED,
-			Uint8Array.of(
-				MiniJoyC.#integerInRange(r, "r", 0, 0xff),
-				MiniJoyC.#integerInRange(g, "g", 0, 0xff),
-				MiniJoyC.#integerInRange(b, "b", 0, 0xff),
-			),
+			Uint8Array.of(integerInRange(r, "r", 0, 0xff), integerInRange(g, "g", 0, 0xff), integerInRange(b, "b", 0, 0xff)),
 		);
 	}
 
@@ -256,7 +253,7 @@ export default class MiniJoyC {
 	}
 
 	setI2CAddress(address: number): void {
-		const nextAddress = MiniJoyC.#integerInRange(address, "address", 1, 0x7f);
+		const nextAddress = integerInRange(address, "address", 1, 0x7f);
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(MiniJoyC.REGISTER.I2C_ADDRESS, nextAddress);
@@ -293,17 +290,11 @@ export default class MiniJoyC {
 	}
 
 	static #calibrationIndex(value: number): MiniJoyCCalibrationIndex {
-		return MiniJoyC.#integerInRange(value, "calibration index", 0, 5) as MiniJoyCCalibrationIndex;
+		return integerInRange(value, "calibration index", 0, 5) as MiniJoyCCalibrationIndex;
 	}
 
 	static #calibrationValue(value: number): number {
-		return MiniJoyC.#integerInRange(value, "calibration value", 0, 4095);
-	}
-
-	static #integerInRange(value: number, name: string, minimum: number, maximum: number): number {
-		if (!Number.isInteger(value) || value < minimum || value > maximum)
-			throw new RangeError(`${name} must be an integer from ${minimum} to ${maximum}`);
-		return value;
+		return integerInRange(value, "calibration value", 0, 4095);
 	}
 
 	static #signed8(value: number): number {

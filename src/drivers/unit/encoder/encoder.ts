@@ -1,6 +1,7 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
+import { integerInRange } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -76,8 +77,8 @@ export default class Encoder {
 		this.#bus = new IO({
 			data: options.data ?? device.I2C.default.data,
 			clock: options.clock ?? device.I2C.default.clock,
-			hz: Encoder.#integerInRange(options.hz ?? Encoder.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
-			address: Encoder.#integerInRange(options.address ?? Encoder.DEFAULT_ADDRESS, "address", 1, 0x7f),
+			hz: integerInRange(options.hz ?? Encoder.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			address: integerInRange(options.address ?? Encoder.DEFAULT_ADDRESS, "address", 1, 0x7f),
 		});
 		try {
 			this.#polling = new PollingInput(this, this, "Encoder", {
@@ -156,7 +157,7 @@ export default class Encoder {
 	}
 
 	setEncoder(value: number): void {
-		const encoder = Encoder.#integerInRange(value, "value", -0x8000, 0x7fff);
+		const encoder = integerInRange(value, "value", -0x8000, 0x7fff);
 		this.#activeBus.writeUint16(Encoder.REGISTER.ENCODER, encoder & 0xffff, false);
 	}
 
@@ -169,11 +170,11 @@ export default class Encoder {
 	}
 
 	setMode(mode: EncoderMode): void {
-		this.#activeBus.writeUint8(Encoder.REGISTER.MODE, Encoder.#integerInRange(mode, "mode", 0, 1));
+		this.#activeBus.writeUint8(Encoder.REGISTER.MODE, integerInRange(mode, "mode", 0, 1));
 	}
 
 	setLed(led: number, r: number, g: number, b: number): void {
-		this.#writeLed(Encoder.#integerInRange(led, "led", 0, Encoder.LED_COUNT - 1) + 1, r, g, b);
+		this.#writeLed(integerInRange(led, "led", 0, Encoder.LED_COUNT - 1) + 1, r, g, b);
 	}
 
 	setAllLeds(r: number, g: number, b: number): void {
@@ -185,9 +186,9 @@ export default class Encoder {
 			Encoder.REGISTER.RGB_LED,
 			Uint8Array.of(
 				index,
-				Encoder.#integerInRange(r, "r", 0, 0xff),
-				Encoder.#integerInRange(g, "g", 0, 0xff),
-				Encoder.#integerInRange(b, "b", 0, 0xff),
+				integerInRange(r, "r", 0, 0xff),
+				integerInRange(g, "g", 0, 0xff),
+				integerInRange(b, "b", 0, 0xff),
 			),
 		);
 	}
@@ -213,12 +214,6 @@ export default class Encoder {
 	static #callback<Callback>(value: Callback | null | undefined, name: string): Callback | null {
 		if (value === undefined || value === null) return null;
 		if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-		return value;
-	}
-
-	static #integerInRange(value: number, name: string, minimum: number, maximum: number): number {
-		if (!Number.isInteger(value) || value < minimum || value > maximum)
-			throw new RangeError(`${name} must be an integer from ${minimum} to ${maximum}`);
 		return value;
 	}
 

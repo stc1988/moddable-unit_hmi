@@ -2,6 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
+import { integerInRange } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -83,12 +84,12 @@ export default class Angle8 {
 	#closed = false;
 
 	constructor(options: Angle8Options = {}) {
-		this.#address = Angle8.#integerInRange(options.address ?? Angle8.DEFAULT_ADDRESS, "address", 1, 0x7f);
+		this.#address = integerInRange(options.address ?? Angle8.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		this.#io = options.io ?? SMBusConstructor;
 		this.#busOptions = {
 			data: options.data ?? device.I2C.default.data,
 			clock: options.clock ?? device.I2C.default.clock,
-			hz: Angle8.#integerInRange(options.hz ?? Angle8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			hz: integerInRange(options.hz ?? Angle8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 		};
 		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
 		this.#onChange = Angle8.#callback(options.onChange, "onChange");
@@ -219,7 +220,7 @@ export default class Angle8 {
 				Angle8.#byte(r, "r"),
 				Angle8.#byte(g, "g"),
 				Angle8.#byte(b, "b"),
-				Angle8.#integerInRange(brightness, "brightness", 0, 100),
+				integerInRange(brightness, "brightness", 0, 100),
 			),
 		);
 	}
@@ -238,7 +239,7 @@ export default class Angle8 {
 	}
 
 	setI2CAddress(address: number): void {
-		const nextAddress = Angle8.#integerInRange(address, "address", 1, 0x7f);
+		const nextAddress = integerInRange(address, "address", 1, 0x7f);
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(Angle8.REGISTER.I2C_ADDRESS, nextAddress);
@@ -286,11 +287,11 @@ export default class Angle8 {
 	}
 
 	static #angleIndex(value: number): number {
-		return Angle8.#integerInRange(value, "angle", 0, Angle8.ANGLE_COUNT - 1);
+		return integerInRange(value, "angle", 0, Angle8.ANGLE_COUNT - 1);
 	}
 
 	static #ledIndex(value: number): number {
-		return Angle8.#integerInRange(value, "led", 0, Angle8.LED_COUNT - 1);
+		return integerInRange(value, "led", 0, Angle8.LED_COUNT - 1);
 	}
 
 	static #resolution(value: number): void {
@@ -298,18 +299,12 @@ export default class Angle8 {
 	}
 
 	static #byte(value: number, name: string): number {
-		return Angle8.#integerInRange(value, name, 0, 0xff);
+		return integerInRange(value, name, 0, 0xff);
 	}
 
 	static #callback<Callback>(value: Callback | null | undefined, name: string): Callback | null {
 		if (value === undefined || value === null) return null;
 		if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-		return value;
-	}
-
-	static #integerInRange(value: number, name: string, minimum: number, maximum: number): number {
-		if (!Number.isInteger(value) || value < minimum || value > maximum)
-			throw new RangeError(`${name} must be an integer from ${minimum} to ${maximum}`);
 		return value;
 	}
 }

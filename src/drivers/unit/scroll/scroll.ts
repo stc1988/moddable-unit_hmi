@@ -2,6 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
+import { integerInRange } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -75,12 +76,12 @@ export default class Scroll {
 	#closed = false;
 
 	constructor(options: ScrollOptions = {}) {
-		this.#address = Scroll.#integerInRange(options.address ?? Scroll.DEFAULT_ADDRESS, "address", 1, 0x7f);
+		this.#address = integerInRange(options.address ?? Scroll.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		this.#io = options.io ?? SMBusConstructor;
 		this.#busOptions = {
 			data: options.data ?? device.I2C.default.data,
 			clock: options.clock ?? device.I2C.default.clock,
-			hz: Scroll.#integerInRange(options.hz ?? Scroll.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			hz: integerInRange(options.hz ?? Scroll.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 		};
 		this.#onChange = Scroll.#callback(options.onChange, "onChange");
 		this.#onButtonChange = Scroll.#callback(options.onButtonChange, "onButtonChange");
@@ -169,7 +170,7 @@ export default class Scroll {
 	}
 
 	setEncoder(value: number): void {
-		const encoder = Scroll.#integerInRange(value, "value", -0x8000, 0x7fff);
+		const encoder = integerInRange(value, "value", -0x8000, 0x7fff);
 		this.#activeBus.writeUint16(Scroll.REGISTER.ENCODER, encoder & 0xffff, false);
 	}
 
@@ -182,9 +183,9 @@ export default class Scroll {
 			Scroll.REGISTER.RGB_LED,
 			Uint8Array.of(
 				0,
-				Scroll.#integerInRange(r, "r", 0, 0xff),
-				Scroll.#integerInRange(g, "g", 0, 0xff),
-				Scroll.#integerInRange(b, "b", 0, 0xff),
+				integerInRange(r, "r", 0, 0xff),
+				integerInRange(g, "g", 0, 0xff),
+				integerInRange(b, "b", 0, 0xff),
 			),
 		);
 	}
@@ -207,7 +208,7 @@ export default class Scroll {
 	}
 
 	setI2CAddress(address: number): void {
-		const nextAddress = Scroll.#integerInRange(address, "address", 1, 0x7f);
+		const nextAddress = integerInRange(address, "address", 1, 0x7f);
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(Scroll.REGISTER.I2C_ADDRESS, nextAddress);
@@ -250,12 +251,6 @@ export default class Scroll {
 	static #callback<Callback>(value: Callback | null | undefined, name: string): Callback | null {
 		if (value === undefined || value === null) return null;
 		if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-		return value;
-	}
-
-	static #integerInRange(value: number, name: string, minimum: number, maximum: number): number {
-		if (!Number.isInteger(value) || value < minimum || value > maximum)
-			throw new RangeError(`${name} must be an integer from ${minimum} to ${maximum}`);
 		return value;
 	}
 

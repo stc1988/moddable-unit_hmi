@@ -2,6 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
+import { integerInRange } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -89,12 +90,12 @@ export default class Encoder8 {
 	#closed = false;
 
 	constructor(options: Encoder8Options = {}) {
-		this.#address = Encoder8.#integerInRange(options.address ?? Encoder8.DEFAULT_ADDRESS, "address", 1, 0x7f);
+		this.#address = integerInRange(options.address ?? Encoder8.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		this.#io = options.io ?? SMBusConstructor;
 		this.#busOptions = {
 			data: options.data ?? device.I2C.default.data,
 			clock: options.clock ?? device.I2C.default.clock,
-			hz: Encoder8.#integerInRange(options.hz ?? Encoder8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			hz: integerInRange(options.hz ?? Encoder8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 		};
 		this.#onChange = Encoder8.#callback(options.onChange, "onChange");
 		this.#onEncoderChange = Encoder8.#callback(options.onEncoderChange, "onEncoderChange");
@@ -291,7 +292,7 @@ export default class Encoder8 {
 	}
 
 	setI2CAddress(address: number): void {
-		const nextAddress = Encoder8.#integerInRange(address, "address", 1, 0x7f);
+		const nextAddress = integerInRange(address, "address", 1, 0x7f);
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(Encoder8.REGISTER.I2C_ADDRESS, nextAddress);
@@ -365,35 +366,29 @@ export default class Encoder8 {
 	}
 
 	static #signed32Buffer(value: number, name: string): Uint8Array {
-		const integer = Encoder8.#integerInRange(value, name, -0x8000_0000, 0x7fff_ffff);
+		const integer = integerInRange(value, name, -0x8000_0000, 0x7fff_ffff);
 		return Uint8Array.of(integer & 0xff, (integer >>> 8) & 0xff, (integer >>> 16) & 0xff, (integer >>> 24) & 0xff);
 	}
 
 	static #encoderIndex(value: number): number {
-		return Encoder8.#integerInRange(value, "encoder", 0, Encoder8.ENCODER_COUNT - 1);
+		return integerInRange(value, "encoder", 0, Encoder8.ENCODER_COUNT - 1);
 	}
 
 	static #buttonIndex(value: number): number {
-		return Encoder8.#integerInRange(value, "button", 0, Encoder8.BUTTON_COUNT - 1);
+		return integerInRange(value, "button", 0, Encoder8.BUTTON_COUNT - 1);
 	}
 
 	static #ledIndex(value: number): number {
-		return Encoder8.#integerInRange(value, "led", 0, Encoder8.LED_COUNT - 1);
+		return integerInRange(value, "led", 0, Encoder8.LED_COUNT - 1);
 	}
 
 	static #byte(value: number, name: string): number {
-		return Encoder8.#integerInRange(value, name, 0, 0xff);
+		return integerInRange(value, name, 0, 0xff);
 	}
 
 	static #callback<Callback>(value: Callback | null | undefined, name: string): Callback | null {
 		if (value === undefined || value === null) return null;
 		if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-		return value;
-	}
-
-	static #integerInRange(value: number, name: string, minimum: number, maximum: number): number {
-		if (!Number.isInteger(value) || value < minimum || value > maximum)
-			throw new RangeError(`${name} must be an integer from ${minimum} to ${maximum}`);
 		return value;
 	}
 }
