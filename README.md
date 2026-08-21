@@ -10,7 +10,7 @@
 | M5Stack Unit ByteButton | Unit | I2C | [Driver](docs/unit/bytebutton.md) / [M5Stack](https://docs.m5stack.com/ja/unit/Unit%20ByteButton) | 8 capacitive buttons, 9 RGB LEDs |
 | M5Stack Unit ByteSwitch | Unit | I2C | [Driver](docs/unit/byteswitch.md) / [M5Stack](https://docs.m5stack.com/en/unit/Unit%20ByteSwitch) | 8 toggle switches, 9 RGB LEDs |
 | M5Stack Unit Encoder | Unit | I2C | [Driver](docs/unit/encoder.md) / [M5Stack](https://docs.m5stack.com/en/unit/encoder) | Rotary encoder, push button, 2 RGB LEDs |
-| M5Stack Unit Fader | Unit | Analog / RGB data | [Driver](docs/unit/fader.md) / [M5Stack](https://docs.m5stack.com/ja/unit/fader) | 35 mm slider, 14x SK6812 RGB LED |
+| M5Stack Unit Fader | Unit | Analog / NeoPixel | [Driver](docs/unit/fader.md) / [M5Stack](https://docs.m5stack.com/ja/unit/fader) | 35 mm slider, 14x SK6812 RGB LED |
 | M5Stack Unit Joystick v1.1 | Unit | I2C | [Driver](docs/unit/joystick.md) / [M5Stack](https://docs.m5stack.com/ja/unit/joystick_1.1) | Joystick (X/Y), Button |
 | M5Stack Unit JoyStick2 | Unit | I2C | [Driver](docs/unit/joystick2.md) / [M5Stack](https://docs.m5stack.com/ja/unit/Unit-JoyStick2) | Hall-effect joystick (X/Y), Button, RGB LED |
 | M5Stack Unit Scroll | Unit | I2C | [Driver](docs/unit/scroll.md) / [M5Stack](https://docs.m5stack.com/ja/unit/UNIT-Scroll) | Rotary encoder, Button, RGB LED |
