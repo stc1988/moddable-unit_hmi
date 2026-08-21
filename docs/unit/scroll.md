@@ -57,5 +57,5 @@ errors to the caller.
 
 ## Exported types
 
-The module exports `ScrollOptions`, `ScrollIO`, `ScrollIOInstance`, `ScrollState`, `ScrollColor`, `ScrollChangeCallback`,
+The module exports `ScrollOptions`, `ScrollIO`, `ScrollIOInstance`, `ScrollState`, `ScrollChangeCallback`,
 and `ScrollButtonChangeCallback` for TypeScript applications.

@@ -1,9 +1,9 @@
 import EncoderInput, {
+	type EncoderInputOptions,
 	type EncoderButtonChangeCallback as InputButtonChangeCallback,
 	type EncoderChangeCallback as InputChangeCallback,
-	type EncoderInputOptions,
 } from "encoder/input";
-import { SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
+import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 
 export interface ScrollIOInstance extends SMBusInstance {
@@ -21,8 +21,6 @@ export interface ScrollState {
 	value: number;
 	pressed: boolean;
 }
-
-export type ScrollColor = RGBColor;
 
 export interface ScrollOptions extends EncoderInputOptions<ScrollState>, SMBusDeviceOptions<ScrollIO> {}
 
@@ -103,7 +101,7 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 		);
 	}
 
-	getLed(): ScrollColor {
+	getLed(): RGBColor {
 		const data = new Uint8Array(this.activeBus.readBuffer(Scroll.REGISTER.RGB_LED, 4));
 		return { r: data[1], g: data[2], b: data[3] };
 	}
