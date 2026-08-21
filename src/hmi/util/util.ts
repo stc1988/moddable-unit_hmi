@@ -34,38 +34,43 @@ export function signed32ToLittleEndian(value: number, name: string): Uint8Array 
 	return Uint8Array.of(integer & 0xff, (integer >>> 8) & 0xff, (integer >>> 16) & 0xff, (integer >>> 24) & 0xff);
 }
 
-export interface I2CBusInstance {
+export interface SMBusInstance {
 	close(): void;
 }
 
-export type I2CBusConstructor<Bus extends I2CBusInstance, Options extends { address: number }> = new (
+export type SMBusConstructor<Bus extends SMBusInstance, Options extends { address: number }> = new (
 	options: Options,
 ) => Bus;
 
-export class I2CBusResource<Bus extends I2CBusInstance, Options extends { address: number }> {
-	#IO: I2CBusConstructor<Bus, Options>;
+export class SMBusDevice<Bus extends SMBusInstance, Options extends { address: number }> {
+	#IO: SMBusConstructor<Bus, Options>;
 	#options: Omit<Options, "address">;
 	#bus?: Bus;
 	#name: string;
 
-	constructor(IO: I2CBusConstructor<Bus, Options>, options: Omit<Options, "address">, address: number, name: string) {
+	protected constructor(
+		IO: SMBusConstructor<Bus, Options>,
+		options: Omit<Options, "address">,
+		address: number,
+		name: string,
+	) {
 		this.#IO = IO;
 		this.#options = options;
 		this.#name = name;
-		this.open(address);
+		this.reconnect(address);
 	}
 
-	open(address: number): void {
+	protected reconnect(address: number): void {
 		this.close();
 		this.#bus = new this.#IO({ ...this.#options, address } as Options);
 	}
 
-	get active(): Bus {
+	protected get activeBus(): Bus {
 		if (!this.#bus) throw new Error(`${this.#name} bus is closed`);
 		return this.#bus;
 	}
 
-	close(): void {
+	public close(): void {
 		this.#bus?.close();
 		this.#bus = undefined;
 	}

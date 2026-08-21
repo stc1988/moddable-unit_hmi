@@ -1,6 +1,6 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import { callbackOrNull, I2CBusResource, integerInRange, type RGBColor, signed16 } from "hmi/util";
+import { callbackOrNull, integerInRange, type RGBColor, SMBusDevice, signed16 } from "hmi/util";
 import PollingInput from "input/polling";
 import Timer from "timer";
 
@@ -45,7 +45,7 @@ export type ScrollChangeCallback = (state: ScrollState) => void;
 export type ScrollButtonChangeCallback = (pressed: boolean) => void;
 
 // https://docs.m5stack.com/ja/unit/UNIT-Scroll
-export default class Scroll {
+export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> {
 	static readonly DEFAULT_ADDRESS = 0x40;
 	static readonly DEFAULT_HZ = 400_000;
 
@@ -61,7 +61,6 @@ export default class Scroll {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	#bus: I2CBusResource<ScrollIOInstance, SMBusOptions>;
 	#address: number;
 	#polling: PollingInput<ScrollState>;
 	#onChange: ScrollChangeCallback | null;
@@ -70,17 +69,17 @@ export default class Scroll {
 	#closed = false;
 
 	constructor(options: ScrollOptions = {}) {
-		this.#address = integerInRange(options.address ?? Scroll.DEFAULT_ADDRESS, "address", 1, 0x7f);
-		this.#bus = new I2CBusResource(
+		super(
 			options.io ?? SMBusConstructor,
 			{
 				data: options.data ?? device.I2C.default.data,
 				clock: options.clock ?? device.I2C.default.clock,
 				hz: integerInRange(options.hz ?? Scroll.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 			},
-			this.#address,
+			integerInRange(options.address ?? Scroll.DEFAULT_ADDRESS, "address", 1, 0x7f),
 			"scroll",
 		);
+		this.#address = integerInRange(options.address ?? Scroll.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
 		try {
@@ -90,7 +89,7 @@ export default class Scroll {
 			});
 			this.#updatePollingState();
 		} catch (error) {
-			this.#bus.close();
+			super.close();
 			throw error;
 		}
 	}
@@ -101,7 +100,7 @@ export default class Scroll {
 		this.#closed = true;
 		this.#onChange = null;
 		this.#onButtonChange = null;
-		this.#bus.close();
+		super.close();
 	}
 
 	start(): void {
@@ -207,7 +206,7 @@ export default class Scroll {
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(Scroll.REGISTER.I2C_ADDRESS, nextAddress);
-		this.#bus.open(nextAddress);
+		this.reconnect(nextAddress);
 		this.#address = nextAddress;
 		Timer.delay(10);
 	}
@@ -231,6 +230,6 @@ export default class Scroll {
 	}
 
 	get #activeBus(): ScrollIOInstance {
-		return this.#bus.active;
+		return this.activeBus;
 	}
 }

@@ -1,6 +1,6 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import { I2CBusResource, integerInRange, type RGBColor } from "hmi/util";
+import { integerInRange, type RGBColor, SMBusDevice } from "hmi/util";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,
@@ -38,7 +38,7 @@ export type JoyStick2ChangeCallback = JoystickChangeCallback<JoyStick2State>;
 export type JoyStick2ButtonChangeCallback = JoystickButtonChangeCallback;
 
 // https://docs.m5stack.com/ja/unit/Unit-JoyStick2
-export default class JoyStick2 {
+export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance, SMBusOptions> {
 	static readonly REGISTER = {
 		ADC_VALUE_12BITS_REG: 0x00,
 		ADC_VALUE_8BITS_REG: 0x10,
@@ -52,11 +52,10 @@ export default class JoyStick2 {
 		I2C_ADDRESS_REG: 0xff,
 	} as const;
 
-	#bus: I2CBusResource<JoyStick2IOInstance, SMBusOptions>;
 	#input: JoystickInput<JoyStick2State>;
 
 	constructor(options: JoyStick2Options = {}) {
-		this.#bus = new I2CBusResource(
+		super(
 			options.io ?? SMBusConstructor,
 			{
 				data: options.data ?? device.I2C.default.data,
@@ -69,14 +68,14 @@ export default class JoyStick2 {
 		try {
 			this.#input = new JoystickInput(this, this, "JoyStick2", options);
 		} catch (error) {
-			this.#bus.close();
+			super.close();
 			throw error;
 		}
 	}
 
 	close(): void {
 		this.#input.close();
-		this.#bus.close();
+		super.close();
 	}
 
 	start(): void {
@@ -153,6 +152,6 @@ export default class JoyStick2 {
 	}
 
 	get #activeBus(): JoyStick2IOInstance {
-		return this.#bus.active;
+		return this.activeBus;
 	}
 }

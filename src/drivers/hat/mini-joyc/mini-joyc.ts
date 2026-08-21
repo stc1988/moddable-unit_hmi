@@ -1,6 +1,6 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import { I2CBusResource, integerInRange, type RGBColor, signed8, signed16 } from "hmi/util";
+import { integerInRange, type RGBColor, SMBusDevice, signed8, signed16 } from "hmi/util";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,
@@ -57,7 +57,7 @@ export type MiniJoyCChangeCallback = JoystickChangeCallback<MiniJoyCState>;
 export type MiniJoyCButtonChangeCallback = JoystickButtonChangeCallback;
 
 // https://docs.m5stack.com/en/hat/MiniJoyC
-export default class MiniJoyC {
+export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance, SMBusOptions> {
 	static readonly DEFAULT_ADDRESS = 0x54;
 	static readonly DEFAULT_HZ = 200_000;
 
@@ -81,7 +81,6 @@ export default class MiniJoyC {
 		Y_CENTER: 5,
 	} as const;
 
-	#bus: I2CBusResource<MiniJoyCIOInstance, SMBusOptions>;
 	#address: number;
 	#input: JoystickInput<MiniJoyCState>;
 
@@ -90,30 +89,30 @@ export default class MiniJoyC {
 	constructor(options: MiniJoyCOptions = {}) {
 		const hat = (device.I2C as typeof device.I2C & { hat: I2COptions }).hat;
 
-		this.readMode = MiniJoyC.#readMode(options.readMode ?? "pos8");
-		this.#address = integerInRange(options.address ?? MiniJoyC.DEFAULT_ADDRESS, "address", 1, 0x7f);
-		this.#bus = new I2CBusResource(
+		super(
 			options.io ?? SMBusConstructor,
 			{
 				data: options.data ?? hat.data,
 				clock: options.clock ?? hat.clock,
 				hz: integerInRange(options.hz ?? MiniJoyC.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 			},
-			this.#address,
+			integerInRange(options.address ?? MiniJoyC.DEFAULT_ADDRESS, "address", 1, 0x7f),
 			"joystick",
 		);
+		this.readMode = MiniJoyC.#readMode(options.readMode ?? "pos8");
+		this.#address = integerInRange(options.address ?? MiniJoyC.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		Timer.delay(10);
 		try {
 			this.#input = new JoystickInput(this, this, "MiniJoyC", options);
 		} catch (error) {
-			this.#bus.close();
+			super.close();
 			throw error;
 		}
 	}
 
 	close(): void {
 		this.#input.close();
-		this.#bus.close();
+		super.close();
 	}
 
 	start(): void {
@@ -260,7 +259,7 @@ export default class MiniJoyC {
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(MiniJoyC.REGISTER.I2C_ADDRESS, nextAddress);
-		this.#bus.open(nextAddress);
+		this.reconnect(nextAddress);
 		this.#address = nextAddress;
 		Timer.delay(10);
 	}
@@ -274,7 +273,7 @@ export default class MiniJoyC {
 	}
 
 	get #activeBus(): MiniJoyCIOInstance {
-		return this.#bus.active;
+		return this.activeBus;
 	}
 
 	static #readMode(value: string): MiniJoyCReadMode {

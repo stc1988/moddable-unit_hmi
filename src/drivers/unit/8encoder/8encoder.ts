@@ -1,13 +1,6 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import {
-	callbackOrNull,
-	I2CBusResource,
-	integerInRange,
-	type RGBColor,
-	signed32,
-	signed32ToLittleEndian,
-} from "hmi/util";
+import { callbackOrNull, integerInRange, type RGBColor, SMBusDevice, signed32, signed32ToLittleEndian } from "hmi/util";
 import PollingInput from "input/polling";
 import Timer from "timer";
 
@@ -58,7 +51,7 @@ export type Encoder8ButtonChangeCallback = (button: number, pressed: boolean) =>
 export type Encoder8SwitchChangeCallback = (on: boolean) => void;
 
 // https://docs.m5stack.com/en/unit/8Encoder
-export default class Encoder8 {
+export default class Encoder8 extends SMBusDevice<Encoder8IOInstance, SMBusOptions> {
 	static readonly DEFAULT_ADDRESS = 0x41;
 	static readonly DEFAULT_HZ = 100_000;
 	static readonly ENCODER_COUNT = 8;
@@ -80,7 +73,6 @@ export default class Encoder8 {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	#bus: I2CBusResource<Encoder8IOInstance, SMBusOptions>;
 	#address: number;
 	#polling: PollingInput<Encoder8State>;
 	#onChange: Encoder8ChangeCallback | null;
@@ -91,17 +83,17 @@ export default class Encoder8 {
 	#closed = false;
 
 	constructor(options: Encoder8Options = {}) {
-		this.#address = integerInRange(options.address ?? Encoder8.DEFAULT_ADDRESS, "address", 1, 0x7f);
-		this.#bus = new I2CBusResource(
+		super(
 			options.io ?? SMBusConstructor,
 			{
 				data: options.data ?? device.I2C.default.data,
 				clock: options.clock ?? device.I2C.default.clock,
 				hz: integerInRange(options.hz ?? Encoder8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 			},
-			this.#address,
+			integerInRange(options.address ?? Encoder8.DEFAULT_ADDRESS, "address", 1, 0x7f),
 			"8encoder",
 		);
+		this.#address = integerInRange(options.address ?? Encoder8.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onEncoderChange = callbackOrNull(options.onEncoderChange, "onEncoderChange");
 		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
@@ -113,7 +105,7 @@ export default class Encoder8 {
 			});
 			this.#updatePollingState();
 		} catch (error) {
-			this.#bus.close();
+			super.close();
 			throw error;
 		}
 	}
@@ -127,7 +119,7 @@ export default class Encoder8 {
 		this.#onButtonChange = null;
 		this.#onSwitchChange = null;
 		this.#lastState = undefined;
-		this.#bus.close();
+		super.close();
 	}
 
 	start(): void {
@@ -298,7 +290,7 @@ export default class Encoder8 {
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(Encoder8.REGISTER.I2C_ADDRESS, nextAddress);
-		this.#bus.open(nextAddress);
+		this.reconnect(nextAddress);
 		this.#address = nextAddress;
 		Timer.delay(10);
 	}
@@ -337,7 +329,7 @@ export default class Encoder8 {
 	}
 
 	get #activeBus(): Encoder8IOInstance {
-		return this.#bus.active;
+		return this.activeBus;
 	}
 
 	static #stateChanged(state: Encoder8State, previous: Encoder8State): boolean {

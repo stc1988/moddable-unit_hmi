@@ -1,6 +1,6 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import { callbackOrNull, I2CBusResource, integerInRange, type RGBColor, signed16 } from "hmi/util";
+import { callbackOrNull, integerInRange, type RGBColor, SMBusDevice, signed16 } from "hmi/util";
 import PollingInput from "input/polling";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
@@ -45,7 +45,7 @@ export type EncoderChangeCallback = (state: EncoderState) => void;
 export type EncoderButtonChangeCallback = (pressed: boolean) => void;
 
 // https://docs.m5stack.com/en/unit/encoder
-export default class Encoder {
+export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions> {
 	static readonly DEFAULT_ADDRESS = 0x40;
 	static readonly DEFAULT_HZ = 200_000;
 	static readonly LED_COUNT = 2;
@@ -63,7 +63,6 @@ export default class Encoder {
 		RESET: 0x40,
 	} as const;
 
-	#bus: I2CBusResource<EncoderIOInstance, SMBusOptions>;
 	#polling: PollingInput<EncoderState>;
 	#onChange: EncoderChangeCallback | null;
 	#onButtonChange: EncoderButtonChangeCallback | null;
@@ -71,9 +70,7 @@ export default class Encoder {
 	#closed = false;
 
 	constructor(options: EncoderOptions = {}) {
-		this.#onChange = callbackOrNull(options.onChange, "onChange");
-		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
-		this.#bus = new I2CBusResource(
+		super(
 			options.io ?? SMBusConstructor,
 			{
 				data: options.data ?? device.I2C.default.data,
@@ -83,6 +80,8 @@ export default class Encoder {
 			integerInRange(options.address ?? Encoder.DEFAULT_ADDRESS, "address", 1, 0x7f),
 			"encoder",
 		);
+		this.#onChange = callbackOrNull(options.onChange, "onChange");
+		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
 		try {
 			this.#polling = new PollingInput(this, this, "Encoder", {
 				pollingInterval: options.pollingInterval,
@@ -90,7 +89,7 @@ export default class Encoder {
 			});
 			this.#updatePollingState();
 		} catch (error) {
-			this.#bus.close();
+			super.close();
 			throw error;
 		}
 	}
@@ -102,7 +101,7 @@ export default class Encoder {
 		this.#onChange = null;
 		this.#onButtonChange = null;
 		this.#lastButtonState = undefined;
-		this.#bus.close();
+		super.close();
 	}
 
 	start(): void {
@@ -208,6 +207,6 @@ export default class Encoder {
 	}
 
 	get #activeBus(): EncoderIOInstance {
-		return this.#bus.active;
+		return this.activeBus;
 	}
 }

@@ -1,6 +1,6 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import { callbackOrNull, I2CBusResource, integerInRange, type RGBColor } from "hmi/util";
+import { callbackOrNull, integerInRange, type RGBColor, SMBusDevice } from "hmi/util";
 import PollingInput from "input/polling";
 import Timer from "timer";
 
@@ -45,7 +45,7 @@ export type ByteButtonChangeCallback = (state: ByteButtonState) => void;
 export type ByteButtonButtonChangeCallback = (button: number, pressed: boolean) => void;
 
 // https://docs.m5stack.com/ja/unit/Unit%20ByteButton
-export default class ByteButton {
+export default class ByteButton extends SMBusDevice<ByteButtonIOInstance, SMBusOptions> {
 	static readonly DEFAULT_ADDRESS = 0x47;
 	static readonly DEFAULT_HZ = 400_000;
 	static readonly BUTTON_COUNT = 8;
@@ -71,7 +71,6 @@ export default class ByteButton {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	#bus: I2CBusResource<ByteButtonIOInstance, SMBusOptions>;
 	#address: number;
 	#polling: PollingInput<ByteButtonState>;
 	#onChange: ByteButtonChangeCallback | null;
@@ -80,17 +79,17 @@ export default class ByteButton {
 	#closed = false;
 
 	constructor(options: ByteButtonOptions = {}) {
-		this.#address = integerInRange(options.address ?? ByteButton.DEFAULT_ADDRESS, "address", 1, 0x7f);
-		this.#bus = new I2CBusResource(
+		super(
 			options.io ?? SMBusConstructor,
 			{
 				data: options.data ?? device.I2C.default.data,
 				clock: options.clock ?? device.I2C.default.clock,
 				hz: integerInRange(options.hz ?? ByteButton.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 			},
-			this.#address,
+			integerInRange(options.address ?? ByteButton.DEFAULT_ADDRESS, "address", 1, 0x7f),
 			"bytebutton",
 		);
+		this.#address = integerInRange(options.address ?? ByteButton.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
 		try {
@@ -100,7 +99,7 @@ export default class ByteButton {
 			});
 			this.#updatePollingState();
 		} catch (error) {
-			this.#bus.close();
+			super.close();
 			throw error;
 		}
 	}
@@ -111,7 +110,7 @@ export default class ByteButton {
 		this.#closed = true;
 		this.#onChange = null;
 		this.#onButtonChange = null;
-		this.#bus.close();
+		super.close();
 	}
 
 	start(): void {
@@ -243,7 +242,7 @@ export default class ByteButton {
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(ByteButton.REGISTER.I2C_ADDRESS, nextAddress);
-		this.#bus.open(nextAddress);
+		this.reconnect(nextAddress);
 		this.#address = nextAddress;
 		Timer.delay(10);
 	}
@@ -279,7 +278,7 @@ export default class ByteButton {
 	}
 
 	get #activeBus(): ByteButtonIOInstance {
-		return this.#bus.active;
+		return this.activeBus;
 	}
 
 	static #buttonIndex(value: number): number {

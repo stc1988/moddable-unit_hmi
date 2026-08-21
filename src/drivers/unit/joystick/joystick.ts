@@ -1,6 +1,6 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
-import { I2CBusResource } from "hmi/util";
+import { SMBusDevice } from "hmi/util";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,
@@ -36,15 +36,14 @@ export type JoyStickChangeCallback = JoystickChangeCallback<JoyStickState>;
 export type JoyStickButtonChangeCallback = JoystickButtonChangeCallback;
 
 // https://docs.m5stack.com/ja/unit/joystick_1.1
-export default class JoyStick {
+export default class JoyStick extends SMBusDevice<JoyStickIOInstance, SMBusOptions> {
 	static readonly DEFAULT_ADDRESS = 0x52;
 	static readonly STATE_LENGTH = 3;
 
-	#bus: I2CBusResource<JoyStickIOInstance, SMBusOptions>;
 	#input: JoystickInput<JoyStickState>;
 
 	constructor(options: JoyStickOptions = {}) {
-		this.#bus = new I2CBusResource(
+		super(
 			options.io ?? SMBusConstructor,
 			{
 				data: options.data ?? device.I2C.default.data,
@@ -57,14 +56,14 @@ export default class JoyStick {
 		try {
 			this.#input = new JoystickInput(this, this, "JoyStick", options);
 		} catch (error) {
-			this.#bus.close();
+			super.close();
 			throw error;
 		}
 	}
 
 	close(): void {
 		this.#input.close();
-		this.#bus.close();
+		super.close();
 	}
 
 	start(): void {
@@ -108,7 +107,7 @@ export default class JoyStick {
 	}
 
 	read(): JoyStickState {
-		const data = new Uint8Array(this.#bus.active.read(JoyStick.STATE_LENGTH));
+		const data = new Uint8Array(this.activeBus.read(JoyStick.STATE_LENGTH));
 		return {
 			x: data[0],
 			y: data[1],
@@ -126,6 +125,6 @@ export default class JoyStick {
 	}
 
 	get #activeBus(): JoyStickIOInstance {
-		return this.#bus.active;
+		return this.activeBus;
 	}
 }
