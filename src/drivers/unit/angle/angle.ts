@@ -1,8 +1,8 @@
 import Analog from "embedded:io/analog";
 import AnalogInput, {
 	type AnalogInputChangeCallback,
-	AnalogInputEvents,
 	type AnalogInputEventOptions,
+	AnalogInputEvents,
 	type AnalogIO,
 } from "input/analog";
 

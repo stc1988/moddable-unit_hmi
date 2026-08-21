@@ -9,11 +9,11 @@ export async function main(): Promise<void> {
 		byteButton.setLed(led, { r: 0, g: 0, b: led === 8 ? 64 : 0 });
 	}
 
-	byteButton.input.onChange = ({ buttons }) => {
+	byteButton.onChange = ({ buttons }) => {
 		trace(`[ByteButton] buttons=0b${buttons.toString(2).padStart(8, "0")}\n`);
 	};
 
-	byteButton.input.onButtonChange = (button, pressed) => {
+	byteButton.onButtonChange = (button, pressed) => {
 		trace(`[ByteButton] button=${button}\tpressed=${pressed}\n`);
 		byteButton.setLed(button, { r: 0, g: pressed ? 255 : 0, b: 0 });
 	};

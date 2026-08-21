@@ -1,4 +1,4 @@
-import { SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
+import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor } from "hmi/util";
 import Angle8Input from "unit/8angle/input";
 

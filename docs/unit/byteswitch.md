@@ -14,11 +14,11 @@ import ByteSwitch from "unit/byteswitch";
 
 const byteSwitch = new ByteSwitch();
 
-byteSwitch.input.onChange = ({ switches }) => {
+byteSwitch.onChange = ({ switches }) => {
 	trace(`switch mask: 0x${switches.toString(16)}\n`);
 };
 
-byteSwitch.input.onSwitchChange = (switchIndex, on) => {
+byteSwitch.onSwitchChange = (switchIndex, on) => {
 	byteSwitch.setLed(switchIndex, { r: on ? 255 : 0, g: on ? 128 : 0, b: 0 });
 };
 ```
@@ -29,11 +29,11 @@ byteSwitch.input.onSwitchChange = (switchIndex, on) => {
   corresponding switch is on.
 - `readSwitches()` returns the switch bit mask directly.
 - `readSwitch(switchIndex)` reads an individual switch register and returns its on/off state.
-- `input.onChange(state)` runs for the first sample and whenever the switch mask changes.
-- `input.onSwitchChange(switchIndex, on)` runs once for each transition after the initial sample. If several switches change in
+- `onChange(state)` runs for the first sample and whenever the switch mask changes.
+- `onSwitchChange(switchIndex, on)` runs once for each transition after the initial sample. If several switches change in
   one sample, callbacks run in ascending switch order.
 
-Assigning either input callback starts polling automatically. Clearing both callbacks stops it. `input.pollingInterval` defaults to
+Assigning either callback starts polling automatically. Clearing both callbacks stops it. `input.pollingInterval` defaults to
 `30` milliseconds. `input.start()` and `input.stop()` control polling explicitly, and idempotent `close()` stops polling and releases
 the I2C resource.
 

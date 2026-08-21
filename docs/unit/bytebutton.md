@@ -14,11 +14,11 @@ import ByteButton from "unit/bytebutton";
 
 const byteButton = new ByteButton();
 
-byteButton.input.onChange = ({ buttons }) => {
+byteButton.onChange = ({ buttons }) => {
 	trace(`button mask: 0x${buttons.toString(16)}\n`);
 };
 
-byteButton.input.onButtonChange = (button, pressed) => {
+byteButton.onButtonChange = (button, pressed) => {
 	byteButton.setLed(button, { r: 0, g: pressed ? 255 : 0, b: 0 });
 };
 ```
@@ -29,11 +29,11 @@ byteButton.input.onButtonChange = (button, pressed) => {
   values are normalized so that a set bit means pressed.
 - `readButtons()` returns the button bit mask directly.
 - `readButton(button)` reads an individual button register and returns its pressed state.
-- `input.onChange(state)` runs for the first sample and whenever the button mask changes.
-- `input.onButtonChange(button, pressed)` runs once for each pressed or released transition after the initial sample. If several
+- `onChange(state)` runs for the first sample and whenever the button mask changes.
+- `onButtonChange(button, pressed)` runs once for each pressed or released transition after the initial sample. If several
   buttons change in one sample, callbacks run in ascending button order.
 
-Assigning either input callback starts polling automatically. Clearing both callbacks stops it. `input.pollingInterval` defaults to
+Assigning either callback starts polling automatically. Clearing both callbacks stops it. `input.pollingInterval` defaults to
 `30` milliseconds. `input.start()` and `input.stop()` control polling explicitly, and idempotent `close()` stops polling and releases
 the I2C resource.
 

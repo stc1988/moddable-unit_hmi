@@ -59,6 +59,22 @@ export default class ByteButton extends BytePanel<ByteButtonIOInstance> {
 
 	readonly input: ByteButtonInput;
 
+	set onChange(callback: ByteButtonChangeCallback | null | undefined) {
+		this.input.onChange = callback;
+	}
+
+	get onChange(): ByteButtonChangeCallback | null {
+		return this.input.onChange;
+	}
+
+	set onButtonChange(callback: ByteButtonButtonChangeCallback | null | undefined) {
+		this.input.onButtonChange = callback;
+	}
+
+	get onButtonChange(): ByteButtonButtonChangeCallback | null {
+		return this.input.onButtonChange;
+	}
+
 	constructor(options: ByteButtonOptions = {}) {
 		super(options, ByteButton.DEFAULT_ADDRESS, "bytebutton");
 		try {

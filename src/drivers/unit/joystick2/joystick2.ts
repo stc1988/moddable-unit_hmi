@@ -1,4 +1,4 @@
-import { SMBusDevice, type SMBusIO, type SMBusInstance, type SMBusPortOptions } from "hmi/smbus";
+import { SMBusDevice, type SMBusInstance, type SMBusIO, type SMBusPortOptions } from "hmi/smbus";
 import { integerInRange, type RGBColor } from "hmi/util";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,

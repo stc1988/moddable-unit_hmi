@@ -1,9 +1,9 @@
 import EncoderInput, {
+	type EncoderInputOptions,
 	type EncoderButtonChangeCallback as InputButtonChangeCallback,
 	type EncoderChangeCallback as InputChangeCallback,
-	type EncoderInputOptions,
 } from "encoder/input";
-import { SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
+import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 
 export interface EncoderIOInstance extends SMBusInstance {

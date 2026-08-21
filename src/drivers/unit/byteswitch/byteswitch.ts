@@ -59,6 +59,22 @@ export default class ByteSwitch extends BytePanel<ByteSwitchIOInstance> {
 
 	readonly input: ByteSwitchInput;
 
+	set onChange(callback: ByteSwitchChangeCallback | null | undefined) {
+		this.input.onChange = callback;
+	}
+
+	get onChange(): ByteSwitchChangeCallback | null {
+		return this.input.onChange;
+	}
+
+	set onSwitchChange(callback: ByteSwitchSwitchChangeCallback | null | undefined) {
+		this.input.onSwitchChange = callback;
+	}
+
+	get onSwitchChange(): ByteSwitchSwitchChangeCallback | null {
+		return this.input.onSwitchChange;
+	}
+
 	constructor(options: ByteSwitchOptions = {}) {
 		super(options, ByteSwitch.DEFAULT_ADDRESS, "byteswitch");
 		try {

@@ -1,4 +1,4 @@
-import type { SMBusDeviceOptions, SMBusIO, SMBusInstance } from "hmi/smbus";
+import type { SMBusDeviceOptions, SMBusInstance, SMBusIO } from "hmi/smbus";
 import { integerInRange } from "hmi/util";
 import type {
 	JoystickButtonChangeCallback,

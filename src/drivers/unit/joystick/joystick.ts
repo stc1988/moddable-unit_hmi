@@ -1,4 +1,4 @@
-import { SMBusDevice, type SMBusIO, type SMBusInstance, type SMBusPortOptions } from "hmi/smbus";
+import { SMBusDevice, type SMBusInstance, type SMBusIO, type SMBusPortOptions } from "hmi/smbus";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,

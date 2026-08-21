@@ -1,10 +1,6 @@
-import { type I2COptions, SMBusDevice } from "hmi/smbus";
-import { integerInRange, type RGBColor, signed8, signed16 } from "hmi/util";
 import {
 	calibrationIndex,
 	calibrationValue,
-	readMode,
-	setWordLE,
 	type MiniJoyCCalibration,
 	type MiniJoyCCalibrationIndex,
 	type MiniJoyCIOInstance,
@@ -12,8 +8,12 @@ import {
 	type MiniJoyCPosition,
 	type MiniJoyCReadMode,
 	type MiniJoyCState,
+	readMode,
+	setWordLE,
 	wordLE,
 } from "hat/mini-joyc/protocol";
+import { type I2COptions, SMBusDevice } from "hmi/smbus";
+import { integerInRange, type RGBColor, signed8, signed16 } from "hmi/util";
 import JoystickInput from "joystick/input";
 import Timer from "timer";
 
