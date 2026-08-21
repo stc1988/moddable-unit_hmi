@@ -1,6 +1,8 @@
-import PollingInput from "hmi/polling";
 import { SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
-import { callbackOrNull, integerInRange, type RGBColor, signed32, signed32ToLittleEndian } from "hmi/util";
+import { integerInRange, type RGBColor, signed32, signed32ToLittleEndian } from "hmi/util";
+import Encoder8Input from "unit/8encoder/input";
+
+export { Encoder8Input };
 
 export interface Encoder8IOInstance extends SMBusInstance {
 	readUint8(register: number): number;
@@ -34,145 +36,6 @@ export type Encoder8ChangeCallback = (state: Encoder8State) => void;
 export type Encoder8EncoderChangeCallback = (encoder: number, value: number) => void;
 export type Encoder8ButtonChangeCallback = (button: number, pressed: boolean) => void;
 export type Encoder8SwitchChangeCallback = (on: boolean) => void;
-
-export class Encoder8Input {
-	#target: object;
-	#polling: PollingInput<Encoder8State>;
-	#onChange: Encoder8ChangeCallback | null;
-	#onEncoderChange: Encoder8EncoderChangeCallback | null;
-	#onButtonChange: Encoder8ButtonChangeCallback | null;
-	#onSwitchChange: Encoder8SwitchChangeCallback | null;
-	#lastState?: Encoder8State;
-	#closed = false;
-
-	constructor(target: object, source: { read(): Encoder8State }, options: Encoder8Options) {
-		this.#target = target;
-		this.#onChange = callbackOrNull(options.onChange, "onChange");
-		this.#onEncoderChange = callbackOrNull(options.onEncoderChange, "onEncoderChange");
-		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
-		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
-		this.#polling = new PollingInput(this, source, "8Encoder", {
-			pollingInterval: options.pollingInterval,
-			changed: Encoder8Input.#stateChanged,
-		});
-		this.#updatePollingState();
-	}
-
-	close(): void {
-		if (this.#closed) return;
-		this.#polling.close();
-		this.#closed = true;
-		this.#onChange = null;
-		this.#onEncoderChange = null;
-		this.#onButtonChange = null;
-		this.#onSwitchChange = null;
-		this.#lastState = undefined;
-	}
-
-	start(): void {
-		const wasRunning = this.#polling.running;
-		this.#polling.start();
-		if (!wasRunning) this.#lastState = undefined;
-	}
-
-	stop(): void {
-		this.#polling.stop();
-	}
-
-	set pollingInterval(value: number) {
-		this.#polling.pollingInterval = value;
-	}
-
-	get pollingInterval(): number {
-		return this.#polling.pollingInterval;
-	}
-
-	set onChange(callback: Encoder8ChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onChange");
-		if (this.#closed && next) throw new Error("8encoder input is closed");
-		if (next !== this.#onChange) this.#polling.onChange = null;
-		this.#onChange = next;
-		this.#updatePollingState();
-	}
-
-	get onChange(): Encoder8ChangeCallback | null {
-		return this.#onChange;
-	}
-
-	set onEncoderChange(callback: Encoder8EncoderChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onEncoderChange");
-		if (this.#closed && next) throw new Error("8encoder input is closed");
-		this.#onEncoderChange = next;
-		this.#updatePollingState();
-	}
-
-	get onEncoderChange(): Encoder8EncoderChangeCallback | null {
-		return this.#onEncoderChange;
-	}
-
-	set onButtonChange(callback: Encoder8ButtonChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onButtonChange");
-		if (this.#closed && next) throw new Error("8encoder input is closed");
-		this.#onButtonChange = next;
-		this.#updatePollingState();
-	}
-
-	get onButtonChange(): Encoder8ButtonChangeCallback | null {
-		return this.#onButtonChange;
-	}
-
-	set onSwitchChange(callback: Encoder8SwitchChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onSwitchChange");
-		if (this.#closed && next) throw new Error("8encoder input is closed");
-		this.#onSwitchChange = next;
-		this.#updatePollingState();
-	}
-
-	get onSwitchChange(): Encoder8SwitchChangeCallback | null {
-		return this.#onSwitchChange;
-	}
-
-	#updatePollingState(): void {
-		const callback =
-			this.#onChange || this.#onEncoderChange || this.#onButtonChange || this.#onSwitchChange
-				? this.#handleChange
-				: null;
-		if (callback && !this.#polling.onChange) this.#lastState = undefined;
-		this.#polling.onChange = callback;
-	}
-
-	#handleChange(state: Encoder8State): void {
-		const previous = this.#lastState;
-		this.#onChange?.call(this.#target, state);
-		if (previous) {
-			if (this.#onEncoderChange) {
-				for (let encoder = 0; encoder < Encoder8.ENCODER_COUNT; encoder++) {
-					if (state.encoders[encoder] !== previous.encoders[encoder])
-						this.#onEncoderChange.call(this.#target, encoder, state.encoders[encoder]);
-				}
-			}
-
-			const changedButtons = state.buttons ^ previous.buttons;
-			if (changedButtons && this.#onButtonChange) {
-				for (let button = 0; button < Encoder8.BUTTON_COUNT; button++) {
-					const bit = 1 << button;
-					if (changedButtons & bit) this.#onButtonChange.call(this.#target, button, Boolean(state.buttons & bit));
-				}
-			}
-
-			if (state.switchOn !== previous.switchOn) this.#onSwitchChange?.call(this.#target, state.switchOn);
-		}
-		this.#lastState = state;
-	}
-
-	static #stateChanged(state: Encoder8State, previous: Encoder8State): boolean {
-		if (state.buttons !== previous.buttons || state.switchOn !== previous.switchOn) return true;
-		for (let encoder = 0; encoder < Encoder8.ENCODER_COUNT; encoder++) {
-			if (state.encoders[encoder] !== previous.encoders[encoder]) return true;
-		}
-		return false;
-	}
-}
 
 // https://docs.m5stack.com/en/unit/8Encoder
 export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {

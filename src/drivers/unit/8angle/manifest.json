@@ -1,7 +1,8 @@
 {
 	"include": ["../../../hmi/polling/manifest.json", "../../../hmi/smbus/manifest.json"],
 	"modules": {
-		"unit/8angle": "./8angle"
+		"unit/8angle": "./8angle",
+		"unit/8angle/input": "./input"
 	},
-	"preload": ["unit/8angle"]
+	"preload": ["unit/8angle", "unit/8angle/input"]
 }

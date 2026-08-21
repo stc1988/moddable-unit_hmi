@@ -1,7 +1,8 @@
 {
 	"include": ["../../../hmi/polling/manifest.json", "../../../hmi/smbus/manifest.json"],
 	"modules": {
-		"unit/8encoder": "./8encoder"
+		"unit/8encoder": "./8encoder",
+		"unit/8encoder/input": "./input"
 	},
-	"preload": ["unit/8encoder"]
+	"preload": ["unit/8encoder", "unit/8encoder/input"]
 }

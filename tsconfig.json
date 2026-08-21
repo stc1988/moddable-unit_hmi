@@ -23,7 +23,9 @@
 			"hmi/polling": ["./src/hmi/polling/pollingInput"],
 			"joystick/input": ["./src/input/joystick/joystickInput"],
 			"unit/8angle": ["./src/drivers/unit/8angle/8angle"],
+			"unit/8angle/input": ["./src/drivers/unit/8angle/input"],
 			"unit/8encoder": ["./src/drivers/unit/8encoder/8encoder"],
+			"unit/8encoder/input": ["./src/drivers/unit/8encoder/input"],
 			"unit/angle": ["./src/drivers/unit/angle/angle"],
 			"unit/bytebutton": ["./src/drivers/unit/bytebutton/bytebutton"],
 			"unit/byteswitch": ["./src/drivers/unit/byteswitch/byteswitch"],
@@ -33,6 +35,7 @@
 			"unit/joystick2": ["./src/drivers/unit/joystick2/joystick2"],
 			"unit/scroll": ["./src/drivers/unit/scroll/scroll"],
 			"hat/mini-joyc": ["./src/drivers/hat/mini-joyc/mini-joyc"],
+			"hat/mini-joyc/protocol": ["./src/drivers/hat/mini-joyc/protocol"],
 			"*": [
 				"./node_modules/@moddable/typings/*",
 				"./node_modules/@moddable/typings/ble/*",

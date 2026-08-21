@@ -1,46 +1,34 @@
-import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
+import { type I2COptions, SMBusDevice } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed8, signed16 } from "hmi/util";
-import JoystickInput, {
-	type JoystickButtonChangeCallback,
-	type JoystickChangeCallback,
-	type JoystickInputOptions,
-	type JoystickPosition,
-	type JoystickState,
-} from "joystick/input";
+import {
+	calibrationIndex,
+	calibrationValue,
+	readMode,
+	setWordLE,
+	type MiniJoyCCalibration,
+	type MiniJoyCCalibrationIndex,
+	type MiniJoyCIOInstance,
+	type MiniJoyCOptions,
+	type MiniJoyCPosition,
+	type MiniJoyCReadMode,
+	type MiniJoyCState,
+	wordLE,
+} from "hat/mini-joyc/protocol";
+import JoystickInput from "joystick/input";
 import Timer from "timer";
 
-export interface MiniJoyCIOInstance extends SMBusInstance {
-	readUint8(register: number): number;
-	writeUint8(register: number, value: number): void;
-	readUint16(register: number, bigEndian?: boolean): number;
-	writeUint16(register: number, value: number, bigEndian?: boolean): void;
-	readBuffer(register: number, byteLength: number): ArrayBuffer;
-	writeBuffer(register: number, buffer: ByteBuffer): void;
-}
-
-export type MiniJoyCIO = SMBusIO<MiniJoyCIOInstance>;
-
-export type MiniJoyCReadMode = "adc" | "pos8" | "pos10";
-export type MiniJoyCCalibrationIndex = 0 | 1 | 2 | 3 | 4 | 5;
-
-export type MiniJoyCPosition = JoystickPosition;
-export type MiniJoyCState = JoystickState;
-
-export interface MiniJoyCCalibration {
-	xMin: number;
-	xMax: number;
-	yMin: number;
-	yMax: number;
-	xCenter: number;
-	yCenter: number;
-}
-
-export interface MiniJoyCOptions extends JoystickInputOptions<MiniJoyCState>, SMBusDeviceOptions<MiniJoyCIO> {
-	readMode?: MiniJoyCReadMode;
-}
-
-export type MiniJoyCChangeCallback = JoystickChangeCallback<MiniJoyCState>;
-export type MiniJoyCButtonChangeCallback = JoystickButtonChangeCallback;
+export type {
+	MiniJoyCButtonChangeCallback,
+	MiniJoyCCalibration,
+	MiniJoyCCalibrationIndex,
+	MiniJoyCChangeCallback,
+	MiniJoyCIO,
+	MiniJoyCIOInstance,
+	MiniJoyCOptions,
+	MiniJoyCPosition,
+	MiniJoyCReadMode,
+	MiniJoyCState,
+} from "hat/mini-joyc/protocol";
 
 // https://docs.m5stack.com/en/hat/MiniJoyC
 export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
@@ -81,7 +69,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 			data: hat.data,
 			clock: hat.clock,
 		});
-		this.readMode = MiniJoyC.#readMode(options.readMode ?? "pos8");
+		this.readMode = readMode(options.readMode ?? "pos8");
 		Timer.delay(10);
 		try {
 			this.input = new JoystickInput(this, this, "MiniJoyC", options);
@@ -104,7 +92,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	readXY(mode: MiniJoyCReadMode = this.readMode): MiniJoyCPosition {
-		switch (MiniJoyC.#readMode(mode)) {
+		switch (readMode(mode)) {
 			case "adc":
 				return this.readADC();
 			case "pos8":
@@ -151,25 +139,25 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	readCalibration(index: MiniJoyCCalibrationIndex): number {
-		return this.#readWordLE(MiniJoyC.REGISTER.CALIBRATION + MiniJoyC.#calibrationIndex(index) * 2);
+		return this.#readWordLE(MiniJoyC.REGISTER.CALIBRATION + calibrationIndex(index) * 2);
 	}
 
 	readCalibrationValues(): MiniJoyCCalibration {
 		const data = new Uint8Array(this.activeBus.readBuffer(MiniJoyC.REGISTER.CALIBRATION, 12));
 		return {
-			xMin: MiniJoyC.#wordLE(data, 0),
-			xMax: MiniJoyC.#wordLE(data, 2),
-			yMin: MiniJoyC.#wordLE(data, 4),
-			yMax: MiniJoyC.#wordLE(data, 6),
-			xCenter: MiniJoyC.#wordLE(data, 8),
-			yCenter: MiniJoyC.#wordLE(data, 10),
+			xMin: wordLE(data, 0),
+			xMax: wordLE(data, 2),
+			yMin: wordLE(data, 4),
+			yMax: wordLE(data, 6),
+			xCenter: wordLE(data, 8),
+			yCenter: wordLE(data, 10),
 		};
 	}
 
 	writeCalibration(index: MiniJoyCCalibrationIndex, value: number): void {
 		this.activeBus.writeUint16(
-			MiniJoyC.REGISTER.CALIBRATION + MiniJoyC.#calibrationIndex(index) * 2,
-			MiniJoyC.#calibrationValue(value),
+			MiniJoyC.REGISTER.CALIBRATION + calibrationIndex(index) * 2,
+			calibrationValue(value),
 			false,
 		);
 		Timer.delay(1000);
@@ -177,12 +165,12 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 
 	writeCalibrationValues(values: MiniJoyCCalibration): void {
 		const data = new Uint8Array(12);
-		MiniJoyC.#setWordLE(data, 0, MiniJoyC.#calibrationValue(values.xMin));
-		MiniJoyC.#setWordLE(data, 2, MiniJoyC.#calibrationValue(values.xMax));
-		MiniJoyC.#setWordLE(data, 4, MiniJoyC.#calibrationValue(values.yMin));
-		MiniJoyC.#setWordLE(data, 6, MiniJoyC.#calibrationValue(values.yMax));
-		MiniJoyC.#setWordLE(data, 8, MiniJoyC.#calibrationValue(values.xCenter));
-		MiniJoyC.#setWordLE(data, 10, MiniJoyC.#calibrationValue(values.yCenter));
+		setWordLE(data, 0, calibrationValue(values.xMin));
+		setWordLE(data, 2, calibrationValue(values.xMax));
+		setWordLE(data, 4, calibrationValue(values.yMin));
+		setWordLE(data, 6, calibrationValue(values.yMax));
+		setWordLE(data, 8, calibrationValue(values.xCenter));
+		setWordLE(data, 10, calibrationValue(values.yCenter));
 		this.activeBus.writeBuffer(MiniJoyC.REGISTER.CALIBRATION, data);
 		Timer.delay(1000);
 	}
@@ -205,28 +193,5 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 
 	#readWordLE(register: number): number {
 		return this.activeBus.readUint16(register, false) & 0xffff;
-	}
-
-	static #readMode(value: string): MiniJoyCReadMode {
-		if (value !== "adc" && value !== "pos8" && value !== "pos10")
-			throw new RangeError('readMode must be "adc", "pos8", or "pos10"');
-		return value;
-	}
-
-	static #calibrationIndex(value: number): MiniJoyCCalibrationIndex {
-		return integerInRange(value, "calibration index", 0, 5) as MiniJoyCCalibrationIndex;
-	}
-
-	static #calibrationValue(value: number): number {
-		return integerInRange(value, "calibration value", 0, 4095);
-	}
-
-	static #wordLE(data: Uint8Array, offset: number): number {
-		return data[offset] | (data[offset + 1] << 8);
-	}
-
-	static #setWordLE(data: Uint8Array, offset: number, value: number): void {
-		data[offset] = value;
-		data[offset + 1] = value >> 8;
 	}
 }

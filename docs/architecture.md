@@ -45,6 +45,9 @@ connection replacement, active-resource access, address changes, and close handl
 8Angle and 8Encoder expose product-specific input controllers for their multi-channel transitions. ByteButton and
 ByteSwitch adapt the shared BytePanel bit-field input controller to product-specific callback names. These controllers
 compose `PollingInput` without adding polling or callback forwarding methods to the hardware-facing product classes.
+The multi-channel controllers live in each product's `input` module, keeping the main driver focused on registers and
+device operations. MiniJoyC likewise keeps its public types, validation, and little-endian calibration encoding in a
+separate `protocol` module.
 
 ## Deliberate boundaries
 
