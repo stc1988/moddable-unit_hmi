@@ -1,5 +1,5 @@
 import PollingInput, { type InputSource } from "hmi/polling";
-import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
+import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { callbackOrNull, integerInRange, type RGBColor } from "hmi/util";
 
 export type BytePanelI2COptions = I2COptions;
@@ -14,8 +14,6 @@ export interface BytePanelIOInstance extends SMBusInstance {
 export type BytePanelIO<Bus extends BytePanelIOInstance = BytePanelIOInstance> = SMBusIO<Bus>;
 
 export type BytePanelOptions<IO extends BytePanelIO = BytePanelIO> = SMBusDeviceOptions<IO>;
-
-export type BytePanelColor = RGBColor;
 
 export interface BytePanelInputOptions<State> {
 	pollingInterval?: number;
@@ -78,7 +76,7 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 		this.#writeColor(REGISTER.LED_RGB888 + BytePanel.#ledIndex(led) * 4, color);
 	}
 
-	getLed(led: number): BytePanelColor {
+	getLed(led: number): RGBColor {
 		return this.#readColor(REGISTER.LED_RGB888 + BytePanel.#ledIndex(led) * 4);
 	}
 
@@ -97,7 +95,7 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 		this.#writeColor(base + BytePanel.#inputIndex(index) * 4, color);
 	}
 
-	protected getInputLed(index: number, on: boolean): BytePanelColor {
+	protected getInputLed(index: number, on: boolean): RGBColor {
 		const base = on ? REGISTER.INPUT_ON_RGB888 : REGISTER.INPUT_OFF_RGB888;
 		return this.#readColor(base + BytePanel.#inputIndex(index) * 4);
 	}
@@ -142,7 +140,7 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 		);
 	}
 
-	#readColor(register: number): BytePanelColor {
+	#readColor(register: number): RGBColor {
 		const data = new Uint8Array(this.activeBus.readBuffer(register, 4));
 		return { r: data[2], g: data[1], b: data[0] };
 	}

@@ -73,6 +73,6 @@ errors to the caller.
 
 ## Exported types
 
-The module exports `Encoder8Input`, `Encoder8Options`, `Encoder8IO`, `Encoder8IOInstance`, `Encoder8State`, `Encoder8Color`,
+The module exports `Encoder8Input`, `Encoder8Options`, `Encoder8IO`, `Encoder8IOInstance`, `Encoder8State`,
 `Encoder8ChangeCallback`, `Encoder8EncoderChangeCallback`, `Encoder8ButtonChangeCallback`, and
 `Encoder8SwitchChangeCallback` for TypeScript applications.

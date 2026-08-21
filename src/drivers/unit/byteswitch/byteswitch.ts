@@ -1,10 +1,9 @@
 import type { RGBColor } from "hmi/util";
 import BytePanel, {
-	type BytePanelColor,
-	type BytePanelIO,
-	type BytePanelIOInstance,
 	BytePanelInput,
 	type BytePanelInputChangeCallback,
+	type BytePanelIO,
+	type BytePanelIOInstance,
 	type BytePanelOptions,
 } from "unit/byte-panel";
 
@@ -16,8 +15,6 @@ export interface ByteSwitchState {
 	/** Bit n is 1 while switch n is on. */
 	switches: number;
 }
-
-export type ByteSwitchColor = BytePanelColor;
 
 export type ByteSwitchLedMode = 0 | 1;
 
@@ -93,7 +90,7 @@ export default class ByteSwitch extends BytePanel<ByteSwitchIOInstance> {
 		this.setInputLed(switchIndex, on, color);
 	}
 
-	getSwitchLed(switchIndex: number, on: boolean): ByteSwitchColor {
+	getSwitchLed(switchIndex: number, on: boolean): RGBColor {
 		return this.getInputLed(switchIndex, on);
 	}
 

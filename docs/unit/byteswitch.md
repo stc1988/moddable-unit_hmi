@@ -64,5 +64,5 @@ errors to the caller.
 
 ## Exported types
 
-The module exports `ByteSwitchInput`, `ByteSwitchOptions`, `ByteSwitchIO`, `ByteSwitchIOInstance`, `ByteSwitchState`, `ByteSwitchColor`,
+The module exports `ByteSwitchInput`, `ByteSwitchOptions`, `ByteSwitchIO`, `ByteSwitchIOInstance`, `ByteSwitchState`,
 `ByteSwitchLedMode`, `ByteSwitchChangeCallback`, and `ByteSwitchSwitchChangeCallback` for TypeScript applications.

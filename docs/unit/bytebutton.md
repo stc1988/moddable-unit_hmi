@@ -64,5 +64,5 @@ errors to the caller.
 
 ## Exported types
 
-The module exports `ByteButtonInput`, `ByteButtonOptions`, `ByteButtonIO`, `ByteButtonIOInstance`, `ByteButtonState`, `ByteButtonColor`,
+The module exports `ByteButtonInput`, `ByteButtonOptions`, `ByteButtonIO`, `ByteButtonIOInstance`, `ByteButtonState`,
 `ByteButtonLedMode`, `ByteButtonChangeCallback`, and `ByteButtonButtonChangeCallback` for TypeScript applications.

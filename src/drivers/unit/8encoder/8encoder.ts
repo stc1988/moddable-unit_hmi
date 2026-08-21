@@ -1,4 +1,4 @@
-import { SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
+import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed32, signed32ToLittleEndian } from "hmi/util";
 import Encoder8Input from "unit/8encoder/input";
 
@@ -21,8 +21,6 @@ export interface Encoder8State {
 	/** State of the physical toggle switch. */
 	switchOn: boolean;
 }
-
-export type Encoder8Color = RGBColor;
 
 export interface Encoder8Options extends SMBusDeviceOptions<Encoder8IO> {
 	pollingInterval?: number;
@@ -149,7 +147,7 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 		);
 	}
 
-	getLed(led: number): Encoder8Color {
+	getLed(led: number): RGBColor {
 		const data = new Uint8Array(this.activeBus.readBuffer(Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3, 3));
 		return { r: data[0], g: data[1], b: data[2] };
 	}

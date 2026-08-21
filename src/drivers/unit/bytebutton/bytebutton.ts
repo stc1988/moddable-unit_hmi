@@ -1,10 +1,9 @@
 import type { RGBColor } from "hmi/util";
 import BytePanel, {
-	type BytePanelColor,
-	type BytePanelIO,
-	type BytePanelIOInstance,
 	BytePanelInput,
 	type BytePanelInputChangeCallback,
+	type BytePanelIO,
+	type BytePanelIOInstance,
 	type BytePanelOptions,
 } from "unit/byte-panel";
 
@@ -16,8 +15,6 @@ export interface ByteButtonState {
 	/** Bit n is 1 while button n is pressed. */
 	buttons: number;
 }
-
-export type ByteButtonColor = BytePanelColor;
 
 export type ByteButtonLedMode = 0 | 1;
 
@@ -93,7 +90,7 @@ export default class ByteButton extends BytePanel<ByteButtonIOInstance> {
 		this.setInputLed(button, pressed, color);
 	}
 
-	getButtonLed(button: number, pressed: boolean): ByteButtonColor {
+	getButtonLed(button: number, pressed: boolean): RGBColor {
 		return this.getInputLed(button, pressed);
 	}
 
