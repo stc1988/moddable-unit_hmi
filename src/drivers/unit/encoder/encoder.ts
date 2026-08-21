@@ -1,7 +1,7 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
-import { integerInRange } from "hmi/util";
+import { callbackOrNull, integerInRange, signed16 } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -72,8 +72,8 @@ export default class Encoder {
 
 	constructor(options: EncoderOptions = {}) {
 		const IO = options.io ?? SMBusConstructor;
-		this.#onChange = Encoder.#callback(options.onChange, "onChange");
-		this.#onButtonChange = Encoder.#callback(options.onButtonChange, "onButtonChange");
+		this.#onChange = callbackOrNull(options.onChange, "onChange");
+		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
 		this.#bus = new IO({
 			data: options.data ?? device.I2C.default.data,
 			clock: options.clock ?? device.I2C.default.clock,
@@ -123,7 +123,7 @@ export default class Encoder {
 	}
 
 	set onChange(callback: EncoderChangeCallback | null | undefined) {
-		const next = Encoder.#callback(callback, "onChange");
+		const next = callbackOrNull(callback, "onChange");
 		if (this.#closed && next) throw new Error("encoder is closed");
 		if (next !== this.#onChange) this.#polling.onChange = null;
 		this.#onChange = next;
@@ -135,7 +135,7 @@ export default class Encoder {
 	}
 
 	set onButtonChange(callback: EncoderButtonChangeCallback | null | undefined) {
-		const next = Encoder.#callback(callback, "onButtonChange");
+		const next = callbackOrNull(callback, "onButtonChange");
 		if (this.#closed && next) throw new Error("encoder is closed");
 		this.#onButtonChange = next;
 		this.#updatePollingState();
@@ -153,7 +153,7 @@ export default class Encoder {
 	}
 
 	readEncoder(): number {
-		return Encoder.#signed16(this.#activeBus.readUint16(Encoder.REGISTER.ENCODER, false));
+		return signed16(this.#activeBus.readUint16(Encoder.REGISTER.ENCODER, false));
 	}
 
 	setEncoder(value: number): void {
@@ -209,16 +209,5 @@ export default class Encoder {
 	get #activeBus(): EncoderIOInstance {
 		if (!this.#bus) throw new Error("encoder is closed");
 		return this.#bus;
-	}
-
-	static #callback<Callback>(value: Callback | null | undefined, name: string): Callback | null {
-		if (value === undefined || value === null) return null;
-		if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-		return value;
-	}
-
-	static #signed16(value: number): number {
-		const word = value & 0xffff;
-		return word & 0x8000 ? word - 0x1_0000 : word;
 	}
 }

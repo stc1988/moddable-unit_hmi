@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { integerInRange } from "hmi/util";
+import { callbackOrNull, integerInRange, signed32, signed32ToLittleEndian } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -97,10 +97,10 @@ export default class Encoder8 {
 			clock: options.clock ?? device.I2C.default.clock,
 			hz: integerInRange(options.hz ?? Encoder8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 		};
-		this.#onChange = Encoder8.#callback(options.onChange, "onChange");
-		this.#onEncoderChange = Encoder8.#callback(options.onEncoderChange, "onEncoderChange");
-		this.#onButtonChange = Encoder8.#callback(options.onButtonChange, "onButtonChange");
-		this.#onSwitchChange = Encoder8.#callback(options.onSwitchChange, "onSwitchChange");
+		this.#onChange = callbackOrNull(options.onChange, "onChange");
+		this.#onEncoderChange = callbackOrNull(options.onEncoderChange, "onEncoderChange");
+		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
+		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
 		this.#bus = this.#openBus(this.#address);
 		try {
 			this.#polling = new PollingInput(this, this, "8Encoder", {
@@ -147,7 +147,7 @@ export default class Encoder8 {
 	}
 
 	set onChange(callback: Encoder8ChangeCallback | null | undefined) {
-		const next = Encoder8.#callback(callback, "onChange");
+		const next = callbackOrNull(callback, "onChange");
 		if (this.#closed && next) throw new Error("8encoder is closed");
 		if (next !== this.#onChange) this.#polling.onChange = null;
 		this.#onChange = next;
@@ -159,7 +159,7 @@ export default class Encoder8 {
 	}
 
 	set onEncoderChange(callback: Encoder8EncoderChangeCallback | null | undefined) {
-		const next = Encoder8.#callback(callback, "onEncoderChange");
+		const next = callbackOrNull(callback, "onEncoderChange");
 		if (this.#closed && next) throw new Error("8encoder is closed");
 		this.#onEncoderChange = next;
 		this.#updatePollingState();
@@ -170,7 +170,7 @@ export default class Encoder8 {
 	}
 
 	set onButtonChange(callback: Encoder8ButtonChangeCallback | null | undefined) {
-		const next = Encoder8.#callback(callback, "onButtonChange");
+		const next = callbackOrNull(callback, "onButtonChange");
 		if (this.#closed && next) throw new Error("8encoder is closed");
 		this.#onButtonChange = next;
 		this.#updatePollingState();
@@ -181,7 +181,7 @@ export default class Encoder8 {
 	}
 
 	set onSwitchChange(callback: Encoder8SwitchChangeCallback | null | undefined) {
-		const next = Encoder8.#callback(callback, "onSwitchChange");
+		const next = callbackOrNull(callback, "onSwitchChange");
 		if (this.#closed && next) throw new Error("8encoder is closed");
 		this.#onSwitchChange = next;
 		this.#updatePollingState();
@@ -207,13 +207,13 @@ export default class Encoder8 {
 
 	readEncoder(encoder: number): number {
 		const data = this.#activeBus.readBuffer(Encoder8.REGISTER.ENCODER + Encoder8.#encoderIndex(encoder) * 4, 4);
-		return Encoder8.#signed32(new Uint8Array(data), 0);
+		return signed32(new Uint8Array(data), 0);
 	}
 
 	setEncoder(encoder: number, value: number): void {
 		this.#activeBus.writeBuffer(
 			Encoder8.REGISTER.ENCODER + Encoder8.#encoderIndex(encoder) * 4,
-			Encoder8.#signed32Buffer(value, "value"),
+			signed32ToLittleEndian(value, "value"),
 		);
 	}
 
@@ -225,7 +225,7 @@ export default class Encoder8 {
 
 	readIncrement(encoder: number): number {
 		const data = this.#activeBus.readBuffer(Encoder8.REGISTER.INCREMENT + Encoder8.#encoderIndex(encoder) * 4, 4);
-		return Encoder8.#signed32(new Uint8Array(data), 0);
+		return signed32(new Uint8Array(data), 0);
 	}
 
 	readEncoderChangeFlags(): number {
@@ -356,18 +356,8 @@ export default class Encoder8 {
 	static #readSignedValues(buffer: ArrayBuffer): number[] {
 		const data = new Uint8Array(buffer);
 		const values = new Array<number>(Encoder8.ENCODER_COUNT);
-		for (let encoder = 0; encoder < Encoder8.ENCODER_COUNT; encoder++)
-			values[encoder] = Encoder8.#signed32(data, encoder * 4);
+		for (let encoder = 0; encoder < Encoder8.ENCODER_COUNT; encoder++) values[encoder] = signed32(data, encoder * 4);
 		return values;
-	}
-
-	static #signed32(data: Uint8Array, offset: number): number {
-		return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
-	}
-
-	static #signed32Buffer(value: number, name: string): Uint8Array {
-		const integer = integerInRange(value, name, -0x8000_0000, 0x7fff_ffff);
-		return Uint8Array.of(integer & 0xff, (integer >>> 8) & 0xff, (integer >>> 16) & 0xff, (integer >>> 24) & 0xff);
 	}
 
 	static #encoderIndex(value: number): number {
@@ -384,11 +374,5 @@ export default class Encoder8 {
 
 	static #byte(value: number, name: string): number {
 		return integerInRange(value, name, 0, 0xff);
-	}
-
-	static #callback<Callback>(value: Callback | null | undefined, name: string): Callback | null {
-		if (value === undefined || value === null) return null;
-		if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-		return value;
 	}
 }

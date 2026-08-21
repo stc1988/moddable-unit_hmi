@@ -7,7 +7,7 @@ import JoystickInput, {
 	type JoystickPosition,
 	type JoystickState,
 } from "joystick/input";
-import { integerInRange } from "hmi/util";
+import { integerInRange, signed8, signed16 } from "hmi/util";
 import Timer from "timer";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
@@ -184,15 +184,15 @@ export default class MiniJoyC {
 
 	readPosition8Bit(): MiniJoyCPosition {
 		return {
-			x: MiniJoyC.#signed8(this.#readByte(MiniJoyC.REGISTER.POSITION_8_BIT)),
-			y: MiniJoyC.#signed8(this.#readByte(MiniJoyC.REGISTER.POSITION_8_BIT + 1)),
+			x: signed8(this.#readByte(MiniJoyC.REGISTER.POSITION_8_BIT)),
+			y: signed8(this.#readByte(MiniJoyC.REGISTER.POSITION_8_BIT + 1)),
 		};
 	}
 
 	readPosition10Bit(): MiniJoyCPosition {
 		return {
-			x: MiniJoyC.#signed16(this.#readWordLE(MiniJoyC.REGISTER.POSITION_10_BIT)),
-			y: MiniJoyC.#signed16(this.#readWordLE(MiniJoyC.REGISTER.POSITION_10_BIT + 2)),
+			x: signed16(this.#readWordLE(MiniJoyC.REGISTER.POSITION_10_BIT)),
+			y: signed16(this.#readWordLE(MiniJoyC.REGISTER.POSITION_10_BIT + 2)),
 		};
 	}
 
@@ -295,14 +295,6 @@ export default class MiniJoyC {
 
 	static #calibrationValue(value: number): number {
 		return integerInRange(value, "calibration value", 0, 4095);
-	}
-
-	static #signed8(value: number): number {
-		return value & 0x80 ? value - 0x100 : value;
-	}
-
-	static #signed16(value: number): number {
-		return value & 0x8000 ? value - 0x1_0000 : value;
 	}
 
 	static #wordLE(data: Uint8Array, offset: number): number {

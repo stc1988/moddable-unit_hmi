@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { integerInRange } from "hmi/util";
+import { callbackOrNull, integerInRange } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -93,8 +93,8 @@ export default class ByteSwitch {
 			clock: options.clock ?? device.I2C.default.clock,
 			hz: integerInRange(options.hz ?? ByteSwitch.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 		};
-		this.#onChange = ByteSwitch.#callback(options.onChange, "onChange");
-		this.#onSwitchChange = ByteSwitch.#callback(options.onSwitchChange, "onSwitchChange");
+		this.#onChange = callbackOrNull(options.onChange, "onChange");
+		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
 		this.#bus = this.#openBus(this.#address);
 		try {
 			this.#polling = new PollingInput(this, this, "ByteSwitch", {
@@ -138,7 +138,7 @@ export default class ByteSwitch {
 	}
 
 	set onChange(callback: ByteSwitchChangeCallback | null | undefined) {
-		const next = ByteSwitch.#callback(callback, "onChange");
+		const next = callbackOrNull(callback, "onChange");
 		if (this.#closed && next) throw new Error("byteswitch is closed");
 		if (next !== this.#onChange) this.#polling.onChange = null;
 		this.#onChange = next;
@@ -150,7 +150,7 @@ export default class ByteSwitch {
 	}
 
 	set onSwitchChange(callback: ByteSwitchSwitchChangeCallback | null | undefined) {
-		const next = ByteSwitch.#callback(callback, "onSwitchChange");
+		const next = callbackOrNull(callback, "onSwitchChange");
 		if (this.#closed && next) throw new Error("byteswitch is closed");
 		this.#onSwitchChange = next;
 		this.#updatePollingState();
@@ -304,11 +304,5 @@ export default class ByteSwitch {
 
 	static #byte(value: number, name: string): number {
 		return integerInRange(value, name, 0, 0xff);
-	}
-
-	static #callback<Callback>(value: Callback | null | undefined, name: string): Callback | null {
-		if (value === undefined || value === null) return null;
-		if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-		return value;
 	}
 }

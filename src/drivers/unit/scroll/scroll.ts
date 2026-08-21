@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { integerInRange } from "hmi/util";
+import { callbackOrNull, integerInRange, signed16 } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -83,8 +83,8 @@ export default class Scroll {
 			clock: options.clock ?? device.I2C.default.clock,
 			hz: integerInRange(options.hz ?? Scroll.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
 		};
-		this.#onChange = Scroll.#callback(options.onChange, "onChange");
-		this.#onButtonChange = Scroll.#callback(options.onButtonChange, "onButtonChange");
+		this.#onChange = callbackOrNull(options.onChange, "onChange");
+		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
 		this.#bus = this.#openBus(this.#address);
 		try {
 			this.#polling = new PollingInput(this, this, "Scroll", {
@@ -128,7 +128,7 @@ export default class Scroll {
 	}
 
 	set onChange(callback: ScrollChangeCallback | null | undefined) {
-		const next = Scroll.#callback(callback, "onChange");
+		const next = callbackOrNull(callback, "onChange");
 		if (this.#closed && next) throw new Error("scroll is closed");
 		if (next !== this.#onChange) this.#polling.onChange = null;
 		this.#onChange = next;
@@ -140,7 +140,7 @@ export default class Scroll {
 	}
 
 	set onButtonChange(callback: ScrollButtonChangeCallback | null | undefined) {
-		const next = Scroll.#callback(callback, "onButtonChange");
+		const next = callbackOrNull(callback, "onButtonChange");
 		if (this.#closed && next) throw new Error("scroll is closed");
 		this.#onButtonChange = next;
 		this.#updatePollingState();
@@ -158,11 +158,11 @@ export default class Scroll {
 	}
 
 	readEncoder(): number {
-		return Scroll.#signed16(this.#activeBus.readUint16(Scroll.REGISTER.ENCODER, false));
+		return signed16(this.#activeBus.readUint16(Scroll.REGISTER.ENCODER, false));
 	}
 
 	readIncrement(): number {
-		return Scroll.#signed16(this.#activeBus.readUint16(Scroll.REGISTER.INCREMENT, false));
+		return signed16(this.#activeBus.readUint16(Scroll.REGISTER.INCREMENT, false));
 	}
 
 	isButtonPressed(): boolean {
@@ -246,16 +246,5 @@ export default class Scroll {
 	get #activeBus(): ScrollIOInstance {
 		if (!this.#bus) throw new Error("scroll is closed");
 		return this.#bus;
-	}
-
-	static #callback<Callback>(value: Callback | null | undefined, name: string): Callback | null {
-		if (value === undefined || value === null) return null;
-		if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-		return value;
-	}
-
-	static #signed16(value: number): number {
-		const word = value & 0xffff;
-		return word & 0x8000 ? word - 0x1_0000 : word;
 	}
 }
