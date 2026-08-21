@@ -17,6 +17,7 @@
 		"paths": {
 			"hmi/smbus": ["./src/hmi/smbus/smbus"],
 			"hmi/util": ["./src/hmi/util/util"],
+			"unit/byte-panel": ["./src/drivers/unit/byte-panel/bytePanel"],
 			"input/analog": ["./src/input/analog/analogInput"],
 			"hmi/polling": ["./src/hmi/polling/pollingInput"],
 			"joystick/input": ["./src/input/joystick/joystickInput"],

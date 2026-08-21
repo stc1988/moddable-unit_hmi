@@ -1,0 +1,7 @@
+{
+	"include": ["../../../hmi/smbus/manifest.json"],
+	"modules": {
+		"unit/byte-panel": "./bytePanel"
+	},
+	"preload": ["unit/byte-panel"]
+}

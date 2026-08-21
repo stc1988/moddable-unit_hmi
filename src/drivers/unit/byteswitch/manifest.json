@@ -1,5 +1,5 @@
 {
-	"include": ["../../../hmi/polling/manifest.json", "../../../hmi/smbus/manifest.json"],
+	"include": ["../../../hmi/polling/manifest.json", "../byte-panel/manifest.json"],
 	"modules": {
 		"unit/byteswitch": "./byteswitch"
 	},

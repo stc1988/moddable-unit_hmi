@@ -23,6 +23,10 @@ callbacks before the hardware layer is closed.
 `JoystickInput` adds joystick-specific axis deadband and button-transition semantics on top of this layer. The three I2C
 joystick drivers therefore share event behavior without attempting to merge their different registers or wire protocols.
 
+ByteButton and ByteSwitch share the same register layout and LED/configuration protocol. Their `BytePanel` base keeps
+that product-family protocol in one place while the public drivers retain button- and switch-specific names, input
+polarity, state, and callbacks.
+
 ## AnalogInput
 
 `input/analog` wraps a constructor-injected analog I/O implementation. It exposes a raw read and a normalized
@@ -42,7 +46,6 @@ introducing joystick axis semantics.
 
 ## Deliberate boundaries
 
-Register maps, encoding, calibration, and LED protocols remain in product drivers. Those details differ substantially and
-sharing them would couple otherwise independent devices. New drivers should reuse the polling or analog layer only when
-their behavior matches those contracts; a bus transport abstraction can be added separately when multiple devices truly
-share transaction behavior.
+Register maps, encoding, calibration, and LED protocols remain in product drivers unless multiple products implement the
+same protocol, as ByteButton and ByteSwitch do. New drivers should reuse the polling or analog layer only when their
+behavior matches those contracts; product-family protocol sharing stays separate from generic bus resource management.
