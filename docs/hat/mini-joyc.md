@@ -2,7 +2,7 @@
 
 The TypeScript driver in `src/drivers/hat/mini-joyc` supports the M5Stack Mini JoyC HAT. It reads the joystick and push button over I2C and controls the built-in RGB LED.
 
-The defaults use the HAT I2C port on M5StickC Plus, address `0x54`, and a 200 kHz bus. Pass `data`, `clock`, `address`, or `hz` when using another compatible configuration. The `io` option accepts an SMBus-compatible constructor for alternate I/O providers or testing.
+The defaults use the HAT I2C port on M5StickC Plus, address `0x54`, and a 200 kHz bus. Pass `data`, `clock`, `address`, or `hz` when using another compatible configuration. The `io` option accepts an I2C-compatible constructor for alternate I/O providers or testing.
 
 ## Basic usage
 
@@ -25,7 +25,7 @@ joystick.onButtonChange = (pressed) => {
 - `address` sets the 7-bit I2C address and defaults to `0x54`.
 - `data` and `clock` select the I2C pins. They default to `device.I2C.hat`.
 - `hz` sets the I2C bus speed and defaults to `200_000`.
-- `io` provides the SMBus-compatible I/O constructor.
+- `io` provides the I2C-compatible I/O constructor.
 - `readMode` selects `"adc"`, `"pos8"`, or `"pos10"` and defaults to `"pos8"`.
 - `pollingInterval` sets the polling period in milliseconds and defaults to `30`.
 - `deadband` suppresses axis notifications until either axis differs from the last notified state by more than this many native units. It defaults to `0`.
@@ -80,15 +80,15 @@ Calibration values must be integers from `0` through `4095`. A calibration write
 
 - `getFirmwareVersion()` reads the firmware version register.
 - `getI2CAddress()` reads the configured I2C address.
-- `setI2CAddress(address)` writes an address from `0x01` through `0x7f`, closes the old SMBus connection, and reconnects using the new address.
+- `setI2CAddress(address)` writes an address from `0x01` through `0x7f`, closes the old I2C connection, and reconnects using the new address.
 
 Changing the address modifies device configuration. Applications must use the new address when constructing later driver instances.
 
 ## Polling and lifetime
 
 - `start()` starts polling explicitly.
-- `stop()` stops polling without closing the SMBus connection.
-- `close()` stops polling and releases the SMBus resource. It is safe to call more than once.
+- `stop()` stops polling without closing the I2C connection.
+- `close()` stops polling and releases the I2C resource. It is safe to call more than once.
 
 Polling failures are written to the Moddable debug channel and do not stop the timer. Calls made directly through the public read or write methods throw their I/O errors to the caller.
 

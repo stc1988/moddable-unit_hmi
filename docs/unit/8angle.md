@@ -4,7 +4,7 @@ The TypeScript driver in `src/drivers/unit/8angle` supports the M5Stack Unit 8An
 toggle switch, and nine RGB LEDs over I2C.
 
 The defaults use Port A on the selected Moddable device, address `0x43`, and a 400 kHz bus. Pass `data`, `clock`,
-`address`, or `hz` for another compatible configuration. The `io` option accepts an SMBus-compatible constructor for
+`address`, or `hz` for another compatible configuration. The `io` option accepts an I2C-compatible constructor for
 alternate I/O providers or testing.
 
 ## Basic usage
@@ -39,7 +39,7 @@ If multiple potentiometers change in one sample, `onAngleChange` runs in ascendi
 
 Assigning any callback starts polling automatically. Clearing all callbacks stops it. `pollingInterval` defaults to `30`
 milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases the
-SMBus resource.
+I2C resource.
 
 ## RGB LEDs
 

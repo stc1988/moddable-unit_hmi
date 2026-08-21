@@ -6,7 +6,7 @@ The driver is implemented in TypeScript under `src/drivers/unit/joystick2` and e
 The `examples/unit/joystick2` application is also written in TypeScript and demonstrates typed polling, button events, and LED updates.
 
 The defaults use Port A on the selected Moddable device. Pass `data` and `clock` to select another I2C port. `io` can
-inject a compatible SMBus constructor for another provider or for testing.
+inject a compatible I2C constructor for another provider or for testing.
 
 - `read()` returns the current `{ x, y, pressed }` state. It performs separate coordinate and button register reads.
 - `readXY()` reads the calibrated signed 8-bit coordinates from registers `0x60` and `0x61`. Both axes use the device's native directions and return values in the range documented by M5Stack (`-127` to `127`).

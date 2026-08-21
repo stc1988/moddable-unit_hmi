@@ -10,7 +10,7 @@ Input semantics      AnalogInput                       |                        
                             |                           |                                    |
 Polling lifecycle    +--------------------------- PollingInput<State> ----------------------------+
                             |                           |                                    |
-Hardware I/O         embedded:io/analog           embedded:io/smbus                     embedded:io/smbus
+Hardware I/O         embedded:io/analog           embedded:io/i2c                       embedded:io/i2c
 ```
 
 ## PollingInput

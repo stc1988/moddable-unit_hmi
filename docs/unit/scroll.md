@@ -4,7 +4,7 @@ The TypeScript driver in `src/drivers/unit/scroll` supports the M5Stack Unit Scr
 LED over I2C.
 
 The defaults use Port A on the selected Moddable device, address `0x40`, and a 400 kHz bus. Pass `data`, `clock`,
-`address`, or `hz` for another compatible configuration. The `io` option accepts an SMBus-compatible constructor for
+`address`, or `hz` for another compatible configuration. The `io` option accepts an I2C-compatible constructor for
 alternate I/O providers or testing.
 
 ## Basic usage
@@ -35,7 +35,7 @@ scroll.onButtonChange = (pressed) => {
 
 Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
 `30` milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases
-the SMBus resource.
+the I2C resource.
 
 ## Encoder and RGB LED
 

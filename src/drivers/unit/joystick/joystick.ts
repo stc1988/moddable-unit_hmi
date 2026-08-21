@@ -1,4 +1,5 @@
-import I2C from "embedded:io/i2c";
+import type I2C from "embedded:io/i2c";
+import SMBus from "embedded:io/smbus";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,
@@ -8,13 +9,18 @@ import JoystickInput, {
 } from "joystick/input";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
+type SMBusOptions = I2COptions & { stop?: boolean };
 
 export interface JoyStickIOInstance {
 	read(byteLength: number, stop?: boolean): ArrayBuffer;
 	close(): void;
 }
 
-export type JoyStickIO = new (options: I2COptions) => JoyStickIOInstance;
+export type JoyStickIO = new (options: SMBusOptions) => JoyStickIOInstance;
+
+// @moddable/typings 8.3.1 declares the SMBus options as a tuple intersection.
+// Narrow the constructor to the object accepted by the runtime implementation.
+const SMBusConstructor = SMBus as unknown as JoyStickIO;
 
 export type JoyStickPosition = JoystickPosition;
 export type JoyStickState = JoystickState;
@@ -37,7 +43,7 @@ export default class JoyStick {
 	#input: JoystickInput<JoyStickState>;
 
 	constructor(options: JoyStickOptions = {}) {
-		const IO = options.io ?? I2C;
+		const IO = options.io ?? SMBusConstructor;
 		this.#bus = new IO({
 			address: JoyStick.DEFAULT_ADDRESS,
 			data: options.data ?? device.I2C.default.data,
