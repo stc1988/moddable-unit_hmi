@@ -2,8 +2,6 @@ import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO 
 import { integerInRange, type RGBColor, signed32, signed32ToLittleEndian } from "hmi/util";
 import Encoder8Input from "unit/8encoder/input";
 
-export { Encoder8Input };
-
 export interface Encoder8IOInstance extends SMBusInstance {
 	readUint8(register: number): number;
 	writeUint8(register: number, value: number): void;
@@ -58,12 +56,49 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	readonly input: Encoder8Input;
+	#input: Encoder8Input;
+
+	set onChange(callback: Encoder8ChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
+	}
+	get onChange(): Encoder8ChangeCallback | null {
+		return this.#input.onChange;
+	}
+	set onEncoderChange(callback: Encoder8EncoderChangeCallback | null | undefined) {
+		this.#input.onEncoderChange = callback;
+	}
+	get onEncoderChange(): Encoder8EncoderChangeCallback | null {
+		return this.#input.onEncoderChange;
+	}
+	set onButtonChange(callback: Encoder8ButtonChangeCallback | null | undefined) {
+		this.#input.onButtonChange = callback;
+	}
+	get onButtonChange(): Encoder8ButtonChangeCallback | null {
+		return this.#input.onButtonChange;
+	}
+	set onSwitchChange(callback: Encoder8SwitchChangeCallback | null | undefined) {
+		this.#input.onSwitchChange = callback;
+	}
+	get onSwitchChange(): Encoder8SwitchChangeCallback | null {
+		return this.#input.onSwitchChange;
+	}
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
+	}
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
+	}
+	start(): void {
+		this.#input.start();
+	}
+	stop(): void {
+		this.#input.stop();
+	}
 
 	constructor(options: Encoder8Options = {}) {
 		super(options, { address: Encoder8.DEFAULT_ADDRESS, hz: Encoder8.DEFAULT_HZ, name: "8encoder" });
 		try {
-			this.input = new Encoder8Input(this, this, options);
+			this.#input = new Encoder8Input(this, this, options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -71,7 +106,7 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 	}
 
 	close(): void {
-		this.input.close();
+		this.#input.close();
 		super.close();
 	}
 

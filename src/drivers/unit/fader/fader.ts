@@ -50,7 +50,32 @@ export default class Fader {
 	#sensor: AnalogInput;
 	#leds: FaderLedIO;
 	#closed = false;
-	readonly input: AnalogInputEvents<FaderSample>;
+	#input: AnalogInputEvents<FaderSample>;
+
+	set onChange(callback: FaderChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
+	}
+	get onChange(): FaderChangeCallback | null {
+		return this.#input.onChange;
+	}
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
+	}
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
+	}
+	set deadband(value: number) {
+		this.#input.deadband = value;
+	}
+	get deadband(): number {
+		return this.#input.deadband;
+	}
+	start(): void {
+		this.#input.start();
+	}
+	stop(): void {
+		this.#input.stop();
+	}
 
 	constructor(options: FaderOptions = {}) {
 		const sensor = new AnalogInput({
@@ -67,7 +92,7 @@ export default class Fader {
 				order: "GRB",
 			});
 			leds.brightness = Fader.#colorComponent(options.brightness ?? 128, "brightness");
-			this.input = new AnalogInputEvents(this, sensor, "Fader", options);
+			this.#input = new AnalogInputEvents(this, sensor, "Fader", options);
 			this.#sensor = sensor;
 			this.#leds = leds;
 		} catch (error) {
@@ -80,7 +105,7 @@ export default class Fader {
 	close(): void {
 		if (this.#closed) return;
 		this.#closed = true;
-		this.input.close();
+		this.#input.close();
 		this.#sensor.close();
 		this.#leds.close();
 	}

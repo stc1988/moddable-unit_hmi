@@ -19,7 +19,7 @@ The shared host in `examples/manifest.json` includes the Moddable SDK NeoPixel n
 
 - `read()` returns the raw ADC value.
 - `readSample()` returns `{ raw, position }`, where `position` is normalized in the direction opposite to the ADC value: the ADC maximum is `0` and the ADC minimum is `1`.
-- `input.onChange` receives the same sample when the raw value changes by more than `input.deadband`. Assigning a callback starts polling; assigning `null` stops it.
+- `onChange` receives the same sample when the raw value changes by more than `deadband`. Assigning a callback starts polling; assigning `null` stops it.
 - `setLed(column, level, { r, g, b }, update = true)` changes one LED using its physical column (`"left"` or `"right"`) and level (`0` through `6`). Level `0` is the `position = 0` end of the fader. Pass `false` to defer the hardware update while changing multiple LEDs.
 - `setLevel(level, { r, g, b }, update = true)` changes the left and right LEDs at the same level together.
 - `fillColumn(column, { r, g, b }, update = true)` changes all seven LEDs in one column.
@@ -28,7 +28,7 @@ The shared host in `examples/manifest.json` includes the Moddable SDK NeoPixel n
 - `fill({ r, g, b })` updates all LEDs.
 - `show()` sends deferred LED changes to the hardware.
 - `brightness` gets or sets the global LED brightness in the range `0` through `255`.
-- `input.start()`, `input.stop()`, and `close()` control polling and hardware resources explicitly.
+- `start()`, `stop()`, and `close()` control polling and hardware resources explicitly.
 
 The serial chain runs up the right column and back down the left column. The coordinate mapping hides this reversal:
 
@@ -47,7 +47,7 @@ import Fader from "unit/fader";
 
 const fader = new Fader({ deadband: 4, brightness: 128 });
 
-fader.input.onChange = ({ raw, position }) => {
+fader.onChange = ({ raw, position }) => {
 	const lit = Math.round(position * Fader.LEVEL_COUNT);
 	for (let level = 0; level < Fader.LEVEL_COUNT; level++) {
 	fader.setLevel(level, { r: 0, g: level < lit ? 128 : 0, b: level < lit ? 255 : 0 }, false);

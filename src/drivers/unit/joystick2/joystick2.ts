@@ -41,12 +41,43 @@ export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance> {
 		I2C_ADDRESS_REG: 0xff,
 	} as const;
 
-	readonly input: JoystickInput<JoyStick2State>;
+	#input: JoystickInput<JoyStick2State>;
+
+	set onChange(callback: JoyStick2ChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
+	}
+	get onChange(): JoyStick2ChangeCallback | null {
+		return this.#input.onChange;
+	}
+	set onButtonChange(callback: JoyStick2ButtonChangeCallback | null | undefined) {
+		this.#input.onButtonChange = callback;
+	}
+	get onButtonChange(): JoyStick2ButtonChangeCallback | null {
+		return this.#input.onButtonChange;
+	}
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
+	}
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
+	}
+	set deadband(value: number) {
+		this.#input.deadband = value;
+	}
+	get deadband(): number {
+		return this.#input.deadband;
+	}
+	start(): void {
+		this.#input.start();
+	}
+	stop(): void {
+		this.#input.stop();
+	}
 
 	constructor(options: JoyStick2Options = {}) {
 		super(options, { address: JoyStick2.DEFAULT_ADDRESS, hz: JoyStick2.DEFAULT_HZ, name: "joystick" });
 		try {
-			this.input = new JoystickInput(this, this, "JoyStick2", options);
+			this.#input = new JoystickInput(this, this, "JoyStick2", options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -54,7 +85,7 @@ export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance> {
 	}
 
 	close(): void {
-		this.input.close();
+		this.#input.close();
 		super.close();
 	}
 

@@ -14,11 +14,11 @@ import Encoder8 from "unit/8encoder";
 
 const encoder8 = new Encoder8();
 
-encoder8.input.onChange = ({ encoders, buttons, switchOn }) => {
+encoder8.onChange = ({ encoders, buttons, switchOn }) => {
 	trace(`values=${encoders.join(",")} buttons=0x${buttons.toString(16)} switch=${switchOn}\n`);
 };
 
-encoder8.input.onEncoderChange = (encoder, value) => {
+encoder8.onEncoderChange = (encoder, value) => {
 	encoder8.setLed(encoder, { r: value < 0 ? 64 : 0, g: value > 0 ? 64 : 0, b: 0 });
 };
 ```
@@ -35,13 +35,13 @@ encoder8.input.onEncoderChange = (encoder, value) => {
 - `readButtons()` returns the pressed-button bit mask; `isButtonPressed(button)` reads one button.
 - `readButtonToggleCounts()` returns the eight button toggle counts and resets them.
 - `isSwitchOn()` reads the physical toggle switch.
-- `input.onChange(state)` runs for the first sample and whenever an encoder, button, or toggle switch changes.
-- `input.onEncoderChange(encoder, value)`, `input.onButtonChange(button, pressed)`, and `input.onSwitchChange(on)` report individual
+- `onChange(state)` runs for the first sample and whenever an encoder, button, or toggle switch changes.
+- `onEncoderChange(encoder, value)`, `onButtonChange(button, pressed)`, and `onSwitchChange(on)` report individual
   transitions after the initial sample.
 
 If multiple inputs change in one sample, individual callbacks run in ascending channel order. Assigning any input callback
-starts polling automatically. Clearing all callbacks stops it. `input.pollingInterval` defaults to `30` milliseconds. `input.start()`
-and `input.stop()` control polling explicitly, and idempotent `close()` stops polling and releases the I2C resource.
+starts polling automatically. Clearing all callbacks stops it. `pollingInterval` defaults to `30` milliseconds. `start()`
+and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases the I2C resource.
 
 ## Counters
 
@@ -73,6 +73,6 @@ errors to the caller.
 
 ## Exported types
 
-The module exports `Encoder8Input`, `Encoder8Options`, `Encoder8IO`, `Encoder8IOInstance`, `Encoder8State`,
+The module exports `Encoder8Options`, `Encoder8IO`, `Encoder8IOInstance`, `Encoder8State`,
 `Encoder8ChangeCallback`, `Encoder8EncoderChangeCallback`, `Encoder8ButtonChangeCallback`, and
 `Encoder8SwitchChangeCallback` for TypeScript applications.

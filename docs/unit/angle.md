@@ -16,17 +16,17 @@ Pass `sensor: { pin }` to the constructor when using another controller. The yel
 
 - `read()` returns the raw ADC value.
 - `readSample()` returns `{ raw, position }`, where `position` normalizes the ADC value from `0` to `1`.
-- `input.onChange` receives the same sample when the raw value changes by more than `input.deadband`. Assigning a callback starts
+- `onChange` receives the same sample when the raw value changes by more than `deadband`. Assigning a callback starts
   polling; assigning `null` stops it.
-- `input.pollingInterval` controls the polling period in milliseconds and defaults to `30`.
-- `input.start()`, `input.stop()`, and `close()` control polling and the analog input resource explicitly.
+- `pollingInterval` controls the polling period in milliseconds and defaults to `30`.
+- `start()`, `stop()`, and `close()` control polling and the analog input resource explicitly.
 
 ```ts
 import Angle from "unit/angle";
 
 const angle = new Angle({ deadband: 4 });
 
-angle.input.onChange = ({ raw, position }) => {
+angle.onChange = ({ raw, position }) => {
 	trace(`raw=${raw}, position=${position}\n`);
 };
 ```

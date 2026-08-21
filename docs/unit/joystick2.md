@@ -11,9 +11,9 @@ inject a compatible I2C constructor for another provider or for testing.
 - `read()` returns the current `{ x, y, pressed }` state. It performs separate coordinate and button register reads.
 - `readXY()` reads the calibrated signed 8-bit coordinates from registers `0x60` and `0x61`. Both axes use the device's native directions and return values in the range documented by M5Stack (`-127` to `127`).
 - `isButtonPressed()` returns the current active-low button state.
-- `input.onChange` receives the complete state for the first sample, when either axis moves by more than `input.deadband`, or when the button state changes.
-- `input.onButtonChange` receives the new button state on transitions after the initial sample.
-- `input.pollingInterval` defaults to `30` milliseconds and `input.deadband` defaults to `0` native axis units.
+- `onChange` receives the complete state for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
+- `onButtonChange` receives the new button state on transitions after the initial sample.
+- `pollingInterval` defaults to `30` milliseconds and `deadband` defaults to `0` native axis units.
 - Assigning either callback starts polling. Clearing both callbacks stops it.
 
 `JoyStick2#setLed({ r, g, b })` accepts RGB component values even though the device stores them in BGR register order: blue at `0x30`, green at `0x31`, and red at `0x32`.
@@ -23,11 +23,11 @@ import JoyStick2 from "unit/joystick2";
 
 const joystick = new JoyStick2({ deadband: 2 });
 
-joystick.input.onChange = ({ x, y, pressed }) => {
+joystick.onChange = ({ x, y, pressed }) => {
 	trace(`x=${x}, y=${y}, pressed=${pressed}\n`);
 };
 
-joystick.input.onButtonChange = (pressed) => {
+joystick.onButtonChange = (pressed) => {
 	joystick.setLed({ r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 255 });
 };
 ```

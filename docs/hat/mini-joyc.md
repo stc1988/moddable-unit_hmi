@@ -11,11 +11,11 @@ import MiniJoyC from "hat/mini-joyc";
 
 const joystick = new MiniJoyC({ deadband: 2, readMode: "pos8" });
 
-joystick.input.onChange = ({ x, y, pressed }) => {
+joystick.onChange = ({ x, y, pressed }) => {
 	trace(`x=${x}, y=${y}, pressed=${pressed}\n`);
 };
 
-joystick.input.onButtonChange = (pressed) => {
+joystick.onButtonChange = (pressed) => {
 	joystick.setLed({ r: 0, g: pressed ? 128 : 0, b: pressed ? 255 : 0 });
 };
 ```
@@ -46,10 +46,10 @@ Each method performs a new device read. In particular, `read()` reads the positi
 
 Assigning either callback starts the internal polling timer. Clearing both callbacks stops it.
 
-- `input.onChange(state)` runs for the first sample, when either axis moves by more than `input.deadband`, or when the button state changes.
-- `input.onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
+- `onChange(state)` runs for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
+- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
 
-The deadband comparison is made against the last state delivered to `input.onChange`, so several small movements accumulate. `input.deadband` is expressed in the native units of the selected `readMode`.
+The deadband comparison is made against the last state delivered to `onChange`, so several small movements accumulate. `deadband` is expressed in the native units of the selected `readMode`.
 
 Use `read()` from an application-owned control loop when a state is required every frame or at a fixed rate. Change callbacks intentionally do not repeat while the joystick remains at the same position.
 
@@ -86,8 +86,8 @@ Changing the address modifies device configuration. Applications must use the ne
 
 ## Polling and lifetime
 
-- `input.start()` starts polling explicitly.
-- `input.stop()` stops polling without closing the I2C connection.
+- `start()` starts polling explicitly.
+- `stop()` stops polling without closing the I2C connection.
 - `close()` stops polling and releases the I2C resource. It is safe to call more than once.
 
 Polling failures are written to the Moddable debug channel and do not stop the timer. Calls made directly through the public read or write methods throw their I/O errors to the caller.

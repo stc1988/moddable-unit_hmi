@@ -2,8 +2,6 @@ import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO 
 import { integerInRange, type RGBColor } from "hmi/util";
 import Angle8Input from "unit/8angle/input";
 
-export { Angle8Input };
-
 export interface Angle8IOInstance extends SMBusInstance {
 	readUint8(register: number): number;
 	writeUint8(register: number, value: number): void;
@@ -55,12 +53,49 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	readonly input: Angle8Input;
+	#input: Angle8Input;
+
+	set onChange(callback: Angle8ChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
+	}
+	get onChange(): Angle8ChangeCallback | null {
+		return this.#input.onChange;
+	}
+	set onAngleChange(callback: Angle8AngleChangeCallback | null | undefined) {
+		this.#input.onAngleChange = callback;
+	}
+	get onAngleChange(): Angle8AngleChangeCallback | null {
+		return this.#input.onAngleChange;
+	}
+	set onSwitchChange(callback: Angle8SwitchChangeCallback | null | undefined) {
+		this.#input.onSwitchChange = callback;
+	}
+	get onSwitchChange(): Angle8SwitchChangeCallback | null {
+		return this.#input.onSwitchChange;
+	}
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
+	}
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
+	}
+	set deadband(value: number) {
+		this.#input.deadband = value;
+	}
+	get deadband(): number {
+		return this.#input.deadband;
+	}
+	start(): void {
+		this.#input.start();
+	}
+	stop(): void {
+		this.#input.stop();
+	}
 
 	constructor(options: Angle8Options = {}) {
 		super(options, { address: Angle8.DEFAULT_ADDRESS, hz: Angle8.DEFAULT_HZ, name: "8angle" });
 		try {
-			this.input = new Angle8Input(this, this, options);
+			this.#input = new Angle8Input(this, this, options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -68,7 +103,7 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 	}
 
 	close(): void {
-		this.input.close();
+		this.#input.close();
 		super.close();
 	}
 

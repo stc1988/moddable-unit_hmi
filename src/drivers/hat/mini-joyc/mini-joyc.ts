@@ -1,8 +1,10 @@
 import {
 	calibrationIndex,
 	calibrationValue,
+	type MiniJoyCButtonChangeCallback,
 	type MiniJoyCCalibration,
 	type MiniJoyCCalibrationIndex,
+	type MiniJoyCChangeCallback,
 	type MiniJoyCIOInstance,
 	type MiniJoyCOptions,
 	type MiniJoyCPosition,
@@ -55,7 +57,38 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 		Y_CENTER: 5,
 	} as const;
 
-	readonly input: JoystickInput<MiniJoyCState>;
+	#input: JoystickInput<MiniJoyCState>;
+
+	set onChange(callback: MiniJoyCChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
+	}
+	get onChange(): MiniJoyCChangeCallback | null {
+		return this.#input.onChange;
+	}
+	set onButtonChange(callback: MiniJoyCButtonChangeCallback | null | undefined) {
+		this.#input.onButtonChange = callback;
+	}
+	get onButtonChange(): MiniJoyCButtonChangeCallback | null {
+		return this.#input.onButtonChange;
+	}
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
+	}
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
+	}
+	set deadband(value: number) {
+		this.#input.deadband = value;
+	}
+	get deadband(): number {
+		return this.#input.deadband;
+	}
+	start(): void {
+		this.#input.start();
+	}
+	stop(): void {
+		this.#input.stop();
+	}
 
 	readMode: MiniJoyCReadMode;
 
@@ -72,7 +105,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 		this.readMode = readMode(options.readMode ?? "pos8");
 		Timer.delay(10);
 		try {
-			this.input = new JoystickInput(this, this, "MiniJoyC", options);
+			this.#input = new JoystickInput(this, this, "MiniJoyC", options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -80,7 +113,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	close(): void {
-		this.input.close();
+		this.#input.close();
 		super.close();
 	}
 

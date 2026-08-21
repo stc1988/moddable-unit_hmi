@@ -25,7 +25,32 @@ export default class Angle {
 	static readonly DEFAULT_ANALOG_PIN = 8;
 
 	#sensor: AnalogInput;
-	readonly input: AnalogInputEvents<AngleSample>;
+	#input: AnalogInputEvents<AngleSample>;
+
+	set onChange(callback: AngleChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
+	}
+	get onChange(): AngleChangeCallback | null {
+		return this.#input.onChange;
+	}
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
+	}
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
+	}
+	set deadband(value: number) {
+		this.#input.deadband = value;
+	}
+	get deadband(): number {
+		return this.#input.deadband;
+	}
+	start(): void {
+		this.#input.start();
+	}
+	stop(): void {
+		this.#input.stop();
+	}
 
 	constructor(options: AngleOptions = {}) {
 		const sensor = new AnalogInput({
@@ -33,7 +58,7 @@ export default class Angle {
 			pin: options.sensor?.pin ?? Angle.DEFAULT_ANALOG_PIN,
 		});
 		try {
-			this.input = new AnalogInputEvents(this, sensor, "Angle", options);
+			this.#input = new AnalogInputEvents(this, sensor, "Angle", options);
 			this.#sensor = sensor;
 		} catch (error) {
 			sensor.close();
@@ -42,7 +67,7 @@ export default class Angle {
 	}
 
 	close(): void {
-		this.input.close();
+		this.#input.close();
 		this.#sensor.close();
 	}
 

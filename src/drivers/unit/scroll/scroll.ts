@@ -44,12 +44,37 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	static readonly DEFAULT_ADDRESS = 0x40;
 	static readonly DEFAULT_HZ = 400_000;
 
-	readonly input: EncoderInput<ScrollState>;
+	#input: EncoderInput<ScrollState>;
+
+	set onChange(callback: ScrollChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
+	}
+	get onChange(): ScrollChangeCallback | null {
+		return this.#input.onChange;
+	}
+	set onButtonChange(callback: ScrollButtonChangeCallback | null | undefined) {
+		this.#input.onButtonChange = callback;
+	}
+	get onButtonChange(): ScrollButtonChangeCallback | null {
+		return this.#input.onButtonChange;
+	}
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
+	}
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
+	}
+	start(): void {
+		this.#input.start();
+	}
+	stop(): void {
+		this.#input.stop();
+	}
 
 	constructor(options: ScrollOptions = {}) {
 		super(options, { address: Scroll.DEFAULT_ADDRESS, hz: Scroll.DEFAULT_HZ, name: "scroll" });
 		try {
-			this.input = new EncoderInput(this, this, "Scroll", options);
+			this.#input = new EncoderInput(this, this, "Scroll", options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -57,7 +82,7 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	}
 
 	close(): void {
-		this.input.close();
+		this.#input.close();
 		super.close();
 	}
 
@@ -123,7 +148,7 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	}
 
 	enterBootloader(): void {
-		this.input.stop();
+		this.#input.stop();
 		this.activeBus.writeUint8(REGISTER.JUMP_TO_BOOTLOADER, 1);
 	}
 }

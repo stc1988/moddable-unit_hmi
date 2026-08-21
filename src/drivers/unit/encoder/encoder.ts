@@ -49,12 +49,37 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance> {
 		RESET: 0x40,
 	} as const;
 
-	readonly input: EncoderInput<EncoderState>;
+	#input: EncoderInput<EncoderState>;
+
+	set onChange(callback: EncoderChangeCallback | null | undefined) {
+		this.#input.onChange = callback;
+	}
+	get onChange(): EncoderChangeCallback | null {
+		return this.#input.onChange;
+	}
+	set onButtonChange(callback: EncoderButtonChangeCallback | null | undefined) {
+		this.#input.onButtonChange = callback;
+	}
+	get onButtonChange(): EncoderButtonChangeCallback | null {
+		return this.#input.onButtonChange;
+	}
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
+	}
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
+	}
+	start(): void {
+		this.#input.start();
+	}
+	stop(): void {
+		this.#input.stop();
+	}
 
 	constructor(options: EncoderOptions = {}) {
 		super(options, { address: Encoder.DEFAULT_ADDRESS, hz: Encoder.DEFAULT_HZ, name: "encoder" });
 		try {
-			this.input = new EncoderInput(this, this, "Encoder", options);
+			this.#input = new EncoderInput(this, this, "Encoder", options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -62,7 +87,7 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance> {
 	}
 
 	close(): void {
-		this.input.close();
+		this.#input.close();
 		super.close();
 	}
 
