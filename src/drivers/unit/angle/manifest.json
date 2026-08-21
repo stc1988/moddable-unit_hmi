@@ -1,5 +1,5 @@
 {
-	"include": ["../../../input/analog/manifest.json", "../../../input/polling/manifest.json"],
+	"include": ["../../../input/analog/manifest.json", "../../../hmi/polling/manifest.json"],
 	"modules": {
 		"unit/angle": "./angle"
 	},

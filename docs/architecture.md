@@ -15,7 +15,7 @@ Hardware I/O         embedded:io/analog           embedded:io/i2c               
 
 ## PollingInput
 
-`input/polling` owns the polling timer, callback lifecycle, error reporting, polling-interval validation, and comparison
+`hmi/polling` owns the polling timer, callback lifecycle, error reporting, polling-interval validation, and comparison
 against the last notified state. A product supplies a synchronous `read()` source and a `changed(current, previous)`
 function. Assigning a callback starts polling automatically; clearing it stops polling. `close()` is idempotent and stops
 callbacks before the hardware layer is closed.

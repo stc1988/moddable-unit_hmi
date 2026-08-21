@@ -1,4 +1,4 @@
-import PollingInput from "input/polling";
+import PollingInput from "hmi/polling";
 
 export interface JoystickPosition {
 	x: number;

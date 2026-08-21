@@ -1,0 +1,8 @@
+{
+	"include": ["../util/manifest.json"],
+	"modules": {
+		"hmi/polling": "./pollingInput",
+		"timer": "$(MODDABLE)/typings/timer"
+	},
+	"preload": ["hmi/polling"]
+}

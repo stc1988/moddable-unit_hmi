@@ -1,6 +1,6 @@
 import Analog from "embedded:io/analog";
+import PollingInput from "hmi/polling";
 import AnalogInput, { type AnalogIO } from "input/analog";
-import PollingInput from "input/polling";
 
 export interface AngleSample {
 	raw: number;

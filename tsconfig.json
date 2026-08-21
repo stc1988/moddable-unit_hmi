@@ -18,7 +18,7 @@
 			"hmi/smbus": ["./src/hmi/smbus/smbus"],
 			"hmi/util": ["./src/hmi/util/util"],
 			"input/analog": ["./src/input/analog/analogInput"],
-			"input/polling": ["./src/input/polling/pollingInput"],
+			"hmi/polling": ["./src/hmi/polling/pollingInput"],
 			"joystick/input": ["./src/input/joystick/joystickInput"],
 			"unit/8angle": ["./src/drivers/unit/8angle/8angle"],
 			"unit/8encoder": ["./src/drivers/unit/8encoder/8encoder"],
