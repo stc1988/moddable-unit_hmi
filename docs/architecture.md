@@ -32,7 +32,9 @@ direction. Both use `PollingInput` for event delivery.
 Angle accepts `sensor: { io, pin }`. Fader accepts the same `sensor` option and `leds: { io, pin }`. 8Angle, 8Encoder,
 Encoder, Joystick v1.1, JoyStick2, Scroll, ByteButton, ByteSwitch, and Mini JoyC accept an `io` bus constructor. These
 entries are constructors compatible with the required operation subset, so tests and other boards can inject alternative
-I/O without changing product logic. The corresponding Moddable I/O implementations remain the defaults.
+I/O without changing product logic. The corresponding Moddable I/O implementations remain the defaults. `hmi/util`
+provides `I2CBusResource` to share bus creation, active-resource access, address changes, and close handling across the
+I2C drivers.
 
 8Angle, 8Encoder, Encoder, Scroll, ByteButton, and ByteSwitch use `PollingInput` directly because their state is not a
 two-axis joystick. They provide the same automatic callback lifecycle and separate input-transition callbacks without

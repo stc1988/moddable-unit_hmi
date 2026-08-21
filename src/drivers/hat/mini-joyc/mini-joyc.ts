@@ -7,7 +7,7 @@ import JoystickInput, {
 	type JoystickPosition,
 	type JoystickState,
 } from "joystick/input";
-import { integerInRange, signed8, signed16 } from "hmi/util";
+import { I2CBusResource, integerInRange, signed8, signed16 } from "hmi/util";
 import Timer from "timer";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
@@ -81,9 +81,7 @@ export default class MiniJoyC {
 		Y_CENTER: 5,
 	} as const;
 
-	#bus?: MiniJoyCIOInstance;
-	#io: MiniJoyCIO;
-	#busOptions: Omit<SMBusOptions, "address">;
+	#bus: I2CBusResource<MiniJoyCIOInstance, SMBusOptions>;
 	#address: number;
 	#input: JoystickInput<MiniJoyCState>;
 
@@ -94,27 +92,28 @@ export default class MiniJoyC {
 
 		this.readMode = MiniJoyC.#readMode(options.readMode ?? "pos8");
 		this.#address = integerInRange(options.address ?? MiniJoyC.DEFAULT_ADDRESS, "address", 1, 0x7f);
-		this.#io = options.io ?? SMBusConstructor;
-		this.#busOptions = {
-			data: options.data ?? hat.data,
-			clock: options.clock ?? hat.clock,
-			hz: integerInRange(options.hz ?? MiniJoyC.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
-		};
-		this.#bus = this.#openBus(this.#address);
+		this.#bus = new I2CBusResource(
+			options.io ?? SMBusConstructor,
+			{
+				data: options.data ?? hat.data,
+				clock: options.clock ?? hat.clock,
+				hz: integerInRange(options.hz ?? MiniJoyC.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			},
+			this.#address,
+			"joystick",
+		);
 		Timer.delay(10);
 		try {
 			this.#input = new JoystickInput(this, this, "MiniJoyC", options);
 		} catch (error) {
 			this.#bus.close();
-			this.#bus = undefined;
 			throw error;
 		}
 	}
 
 	close(): void {
 		this.#input.close();
-		this.#bus?.close();
-		this.#bus = undefined;
+		this.#bus.close();
 	}
 
 	start(): void {
@@ -257,17 +256,9 @@ export default class MiniJoyC {
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(MiniJoyC.REGISTER.I2C_ADDRESS, nextAddress);
-		this.#activeBus.close();
+		this.#bus.open(nextAddress);
 		this.#address = nextAddress;
-		this.#bus = this.#openBus(nextAddress);
 		Timer.delay(10);
-	}
-
-	#openBus(address: number): MiniJoyCIOInstance {
-		return new this.#io({
-			...this.#busOptions,
-			address,
-		});
 	}
 
 	#readByte(register: number): number {
@@ -279,8 +270,7 @@ export default class MiniJoyC {
 	}
 
 	get #activeBus(): MiniJoyCIOInstance {
-		if (!this.#bus) throw new Error("joystick is closed");
-		return this.#bus;
+		return this.#bus.active;
 	}
 
 	static #readMode(value: string): MiniJoyCReadMode {

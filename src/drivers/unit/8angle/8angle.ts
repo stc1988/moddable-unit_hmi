@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { callbackOrNull, integerInRange } from "hmi/util";
+import { callbackOrNull, I2CBusResource, integerInRange } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -71,9 +71,7 @@ export default class Angle8 {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	#bus?: Angle8IOInstance;
-	#io: Angle8IO;
-	#busOptions: Omit<SMBusOptions, "address">;
+	#bus: I2CBusResource<Angle8IOInstance, SMBusOptions>;
 	#address: number;
 	#polling: PollingInput<Angle8State>;
 	#onChange: Angle8ChangeCallback | null;
@@ -85,17 +83,20 @@ export default class Angle8 {
 
 	constructor(options: Angle8Options = {}) {
 		this.#address = integerInRange(options.address ?? Angle8.DEFAULT_ADDRESS, "address", 1, 0x7f);
-		this.#io = options.io ?? SMBusConstructor;
-		this.#busOptions = {
-			data: options.data ?? device.I2C.default.data,
-			clock: options.clock ?? device.I2C.default.clock,
-			hz: integerInRange(options.hz ?? Angle8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
-		};
+		this.#bus = new I2CBusResource(
+			options.io ?? SMBusConstructor,
+			{
+				data: options.data ?? device.I2C.default.data,
+				clock: options.clock ?? device.I2C.default.clock,
+				hz: integerInRange(options.hz ?? Angle8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			},
+			this.#address,
+			"8angle",
+		);
 		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onAngleChange = callbackOrNull(options.onAngleChange, "onAngleChange");
 		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
-		this.#bus = this.#openBus(this.#address);
 		try {
 			this.#polling = new PollingInput(this, this, "8Angle", {
 				pollingInterval: options.pollingInterval,
@@ -104,7 +105,6 @@ export default class Angle8 {
 			this.#updatePollingState();
 		} catch (error) {
 			this.#bus.close();
-			this.#bus = undefined;
 			throw error;
 		}
 	}
@@ -117,8 +117,7 @@ export default class Angle8 {
 		this.#onAngleChange = null;
 		this.#onSwitchChange = null;
 		this.#lastState = undefined;
-		this.#bus?.close();
-		this.#bus = undefined;
+		this.#bus.close();
 	}
 
 	start(): void {
@@ -243,10 +242,8 @@ export default class Angle8 {
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(Angle8.REGISTER.I2C_ADDRESS, nextAddress);
-		this.#activeBus.close();
-		this.#bus = undefined;
+		this.#bus.open(nextAddress);
 		this.#address = nextAddress;
-		this.#bus = this.#openBus(nextAddress);
 		Timer.delay(10);
 	}
 
@@ -277,13 +274,8 @@ export default class Angle8 {
 		return false;
 	}
 
-	#openBus(address: number): Angle8IOInstance {
-		return new this.#io({ ...this.#busOptions, address });
-	}
-
 	get #activeBus(): Angle8IOInstance {
-		if (!this.#bus) throw new Error("8angle is closed");
-		return this.#bus;
+		return this.#bus.active;
 	}
 
 	static #angleIndex(value: number): number {

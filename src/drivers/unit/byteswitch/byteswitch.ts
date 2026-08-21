@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { callbackOrNull, integerInRange } from "hmi/util";
+import { callbackOrNull, I2CBusResource, integerInRange } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -75,9 +75,7 @@ export default class ByteSwitch {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	#bus?: ByteSwitchIOInstance;
-	#io: ByteSwitchIO;
-	#busOptions: Omit<SMBusOptions, "address">;
+	#bus: I2CBusResource<ByteSwitchIOInstance, SMBusOptions>;
 	#address: number;
 	#polling: PollingInput<ByteSwitchState>;
 	#onChange: ByteSwitchChangeCallback | null;
@@ -87,15 +85,18 @@ export default class ByteSwitch {
 
 	constructor(options: ByteSwitchOptions = {}) {
 		this.#address = integerInRange(options.address ?? ByteSwitch.DEFAULT_ADDRESS, "address", 1, 0x7f);
-		this.#io = options.io ?? SMBusConstructor;
-		this.#busOptions = {
-			data: options.data ?? device.I2C.default.data,
-			clock: options.clock ?? device.I2C.default.clock,
-			hz: integerInRange(options.hz ?? ByteSwitch.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
-		};
+		this.#bus = new I2CBusResource(
+			options.io ?? SMBusConstructor,
+			{
+				data: options.data ?? device.I2C.default.data,
+				clock: options.clock ?? device.I2C.default.clock,
+				hz: integerInRange(options.hz ?? ByteSwitch.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			},
+			this.#address,
+			"byteswitch",
+		);
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
-		this.#bus = this.#openBus(this.#address);
 		try {
 			this.#polling = new PollingInput(this, this, "ByteSwitch", {
 				pollingInterval: options.pollingInterval,
@@ -104,7 +105,6 @@ export default class ByteSwitch {
 			this.#updatePollingState();
 		} catch (error) {
 			this.#bus.close();
-			this.#bus = undefined;
 			throw error;
 		}
 	}
@@ -115,8 +115,7 @@ export default class ByteSwitch {
 		this.#closed = true;
 		this.#onChange = null;
 		this.#onSwitchChange = null;
-		this.#bus?.close();
-		this.#bus = undefined;
+		this.#bus.close();
 	}
 
 	start(): void {
@@ -248,10 +247,8 @@ export default class ByteSwitch {
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(ByteSwitch.REGISTER.I2C_ADDRESS, nextAddress);
-		this.#activeBus.close();
-		this.#bus = undefined;
+		this.#bus.open(nextAddress);
 		this.#address = nextAddress;
-		this.#bus = this.#openBus(nextAddress);
 		Timer.delay(10);
 	}
 
@@ -285,13 +282,8 @@ export default class ByteSwitch {
 		return { r: data[2], g: data[1], b: data[0] };
 	}
 
-	#openBus(address: number): ByteSwitchIOInstance {
-		return new this.#io({ ...this.#busOptions, address });
-	}
-
 	get #activeBus(): ByteSwitchIOInstance {
-		if (!this.#bus) throw new Error("byteswitch is closed");
-		return this.#bus;
+		return this.#bus.active;
 	}
 
 	static #switchIndex(value: number): number {

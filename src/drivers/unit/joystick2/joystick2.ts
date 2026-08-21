@@ -7,6 +7,7 @@ import JoystickInput, {
 	type JoystickPosition,
 	type JoystickState,
 } from "joystick/input";
+import { I2CBusResource } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -51,30 +52,31 @@ export default class JoyStick2 {
 		I2C_ADDRESS_REG: 0xff,
 	} as const;
 
-	#bus?: JoyStick2IOInstance;
+	#bus: I2CBusResource<JoyStick2IOInstance, SMBusOptions>;
 	#input: JoystickInput<JoyStick2State>;
 
 	constructor(options: JoyStick2Options = {}) {
-		const IO = options.io ?? SMBusConstructor;
-		this.#bus = new IO({
-			address: 0x63,
-			data: options.data ?? device.I2C.default.data,
-			clock: options.clock ?? device.I2C.default.clock,
-			hz: 400_000,
-		});
+		this.#bus = new I2CBusResource(
+			options.io ?? SMBusConstructor,
+			{
+				data: options.data ?? device.I2C.default.data,
+				clock: options.clock ?? device.I2C.default.clock,
+				hz: 400_000,
+			},
+			0x63,
+			"joystick",
+		);
 		try {
 			this.#input = new JoystickInput(this, this, "JoyStick2", options);
 		} catch (error) {
 			this.#bus.close();
-			this.#bus = undefined;
 			throw error;
 		}
 	}
 
 	close(): void {
 		this.#input.close();
-		this.#bus?.close();
-		this.#bus = undefined;
+		this.#bus.close();
 	}
 
 	start(): void {
@@ -151,7 +153,6 @@ export default class JoyStick2 {
 	}
 
 	get #activeBus(): JoyStick2IOInstance {
-		if (!this.#bus) throw new Error("joystick is closed");
-		return this.#bus;
+		return this.#bus.active;
 	}
 }

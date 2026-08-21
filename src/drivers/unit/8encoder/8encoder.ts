@@ -2,7 +2,7 @@ import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { callbackOrNull, integerInRange, signed32, signed32ToLittleEndian } from "hmi/util";
+import { callbackOrNull, I2CBusResource, integerInRange, signed32, signed32ToLittleEndian } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };
@@ -77,9 +77,7 @@ export default class Encoder8 {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	#bus?: Encoder8IOInstance;
-	#io: Encoder8IO;
-	#busOptions: Omit<SMBusOptions, "address">;
+	#bus: I2CBusResource<Encoder8IOInstance, SMBusOptions>;
 	#address: number;
 	#polling: PollingInput<Encoder8State>;
 	#onChange: Encoder8ChangeCallback | null;
@@ -91,17 +89,20 @@ export default class Encoder8 {
 
 	constructor(options: Encoder8Options = {}) {
 		this.#address = integerInRange(options.address ?? Encoder8.DEFAULT_ADDRESS, "address", 1, 0x7f);
-		this.#io = options.io ?? SMBusConstructor;
-		this.#busOptions = {
-			data: options.data ?? device.I2C.default.data,
-			clock: options.clock ?? device.I2C.default.clock,
-			hz: integerInRange(options.hz ?? Encoder8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
-		};
+		this.#bus = new I2CBusResource(
+			options.io ?? SMBusConstructor,
+			{
+				data: options.data ?? device.I2C.default.data,
+				clock: options.clock ?? device.I2C.default.clock,
+				hz: integerInRange(options.hz ?? Encoder8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			},
+			this.#address,
+			"8encoder",
+		);
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onEncoderChange = callbackOrNull(options.onEncoderChange, "onEncoderChange");
 		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
 		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
-		this.#bus = this.#openBus(this.#address);
 		try {
 			this.#polling = new PollingInput(this, this, "8Encoder", {
 				pollingInterval: options.pollingInterval,
@@ -110,7 +111,6 @@ export default class Encoder8 {
 			this.#updatePollingState();
 		} catch (error) {
 			this.#bus.close();
-			this.#bus = undefined;
 			throw error;
 		}
 	}
@@ -124,8 +124,7 @@ export default class Encoder8 {
 		this.#onButtonChange = null;
 		this.#onSwitchChange = null;
 		this.#lastState = undefined;
-		this.#bus?.close();
-		this.#bus = undefined;
+		this.#bus.close();
 	}
 
 	start(): void {
@@ -296,10 +295,8 @@ export default class Encoder8 {
 		if (nextAddress === this.#address) return;
 
 		this.#activeBus.writeUint8(Encoder8.REGISTER.I2C_ADDRESS, nextAddress);
-		this.#activeBus.close();
-		this.#bus = undefined;
+		this.#bus.open(nextAddress);
 		this.#address = nextAddress;
-		this.#bus = this.#openBus(nextAddress);
 		Timer.delay(10);
 	}
 
@@ -336,13 +333,8 @@ export default class Encoder8 {
 		this.#lastState = state;
 	}
 
-	#openBus(address: number): Encoder8IOInstance {
-		return new this.#io({ ...this.#busOptions, address });
-	}
-
 	get #activeBus(): Encoder8IOInstance {
-		if (!this.#bus) throw new Error("8encoder is closed");
-		return this.#bus;
+		return this.#bus.active;
 	}
 
 	static #stateChanged(state: Encoder8State, previous: Encoder8State): boolean {
