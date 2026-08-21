@@ -1,32 +1,19 @@
-import type I2C from "embedded:io/i2c";
-import SMBus from "embedded:io/smbus";
 import PollingInput, { type InputSource } from "hmi/polling";
-import { SMBusDevice } from "hmi/smbus";
+import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
 import { callbackOrNull, integerInRange, type RGBColor } from "hmi/util";
-import Timer from "timer";
 
-export type BytePanelI2COptions = ConstructorParameters<typeof I2C>[0];
-export type BytePanelSMBusOptions = BytePanelI2COptions & { stop?: boolean };
+export type BytePanelI2COptions = I2COptions;
 
-export interface BytePanelIOInstance {
+export interface BytePanelIOInstance extends SMBusInstance {
 	readUint8(register: number): number;
 	writeUint8(register: number, value: number): void;
 	readBuffer(register: number, byteLength: number): ArrayBuffer;
 	writeBuffer(register: number, buffer: ByteBuffer): void;
-	close(): void;
 }
 
-export type BytePanelIO<Bus extends BytePanelIOInstance = BytePanelIOInstance> = new (
-	options: BytePanelSMBusOptions,
-) => Bus;
+export type BytePanelIO<Bus extends BytePanelIOInstance = BytePanelIOInstance> = SMBusIO<Bus>;
 
-export interface BytePanelOptions<IO extends BytePanelIO = BytePanelIO> {
-	address?: number;
-	data?: BytePanelI2COptions["data"];
-	clock?: BytePanelI2COptions["clock"];
-	hz?: number;
-	io?: IO;
-}
+export type BytePanelOptions<IO extends BytePanelIO = BytePanelIO> = SMBusDeviceOptions<IO>;
 
 export type BytePanelColor = RGBColor;
 
@@ -58,32 +45,12 @@ const DEFAULT_HZ = 400_000;
 const INPUT_COUNT = 8;
 const LED_COUNT = 9;
 
-// @moddable/typings 8.3.1 declares the SMBus options as a tuple intersection.
-// Narrow the constructor to the object accepted by the runtime implementation.
-const SMBusConstructor = SMBus as unknown as BytePanelIO;
-
-export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInstance> extends SMBusDevice<
-	Bus,
-	BytePanelSMBusOptions
-> {
+export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInstance> extends SMBusDevice<Bus> {
 	static readonly INPUT_COUNT = INPUT_COUNT;
 	static readonly LED_COUNT = LED_COUNT;
 
-	#address: number;
-
 	protected constructor(options: BytePanelOptions<BytePanelIO<Bus>>, defaultAddress: number, name: string) {
-		const address = integerInRange(options.address ?? defaultAddress, "address", 1, 0x7f);
-		super(
-			options.io ?? (SMBusConstructor as BytePanelIO<Bus>),
-			{
-				data: options.data ?? device.I2C.default.data,
-				clock: options.clock ?? device.I2C.default.clock,
-				hz: integerInRange(options.hz ?? DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
-			},
-			address,
-			name,
-		);
-		this.#address = address;
+		super(options, { address: defaultAddress, hz: DEFAULT_HZ, name });
 	}
 
 	protected readInputs(activeLow: boolean): number {
@@ -161,17 +128,11 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 	}
 
 	getI2CAddress(): number {
-		return this.activeBus.readUint8(REGISTER.I2C_ADDRESS) & 0x7f;
+		return this.readAddress(REGISTER.I2C_ADDRESS);
 	}
 
 	setI2CAddress(address: number): void {
-		const nextAddress = integerInRange(address, "address", 1, 0x7f);
-		if (nextAddress === this.#address) return;
-
-		this.activeBus.writeUint8(REGISTER.I2C_ADDRESS, nextAddress);
-		this.reconnect(nextAddress);
-		this.#address = nextAddress;
-		Timer.delay(10);
+		this.changeAddress(REGISTER.I2C_ADDRESS, address);
 	}
 
 	#writeColor(register: number, color: RGBColor): void {

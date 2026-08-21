@@ -1,30 +1,20 @@
-import type I2C from "embedded:io/i2c";
-import SMBus from "embedded:io/smbus";
 import EncoderInput, {
 	type EncoderButtonChangeCallback as InputButtonChangeCallback,
 	type EncoderChangeCallback as InputChangeCallback,
 	type EncoderInputOptions,
 } from "encoder/input";
-import { SMBusDevice } from "hmi/smbus";
+import { SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 
-type I2COptions = ConstructorParameters<typeof I2C>[0];
-type SMBusOptions = I2COptions & { stop?: boolean };
-
-export interface EncoderIOInstance {
+export interface EncoderIOInstance extends SMBusInstance {
 	readUint8(register: number): number;
 	writeUint8(register: number, value: number): void;
 	readUint16(register: number, bigEndian?: boolean): number;
 	writeUint16(register: number, value: number, bigEndian?: boolean): void;
 	writeBuffer(register: number, buffer: ByteBuffer): void;
-	close(): void;
 }
 
-export type EncoderIO = new (options: SMBusOptions) => EncoderIOInstance;
-
-// @moddable/typings 8.3.1 declares the SMBus options as a tuple intersection.
-// Narrow the constructor to the object accepted by the runtime implementation.
-const SMBusConstructor = SMBus as unknown as EncoderIO;
+export type EncoderIO = SMBusIO<EncoderIOInstance>;
 
 export interface EncoderState {
 	/** Signed 16-bit accumulated encoder value. */
@@ -35,19 +25,13 @@ export interface EncoderState {
 
 export type EncoderMode = 0 | 1;
 
-export interface EncoderOptions extends EncoderInputOptions<EncoderState> {
-	address?: number;
-	data?: I2COptions["data"];
-	clock?: I2COptions["clock"];
-	hz?: number;
-	io?: EncoderIO;
-}
+export interface EncoderOptions extends EncoderInputOptions<EncoderState>, SMBusDeviceOptions<EncoderIO> {}
 
 export type EncoderChangeCallback = InputChangeCallback<EncoderState>;
 export type EncoderButtonChangeCallback = InputButtonChangeCallback;
 
 // https://docs.m5stack.com/en/unit/encoder
-export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions> {
+export default class Encoder extends SMBusDevice<EncoderIOInstance> {
 	static readonly DEFAULT_ADDRESS = 0x40;
 	static readonly DEFAULT_HZ = 200_000;
 	static readonly LED_COUNT = 2;
@@ -68,16 +52,7 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 	readonly input: EncoderInput<EncoderState>;
 
 	constructor(options: EncoderOptions = {}) {
-		super(
-			options.io ?? SMBusConstructor,
-			{
-				data: options.data ?? device.I2C.default.data,
-				clock: options.clock ?? device.I2C.default.clock,
-				hz: integerInRange(options.hz ?? Encoder.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
-			},
-			integerInRange(options.address ?? Encoder.DEFAULT_ADDRESS, "address", 1, 0x7f),
-			"encoder",
-		);
+		super(options, { address: Encoder.DEFAULT_ADDRESS, hz: Encoder.DEFAULT_HZ, name: "encoder" });
 		try {
 			this.input = new EncoderInput(this, this, "Encoder", options);
 		} catch (error) {
@@ -99,24 +74,24 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 	}
 
 	readEncoder(): number {
-		return signed16(this.#activeBus.readUint16(Encoder.REGISTER.ENCODER, false));
+		return signed16(this.activeBus.readUint16(Encoder.REGISTER.ENCODER, false));
 	}
 
 	setEncoder(value: number): void {
 		const encoder = integerInRange(value, "value", -0x8000, 0x7fff);
-		this.#activeBus.writeUint16(Encoder.REGISTER.ENCODER, encoder & 0xffff, false);
+		this.activeBus.writeUint16(Encoder.REGISTER.ENCODER, encoder & 0xffff, false);
 	}
 
 	resetEncoder(): void {
-		this.#activeBus.writeUint8(Encoder.REGISTER.RESET, 1);
+		this.activeBus.writeUint8(Encoder.REGISTER.RESET, 1);
 	}
 
 	isButtonPressed(): boolean {
-		return this.#activeBus.readUint8(Encoder.REGISTER.BUTTON) !== 0;
+		return this.activeBus.readUint8(Encoder.REGISTER.BUTTON) !== 0;
 	}
 
 	setMode(mode: EncoderMode): void {
-		this.#activeBus.writeUint8(Encoder.REGISTER.MODE, integerInRange(mode, "mode", 0, 1));
+		this.activeBus.writeUint8(Encoder.REGISTER.MODE, integerInRange(mode, "mode", 0, 1));
 	}
 
 	setLed(led: number, color: RGBColor): void {
@@ -128,7 +103,7 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 	}
 
 	#writeLed(index: number, color: RGBColor): void {
-		this.#activeBus.writeBuffer(
+		this.activeBus.writeBuffer(
 			Encoder.REGISTER.RGB_LED,
 			Uint8Array.of(
 				index,
@@ -137,9 +112,5 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 				integerInRange(color.b, "b", 0, 0xff),
 			),
 		);
-	}
-
-	get #activeBus(): EncoderIOInstance {
-		return this.activeBus;
 	}
 }

@@ -1,6 +1,4 @@
-import type I2C from "embedded:io/i2c";
-import SMBus from "embedded:io/smbus";
-import { SMBusDevice } from "hmi/smbus";
+import { SMBusDevice, type SMBusIO, type SMBusInstance, type SMBusPortOptions } from "hmi/smbus";
 import { integerInRange, type RGBColor } from "hmi/util";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
@@ -10,36 +8,26 @@ import JoystickInput, {
 	type JoystickState,
 } from "joystick/input";
 
-type I2COptions = ConstructorParameters<typeof I2C>[0];
-type SMBusOptions = I2COptions & { stop?: boolean };
-
-export interface JoyStick2IOInstance {
+export interface JoyStick2IOInstance extends SMBusInstance {
 	readUint8(register: number): number;
 	writeUint8(register: number, value: number): void;
 	readUint16(register: number, bigEndian?: boolean): number;
-	close(): void;
 }
 
-export type JoyStick2IO = new (options: SMBusOptions) => JoyStick2IOInstance;
-
-// @moddable/typings 8.3.1 declares the SMBus options as a tuple intersection.
-// Narrow the constructor to the object accepted by the runtime implementation.
-const SMBusConstructor = SMBus as unknown as JoyStick2IO;
+export type JoyStick2IO = SMBusIO<JoyStick2IOInstance>;
 
 export type JoyStick2Position = JoystickPosition;
 export type JoyStick2State = JoystickState;
 
-export interface JoyStick2Options extends JoystickInputOptions<JoyStick2State> {
-	data?: I2COptions["data"];
-	clock?: I2COptions["clock"];
-	io?: JoyStick2IO;
-}
+export interface JoyStick2Options extends JoystickInputOptions<JoyStick2State>, SMBusPortOptions<JoyStick2IO> {}
 
 export type JoyStick2ChangeCallback = JoystickChangeCallback<JoyStick2State>;
 export type JoyStick2ButtonChangeCallback = JoystickButtonChangeCallback;
 
 // https://docs.m5stack.com/ja/unit/Unit-JoyStick2
-export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance, SMBusOptions> {
+export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance> {
+	static readonly DEFAULT_ADDRESS = 0x63;
+	static readonly DEFAULT_HZ = 400_000;
 	static readonly REGISTER = {
 		ADC_VALUE_12BITS_REG: 0x00,
 		ADC_VALUE_8BITS_REG: 0x10,
@@ -56,16 +44,7 @@ export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance, SMBusOpt
 	readonly input: JoystickInput<JoyStick2State>;
 
 	constructor(options: JoyStick2Options = {}) {
-		super(
-			options.io ?? SMBusConstructor,
-			{
-				data: options.data ?? device.I2C.default.data,
-				clock: options.clock ?? device.I2C.default.clock,
-				hz: 400_000,
-			},
-			0x63,
-			"joystick",
-		);
+		super(options, { address: JoyStick2.DEFAULT_ADDRESS, hz: JoyStick2.DEFAULT_HZ, name: "joystick" });
 		try {
 			this.input = new JoystickInput(this, this, "JoyStick2", options);
 		} catch (error) {
@@ -91,7 +70,7 @@ export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance, SMBusOpt
 	}
 
 	#readMappedValue8bit(): JoyStick2Position {
-		const words = this.#activeBus.readUint16(JoyStick2.REGISTER.OFFSET_ADC_VALUE_8BITS_REG, true);
+		const words = this.activeBus.readUint16(JoyStick2.REGISTER.OFFSET_ADC_VALUE_8BITS_REG, true);
 		const x = (words >> 8) & 0xff;
 		const y = words & 0xff;
 
@@ -102,17 +81,13 @@ export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance, SMBusOpt
 	}
 
 	isButtonPressed(): boolean {
-		return this.#activeBus.readUint8(JoyStick2.REGISTER.BUTTON_REG) === 0;
+		return this.activeBus.readUint8(JoyStick2.REGISTER.BUTTON_REG) === 0;
 	}
 
 	setLed(color: RGBColor): void {
-		const bus = this.#activeBus;
+		const bus = this.activeBus;
 		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG, integerInRange(color.b, "b", 0, 0xff));
 		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 1, integerInRange(color.g, "g", 0, 0xff));
 		bus.writeUint8(JoyStick2.REGISTER.RGB_LED_REG + 2, integerInRange(color.r, "r", 0, 0xff));
-	}
-
-	get #activeBus(): JoyStick2IOInstance {
-		return this.activeBus;
 	}
 }

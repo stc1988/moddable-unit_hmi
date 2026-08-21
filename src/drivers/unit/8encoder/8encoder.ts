@@ -1,26 +1,15 @@
-import type I2C from "embedded:io/i2c";
-import SMBus from "embedded:io/smbus";
 import PollingInput from "hmi/polling";
-import { SMBusDevice } from "hmi/smbus";
+import { SMBusDevice, type SMBusDeviceOptions, type SMBusIO, type SMBusInstance } from "hmi/smbus";
 import { callbackOrNull, integerInRange, type RGBColor, signed32, signed32ToLittleEndian } from "hmi/util";
-import Timer from "timer";
 
-type I2COptions = ConstructorParameters<typeof I2C>[0];
-type SMBusOptions = I2COptions & { stop?: boolean };
-
-export interface Encoder8IOInstance {
+export interface Encoder8IOInstance extends SMBusInstance {
 	readUint8(register: number): number;
 	writeUint8(register: number, value: number): void;
 	readBuffer(register: number, byteLength: number): ArrayBuffer;
 	writeBuffer(register: number, buffer: ByteBuffer): void;
-	close(): void;
 }
 
-export type Encoder8IO = new (options: SMBusOptions) => Encoder8IOInstance;
-
-// @moddable/typings 8.3.1 declares the SMBus options as a tuple intersection.
-// Narrow the constructor to the object accepted by the runtime implementation.
-const SMBusConstructor = SMBus as unknown as Encoder8IO;
+export type Encoder8IO = SMBusIO<Encoder8IOInstance>;
 
 export interface Encoder8State {
 	/** Signed counter values for encoders 0 through 7. */
@@ -33,12 +22,7 @@ export interface Encoder8State {
 
 export type Encoder8Color = RGBColor;
 
-export interface Encoder8Options {
-	address?: number;
-	data?: I2COptions["data"];
-	clock?: I2COptions["clock"];
-	hz?: number;
-	io?: Encoder8IO;
+export interface Encoder8Options extends SMBusDeviceOptions<Encoder8IO> {
 	pollingInterval?: number;
 	onChange?: Encoder8ChangeCallback;
 	onEncoderChange?: Encoder8EncoderChangeCallback;
@@ -191,7 +175,7 @@ export class Encoder8Input {
 }
 
 // https://docs.m5stack.com/en/unit/8Encoder
-export default class Encoder8 extends SMBusDevice<Encoder8IOInstance, SMBusOptions> {
+export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 	static readonly DEFAULT_ADDRESS = 0x41;
 	static readonly DEFAULT_HZ = 100_000;
 	static readonly ENCODER_COUNT = 8;
@@ -213,21 +197,10 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance, SMBusOptio
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	#address: number;
 	readonly input: Encoder8Input;
 
 	constructor(options: Encoder8Options = {}) {
-		super(
-			options.io ?? SMBusConstructor,
-			{
-				data: options.data ?? device.I2C.default.data,
-				clock: options.clock ?? device.I2C.default.clock,
-				hz: integerInRange(options.hz ?? Encoder8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
-			},
-			integerInRange(options.address ?? Encoder8.DEFAULT_ADDRESS, "address", 1, 0x7f),
-			"8encoder",
-		);
-		this.#address = integerInRange(options.address ?? Encoder8.DEFAULT_ADDRESS, "address", 1, 0x7f);
+		super(options, { address: Encoder8.DEFAULT_ADDRESS, hz: Encoder8.DEFAULT_HZ, name: "8encoder" });
 		try {
 			this.input = new Encoder8Input(this, this, options);
 		} catch (error) {
@@ -250,18 +223,16 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance, SMBusOptio
 	}
 
 	readEncoders(): number[] {
-		return Encoder8.#readSignedValues(
-			this.#activeBus.readBuffer(Encoder8.REGISTER.ENCODER, Encoder8.ENCODER_COUNT * 4),
-		);
+		return Encoder8.#readSignedValues(this.activeBus.readBuffer(Encoder8.REGISTER.ENCODER, Encoder8.ENCODER_COUNT * 4));
 	}
 
 	readEncoder(encoder: number): number {
-		const data = this.#activeBus.readBuffer(Encoder8.REGISTER.ENCODER + Encoder8.#encoderIndex(encoder) * 4, 4);
+		const data = this.activeBus.readBuffer(Encoder8.REGISTER.ENCODER + Encoder8.#encoderIndex(encoder) * 4, 4);
 		return signed32(new Uint8Array(data), 0);
 	}
 
 	setEncoder(encoder: number, value: number): void {
-		this.#activeBus.writeBuffer(
+		this.activeBus.writeBuffer(
 			Encoder8.REGISTER.ENCODER + Encoder8.#encoderIndex(encoder) * 4,
 			signed32ToLittleEndian(value, "value"),
 		);
@@ -269,54 +240,54 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance, SMBusOptio
 
 	readIncrements(): number[] {
 		return Encoder8.#readSignedValues(
-			this.#activeBus.readBuffer(Encoder8.REGISTER.INCREMENT, Encoder8.ENCODER_COUNT * 4),
+			this.activeBus.readBuffer(Encoder8.REGISTER.INCREMENT, Encoder8.ENCODER_COUNT * 4),
 		);
 	}
 
 	readIncrement(encoder: number): number {
-		const data = this.#activeBus.readBuffer(Encoder8.REGISTER.INCREMENT + Encoder8.#encoderIndex(encoder) * 4, 4);
+		const data = this.activeBus.readBuffer(Encoder8.REGISTER.INCREMENT + Encoder8.#encoderIndex(encoder) * 4, 4);
 		return signed32(new Uint8Array(data), 0);
 	}
 
 	readEncoderChangeFlags(): number {
-		return this.#activeBus.readUint8(Encoder8.REGISTER.ENCODER_CHANGE_FLAGS) & 0xff;
+		return this.activeBus.readUint8(Encoder8.REGISTER.ENCODER_CHANGE_FLAGS) & 0xff;
 	}
 
 	resetEncoder(encoder: number): void {
-		this.#activeBus.writeUint8(Encoder8.REGISTER.RESET_COUNTER + Encoder8.#encoderIndex(encoder), 1);
+		this.activeBus.writeUint8(Encoder8.REGISTER.RESET_COUNTER + Encoder8.#encoderIndex(encoder), 1);
 	}
 
 	resetEncoders(): void {
-		this.#activeBus.writeBuffer(Encoder8.REGISTER.RESET_COUNTER, Uint8Array.of(1, 1, 1, 1, 1, 1, 1, 1));
+		this.activeBus.writeBuffer(Encoder8.REGISTER.RESET_COUNTER, Uint8Array.of(1, 1, 1, 1, 1, 1, 1, 1));
 	}
 
 	readButtons(): number {
-		return ~this.#activeBus.readUint8(Encoder8.REGISTER.BUTTONS) & 0xff;
+		return ~this.activeBus.readUint8(Encoder8.REGISTER.BUTTONS) & 0xff;
 	}
 
 	isButtonPressed(button: number): boolean {
-		return this.#activeBus.readUint8(Encoder8.REGISTER.BUTTON + Encoder8.#buttonIndex(button)) === 0;
+		return this.activeBus.readUint8(Encoder8.REGISTER.BUTTON + Encoder8.#buttonIndex(button)) === 0;
 	}
 
 	readButtonToggleCounts(): number[] {
 		return Array.from(
-			new Uint8Array(this.#activeBus.readBuffer(Encoder8.REGISTER.BUTTON_TOGGLE_COUNT, Encoder8.BUTTON_COUNT)),
+			new Uint8Array(this.activeBus.readBuffer(Encoder8.REGISTER.BUTTON_TOGGLE_COUNT, Encoder8.BUTTON_COUNT)),
 		);
 	}
 
 	isSwitchOn(): boolean {
-		return this.#activeBus.readUint8(Encoder8.REGISTER.SWITCH) !== 0;
+		return this.activeBus.readUint8(Encoder8.REGISTER.SWITCH) !== 0;
 	}
 
 	setLed(led: number, color: RGBColor): void {
-		this.#activeBus.writeBuffer(
+		this.activeBus.writeBuffer(
 			Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3,
 			Uint8Array.of(Encoder8.#byte(color.r, "r"), Encoder8.#byte(color.g, "g"), Encoder8.#byte(color.b, "b")),
 		);
 	}
 
 	getLed(led: number): Encoder8Color {
-		const data = new Uint8Array(this.#activeBus.readBuffer(Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3, 3));
+		const data = new Uint8Array(this.activeBus.readBuffer(Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3, 3));
 		return { r: data[0], g: data[1], b: data[2] };
 	}
 
@@ -330,29 +301,19 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance, SMBusOptio
 			data[offset + 1] = green;
 			data[offset + 2] = blue;
 		}
-		this.#activeBus.writeBuffer(Encoder8.REGISTER.RGB_LED, data);
+		this.activeBus.writeBuffer(Encoder8.REGISTER.RGB_LED, data);
 	}
 
 	getFirmwareVersion(): number {
-		return this.#activeBus.readUint8(Encoder8.REGISTER.FIRMWARE_VERSION) & 0xff;
+		return this.activeBus.readUint8(Encoder8.REGISTER.FIRMWARE_VERSION) & 0xff;
 	}
 
 	getI2CAddress(): number {
-		return this.#activeBus.readUint8(Encoder8.REGISTER.I2C_ADDRESS) & 0x7f;
+		return this.readAddress(Encoder8.REGISTER.I2C_ADDRESS);
 	}
 
 	setI2CAddress(address: number): void {
-		const nextAddress = integerInRange(address, "address", 1, 0x7f);
-		if (nextAddress === this.#address) return;
-
-		this.#activeBus.writeUint8(Encoder8.REGISTER.I2C_ADDRESS, nextAddress);
-		this.reconnect(nextAddress);
-		this.#address = nextAddress;
-		Timer.delay(10);
-	}
-
-	get #activeBus(): Encoder8IOInstance {
-		return this.activeBus;
+		this.changeAddress(Encoder8.REGISTER.I2C_ADDRESS, address);
 	}
 
 	static #readSignedValues(buffer: ArrayBuffer): number[] {

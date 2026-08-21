@@ -1,4 +1,5 @@
 {
+	"include": ["../util/manifest.json"],
 	"modules": {
 		"hmi/smbus": "./smbus"
 	}

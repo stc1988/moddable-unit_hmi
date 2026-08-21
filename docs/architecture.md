@@ -39,8 +39,8 @@ Angle accepts `sensor: { io, pin }`. Fader accepts the same `sensor` option and 
 Encoder, Joystick v1.1, JoyStick2, Scroll, ByteButton, ByteSwitch, and Mini JoyC accept an `io` bus constructor. These
 entries are constructors compatible with the required operation subset, so tests and other boards can inject alternative
 I/O without changing product logic. The corresponding Moddable I/O implementations remain the defaults. `hmi/smbus`
-provides `SMBusDevice` as the base class for sharing bus creation, active-resource access, address changes, and close
-handling across the I2C drivers.
+provides `SMBusDevice` as the base class for resolving bus pins, frequency, address, and injected I/O; it also owns
+connection replacement, active-resource access, address changes, and close handling across the I2C drivers.
 
 8Angle and 8Encoder expose product-specific input controllers for their multi-channel transitions. ByteButton and
 ByteSwitch adapt the shared BytePanel bit-field input controller to product-specific callback names. These controllers
