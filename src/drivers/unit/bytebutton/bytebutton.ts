@@ -1,8 +1,8 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
+import { callbackOrNull, I2CBusResource, integerInRange, type RGBColor } from "hmi/util";
 import PollingInput from "input/polling";
 import Timer from "timer";
-import { callbackOrNull, I2CBusResource, integerInRange, type RGBColor } from "hmi/util";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = I2COptions & { stop?: boolean };

@@ -1,8 +1,8 @@
 import Analog from "embedded:io/analog";
+import type { RGBColor } from "hmi/util";
 import AnalogInput, { type AnalogIO } from "input/analog";
 import PollingInput from "input/polling";
 import NeoPixel from "neopixel";
-import type { RGBColor } from "hmi/util";
 
 export interface FaderSample {
 	raw: number;

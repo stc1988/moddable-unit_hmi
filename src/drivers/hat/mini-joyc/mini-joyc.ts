@@ -1,5 +1,6 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
+import { I2CBusResource, integerInRange, type RGBColor, signed8, signed16 } from "hmi/util";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,
@@ -7,7 +8,6 @@ import JoystickInput, {
 	type JoystickPosition,
 	type JoystickState,
 } from "joystick/input";
-import { I2CBusResource, integerInRange, signed8, signed16, type RGBColor } from "hmi/util";
 import Timer from "timer";
 
 type I2COptions = ConstructorParameters<typeof I2C>[0];
