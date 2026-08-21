@@ -55,6 +55,12 @@ mcrun -dl -m -p esp32/m5stick_cplus
 - [Unit Scroll](examples/unit/scroll) — reports encoder and button changes and controls its RGB LED.
 - [M5Stack Mini JoyC HAT](examples/hat/mini-joyc) — reports joystick and button changes and toggles its RGB LED.
 
+## Input events
+
+Each driver exposes a readonly `input` object for change callbacks and polling controls. Assigning an input callback starts
+polling automatically; clearing all callbacks stops it. Use `driver.input.start()` and `driver.input.stop()` for explicit
+control. Device reads, LEDs, settings, and `close()` remain on the product driver.
+
 ## Development
 
 Format and lint:

@@ -1,7 +1,11 @@
 import Analog from "embedded:io/analog";
-import PollingInput from "hmi/polling";
 import type { RGBColor } from "hmi/util";
-import AnalogInput, { type AnalogIO } from "input/analog";
+import AnalogInput, {
+	type AnalogInputChangeCallback,
+	AnalogInputEvents,
+	type AnalogInputEventOptions,
+	type AnalogIO,
+} from "input/analog";
 import NeoPixel from "neopixel";
 
 export interface FaderSample {
@@ -9,7 +13,7 @@ export interface FaderSample {
 	position: number;
 }
 
-export interface FaderOptions {
+export interface FaderOptions extends AnalogInputEventOptions<FaderSample> {
 	sensor?: {
 		io?: AnalogIO;
 		pin?: number;
@@ -18,13 +22,10 @@ export interface FaderOptions {
 		io?: FaderLedIOConstructor;
 		pin?: number;
 	};
-	pollingInterval?: number;
-	deadband?: number;
 	brightness?: number;
-	onChange?: FaderChangeCallback;
 }
 
-export type FaderChangeCallback = (sample: FaderSample) => void;
+export type FaderChangeCallback = AnalogInputChangeCallback<FaderSample>;
 export type FaderLedColumn = "left" | "right";
 
 export interface FaderLedIO {
@@ -48,12 +49,10 @@ export default class Fader {
 
 	#sensor: AnalogInput;
 	#leds: FaderLedIO;
-	#polling: PollingInput<FaderSample>;
-	#deadband: number;
 	#closed = false;
+	readonly input: AnalogInputEvents<FaderSample>;
 
 	constructor(options: FaderOptions = {}) {
-		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
 		const sensor = new AnalogInput({
 			io: options.sensor?.io ?? Analog,
 			pin: options.sensor?.pin ?? Fader.DEFAULT_ANALOG_PIN,
@@ -68,11 +67,7 @@ export default class Fader {
 				order: "GRB",
 			});
 			leds.brightness = Fader.#colorComponent(options.brightness ?? 128, "brightness");
-			this.#polling = new PollingInput(this, sensor, "Fader", {
-				pollingInterval: options.pollingInterval,
-				onChange: options.onChange,
-				changed: (sample, previous) => Math.abs(sample.raw - previous.raw) > this.#deadband,
-			});
+			this.input = new AnalogInputEvents(this, sensor, "Fader", options);
 			this.#sensor = sensor;
 			this.#leds = leds;
 		} catch (error) {
@@ -85,41 +80,9 @@ export default class Fader {
 	close(): void {
 		if (this.#closed) return;
 		this.#closed = true;
-		this.#polling.close();
+		this.input.close();
 		this.#sensor.close();
 		this.#leds.close();
-	}
-
-	start(): void {
-		this.#polling.start();
-	}
-
-	stop(): void {
-		this.#polling.stop();
-	}
-
-	set onChange(callback: FaderChangeCallback | null | undefined) {
-		this.#polling.onChange = callback;
-	}
-
-	get onChange(): FaderChangeCallback | null {
-		return this.#polling.onChange;
-	}
-
-	set pollingInterval(value: number) {
-		this.#polling.pollingInterval = value;
-	}
-
-	get pollingInterval(): number {
-		return this.#polling.pollingInterval;
-	}
-
-	set deadband(value: number) {
-		this.#deadband = PollingInput.nonNegativeInteger(value, "deadband");
-	}
-
-	get deadband(): number {
-		return this.#deadband;
 	}
 
 	get brightness(): number {

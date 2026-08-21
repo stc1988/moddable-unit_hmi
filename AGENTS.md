@@ -22,13 +22,14 @@ injection points.
 ### Event Model
 
 All joystick drivers must expose the same state and callback model. `read()` returns the current `{ x, y, pressed }` state.
-Assigning `onChange` or `onButtonChange` starts polling automatically. Polling stops when both callbacks are cleared, and
-can also be controlled explicitly with `start()` and `stop()`.
+Polling controls and callbacks live on the driver's public `input` object. Assigning `input.onChange` or
+`input.onButtonChange` starts polling automatically. Polling stops when both callbacks are cleared, and can also be
+controlled explicitly with `input.start()` and `input.stop()`.
 
-- `onChange(state)` runs for the first sample, when either axis moves by more than `deadband`, or when the button state
-  changes.
-- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
-- `deadband` is measured in each device's native axis units and defaults to `0`.
+- `input.onChange(state)` runs for the first sample, when either axis moves by more than `input.deadband`, or when the
+  button state changes.
+- `input.onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
+- `input.deadband` is measured in each device's native axis units and defaults to `0`.
 
 Polling errors are reported through the Moddable debug channel without stopping the timer. Angle and Fader use the same
 callback lifecycle; their change comparison operates on the raw analog value supplied by `AnalogInput`.

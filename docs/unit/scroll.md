@@ -14,11 +14,11 @@ import Scroll from "unit/scroll";
 
 const scroll = new Scroll();
 
-scroll.onChange = ({ value, pressed }) => {
+scroll.input.onChange = ({ value, pressed }) => {
 	trace(`value=${value}, pressed=${pressed}\n`);
 };
 
-scroll.onButtonChange = (pressed) => {
+scroll.input.onButtonChange = (pressed) => {
 	scroll.setLed({ r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 64 });
 };
 ```
@@ -30,11 +30,11 @@ scroll.onButtonChange = (pressed) => {
 - `readEncoder()` returns the signed 16-bit accumulated encoder value.
 - `readIncrement()` returns the signed 16-bit increment register.
 - `isButtonPressed()` returns `true` while the wheel is pressed.
-- `onChange(state)` runs for the first sample and whenever the encoder value or button state changes.
-- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
+- `input.onChange(state)` runs for the first sample and whenever the encoder value or button state changes.
+- `input.onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
 
-Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
-`30` milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases
+Assigning either input callback starts polling automatically. Clearing both callbacks stops it. `input.pollingInterval` defaults to
+`30` milliseconds. `input.start()` and `input.stop()` control polling explicitly, and idempotent `close()` stops polling and releases
 the I2C resource.
 
 ## Encoder and RGB LED

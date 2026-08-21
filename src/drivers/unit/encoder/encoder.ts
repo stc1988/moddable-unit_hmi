@@ -65,7 +65,7 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 		RESET: 0x40,
 	} as const;
 
-	#input: EncoderInput<EncoderState>;
+	readonly input: EncoderInput<EncoderState>;
 
 	constructor(options: EncoderOptions = {}) {
 		super(
@@ -79,7 +79,7 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 			"encoder",
 		);
 		try {
-			this.#input = new EncoderInput(this, this, "Encoder", options);
+			this.input = new EncoderInput(this, this, "Encoder", options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -87,40 +87,8 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance, SMBusOptions
 	}
 
 	close(): void {
-		this.#input.close();
+		this.input.close();
 		super.close();
-	}
-
-	start(): void {
-		this.#input.start();
-	}
-
-	stop(): void {
-		this.#input.stop();
-	}
-
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-
-	set onChange(callback: EncoderChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
-	}
-
-	get onChange(): EncoderChangeCallback | null {
-		return this.#input.onChange;
-	}
-
-	set onButtonChange(callback: EncoderButtonChangeCallback | null | undefined) {
-		this.#input.onButtonChange = callback;
-	}
-
-	get onButtonChange(): EncoderButtonChangeCallback | null {
-		return this.#input.onButtonChange;
 	}
 
 	read(): EncoderState {

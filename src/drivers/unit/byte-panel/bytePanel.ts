@@ -1,7 +1,8 @@
 import type I2C from "embedded:io/i2c";
 import SMBus from "embedded:io/smbus";
+import PollingInput, { type InputSource } from "hmi/polling";
 import { SMBusDevice } from "hmi/smbus";
-import { integerInRange, type RGBColor } from "hmi/util";
+import { callbackOrNull, integerInRange, type RGBColor } from "hmi/util";
 import Timer from "timer";
 
 export type BytePanelI2COptions = ConstructorParameters<typeof I2C>[0];
@@ -28,6 +29,15 @@ export interface BytePanelOptions<IO extends BytePanelIO = BytePanelIO> {
 }
 
 export type BytePanelColor = RGBColor;
+
+export interface BytePanelInputOptions<State> {
+	pollingInterval?: number;
+	onChange?: BytePanelChangeCallback<State>;
+	onInputChange?: BytePanelInputChangeCallback;
+}
+
+export type BytePanelChangeCallback<State> = (state: State) => void;
+export type BytePanelInputChangeCallback = (index: number, on: boolean) => void;
 
 const REGISTER = {
 	INPUTS: 0x00,
@@ -186,5 +196,103 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 
 	static #byte(value: number, name: string): number {
 		return integerInRange(value, name, 0, 0xff);
+	}
+}
+
+export class BytePanelInput<State> {
+	#target: object;
+	#polling: PollingInput<State>;
+	#selectInputs: (state: State) => number;
+	#onChange: BytePanelChangeCallback<State> | null;
+	#onInputChange: BytePanelInputChangeCallback | null;
+	#lastInputs?: number;
+	#closed = false;
+	#name: string;
+
+	constructor(
+		target: object,
+		source: InputSource<State>,
+		name: string,
+		selectInputs: (state: State) => number,
+		options: BytePanelInputOptions<State> = {},
+	) {
+		this.#target = target;
+		this.#name = name;
+		this.#selectInputs = selectInputs;
+		this.#onChange = callbackOrNull(options.onChange, "onChange");
+		this.#onInputChange = callbackOrNull(options.onInputChange, "onInputChange");
+		this.#polling = new PollingInput(this, source, name, {
+			pollingInterval: options.pollingInterval,
+			changed: (state, previous) => selectInputs(state) !== selectInputs(previous),
+		});
+		this.#updatePollingState();
+	}
+
+	close(): void {
+		if (this.#closed) return;
+		this.#polling.close();
+		this.#closed = true;
+		this.#onChange = null;
+		this.#onInputChange = null;
+	}
+
+	start(): void {
+		const wasRunning = this.#polling.running;
+		this.#polling.start();
+		if (!wasRunning) this.#lastInputs = undefined;
+	}
+
+	stop(): void {
+		this.#polling.stop();
+	}
+
+	set pollingInterval(value: number) {
+		this.#polling.pollingInterval = value;
+	}
+
+	get pollingInterval(): number {
+		return this.#polling.pollingInterval;
+	}
+
+	set onChange(callback: BytePanelChangeCallback<State> | null | undefined) {
+		const next = callbackOrNull(callback, "onChange");
+		if (this.#closed && next) throw new Error(`${this.#name} input is closed`);
+		if (next !== this.#onChange) this.#polling.onChange = null;
+		this.#onChange = next;
+		this.#updatePollingState();
+	}
+
+	get onChange(): BytePanelChangeCallback<State> | null {
+		return this.#onChange;
+	}
+
+	set onInputChange(callback: BytePanelInputChangeCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onInputChange");
+		if (this.#closed && next) throw new Error(`${this.#name} input is closed`);
+		this.#onInputChange = next;
+		this.#updatePollingState();
+	}
+
+	get onInputChange(): BytePanelInputChangeCallback | null {
+		return this.#onInputChange;
+	}
+
+	#updatePollingState(): void {
+		const callback = this.#onChange || this.#onInputChange ? this.#handleChange : null;
+		if (callback && !this.#polling.onChange) this.#lastInputs = undefined;
+		this.#polling.onChange = callback;
+	}
+
+	#handleChange(state: State): void {
+		const inputs = this.#selectInputs(state);
+		const changed = this.#lastInputs === undefined ? 0 : inputs ^ this.#lastInputs;
+		this.#onChange?.call(this.#target, state);
+		if (changed && this.#onInputChange) {
+			for (let index = 0; index < INPUT_COUNT; index++) {
+				const bit = 1 << index;
+				if (changed & bit) this.#onInputChange.call(this.#target, index, Boolean(inputs & bit));
+			}
+		}
+		this.#lastInputs = inputs;
 	}
 }

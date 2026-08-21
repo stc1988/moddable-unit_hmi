@@ -10,23 +10,23 @@ port. `io` can inject a compatible I2C constructor for another provider or for t
 - `read()` performs one three-byte I2C transaction and returns `{ x, y, pressed }`. Axis values range from `0` through `255`; `pressed` is `true` while the stick is pushed.
 - `readXY()` returns `{ x, y }` from a new device reading.
 - `isButtonPressed()` returns the button state from a new device reading.
-- `onChange` receives `{ x, y, pressed }` for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
-- `onButtonChange` receives `true` or `false` when the button state changes after the initial sample.
+- `input.onChange` receives `{ x, y, pressed }` for the first sample, when either axis moves by more than `input.deadband`, or when the button state changes.
+- `input.onButtonChange` receives `true` or `false` when the button state changes after the initial sample.
 - Assigning either callback starts polling. Clearing both callbacks stops it.
-- `pollingInterval` controls the polling period in milliseconds and defaults to `30`.
-- `deadband` controls axis change suppression in native axis units and defaults to `0`.
-- `start()`, `stop()`, and `close()` control polling and the I2C resource explicitly.
+- `input.pollingInterval` controls the polling period in milliseconds and defaults to `30`.
+- `input.deadband` controls axis change suppression in native axis units and defaults to `0`.
+- `input.start()`, `input.stop()`, and `close()` control polling and the I2C resource explicitly.
 
 ```ts
 import JoyStick from "unit/joystick";
 
 const joystick = new JoyStick({ deadband: 2 });
 
-joystick.onChange = ({ x, y, pressed }) => {
+joystick.input.onChange = ({ x, y, pressed }) => {
 	trace(`x=${x}, y=${y}, pressed=${pressed}\n`);
 };
 
-joystick.onButtonChange = (pressed) => {
+joystick.input.onButtonChange = (pressed) => {
 	trace(`pressed=${pressed}\n`);
 };
 ```

@@ -64,7 +64,7 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> 
 	} as const;
 
 	#address: number;
-	#input: EncoderInput<ScrollState>;
+	readonly input: EncoderInput<ScrollState>;
 
 	constructor(options: ScrollOptions = {}) {
 		super(
@@ -79,7 +79,7 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> 
 		);
 		this.#address = integerInRange(options.address ?? Scroll.DEFAULT_ADDRESS, "address", 1, 0x7f);
 		try {
-			this.#input = new EncoderInput(this, this, "Scroll", options);
+			this.input = new EncoderInput(this, this, "Scroll", options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -87,40 +87,8 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> 
 	}
 
 	close(): void {
-		this.#input.close();
+		this.input.close();
 		super.close();
-	}
-
-	start(): void {
-		this.#input.start();
-	}
-
-	stop(): void {
-		this.#input.stop();
-	}
-
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-
-	set onChange(callback: ScrollChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
-	}
-
-	get onChange(): ScrollChangeCallback | null {
-		return this.#input.onChange;
-	}
-
-	set onButtonChange(callback: ScrollButtonChangeCallback | null | undefined) {
-		this.#input.onButtonChange = callback;
-	}
-
-	get onButtonChange(): ScrollButtonChangeCallback | null {
-		return this.#input.onButtonChange;
 	}
 
 	read(): ScrollState {
@@ -191,7 +159,7 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance, SMBusOptions> 
 	}
 
 	enterBootloader(): void {
-		this.stop();
+		this.input.stop();
 		this.#activeBus.writeUint8(Scroll.REGISTER.JUMP_TO_BOOTLOADER, 1);
 	}
 

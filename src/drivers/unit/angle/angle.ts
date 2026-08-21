@@ -1,44 +1,39 @@
 import Analog from "embedded:io/analog";
-import PollingInput from "hmi/polling";
-import AnalogInput, { type AnalogIO } from "input/analog";
+import AnalogInput, {
+	type AnalogInputChangeCallback,
+	AnalogInputEvents,
+	type AnalogInputEventOptions,
+	type AnalogIO,
+} from "input/analog";
 
 export interface AngleSample {
 	raw: number;
 	position: number;
 }
 
-export interface AngleOptions {
+export interface AngleOptions extends AnalogInputEventOptions<AngleSample> {
 	sensor?: {
 		io?: AnalogIO;
 		pin?: number;
 	};
-	pollingInterval?: number;
-	deadband?: number;
-	onChange?: AngleChangeCallback;
 }
 
-export type AngleChangeCallback = (sample: AngleSample) => void;
+export type AngleChangeCallback = AnalogInputChangeCallback<AngleSample>;
 
 // https://docs.m5stack.com/ja/unit/angle
 export default class Angle {
 	static readonly DEFAULT_ANALOG_PIN = 8;
 
 	#sensor: AnalogInput;
-	#polling: PollingInput<AngleSample>;
-	#deadband: number;
+	readonly input: AnalogInputEvents<AngleSample>;
 
 	constructor(options: AngleOptions = {}) {
-		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
 		const sensor = new AnalogInput({
 			io: options.sensor?.io ?? Analog,
 			pin: options.sensor?.pin ?? Angle.DEFAULT_ANALOG_PIN,
 		});
 		try {
-			this.#polling = new PollingInput(this, sensor, "Angle", {
-				pollingInterval: options.pollingInterval,
-				onChange: options.onChange,
-				changed: (sample, previous) => Math.abs(sample.raw - previous.raw) > this.#deadband,
-			});
+			this.input = new AnalogInputEvents(this, sensor, "Angle", options);
 			this.#sensor = sensor;
 		} catch (error) {
 			sensor.close();
@@ -47,40 +42,8 @@ export default class Angle {
 	}
 
 	close(): void {
-		this.#polling.close();
+		this.input.close();
 		this.#sensor.close();
-	}
-
-	start(): void {
-		this.#polling.start();
-	}
-
-	stop(): void {
-		this.#polling.stop();
-	}
-
-	set onChange(callback: AngleChangeCallback | null | undefined) {
-		this.#polling.onChange = callback;
-	}
-
-	get onChange(): AngleChangeCallback | null {
-		return this.#polling.onChange;
-	}
-
-	set pollingInterval(value: number) {
-		this.#polling.pollingInterval = value;
-	}
-
-	get pollingInterval(): number {
-		return this.#polling.pollingInterval;
-	}
-
-	set deadband(value: number) {
-		this.#deadband = PollingInput.nonNegativeInteger(value, "deadband");
-	}
-
-	get deadband(): number {
-		return this.#deadband;
 	}
 
 	read(): number {

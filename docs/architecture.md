@@ -1,12 +1,13 @@
 # Driver architecture
 
 The input drivers share behavior by responsibility instead of by bus or product family. Product drivers live under
-`src/drivers/unit` or `src/drivers/hat`; reusable input infrastructure lives separately under `src/input`.
+`src/drivers/unit` or `src/drivers/hat`; reusable input infrastructure lives separately under `src/input`. Every product
+exposes its polling lifecycle, callback properties, and comparison settings through a readonly `input` object.
 
 ```text
 Product driver       Angle / Fader    8Angle / 8Encoder / Encoder / Scroll / ByteButton / ByteSwitch    Joystick / JoyStick2 / MiniJoyC
                             |                           |                                    |
-Input semantics      AnalogInput                       |                              JoystickInput
+Input semantics      AnalogInputEvents             product input controllers                    JoystickInput
                             |                           |                                    |
 Polling lifecycle    +--------------------------- PollingInput<State> ----------------------------+
                             |                           |                                    |
@@ -17,8 +18,8 @@ Hardware I/O         embedded:io/analog           embedded:io/i2c               
 
 `hmi/polling` owns the polling timer, callback lifecycle, error reporting, polling-interval validation, and comparison
 against the last notified state. A product supplies a synchronous `read()` source and a `changed(current, previous)`
-function. Assigning a callback starts polling automatically; clearing it stops polling. `close()` is idempotent and stops
-callbacks before the hardware layer is closed.
+function. Assigning a callback on the public `input` object starts polling automatically; clearing all input callbacks
+stops polling. A product's `close()` closes its input controller before releasing hardware resources.
 
 `JoystickInput` adds joystick-specific axis deadband and button-transition semantics on top of this layer. The three I2C
 joystick drivers therefore share event behavior without attempting to merge their different registers or wire protocols.
@@ -31,8 +32,8 @@ polarity, state, and callbacks.
 ## AnalogInput
 
 `input/analog` wraps a constructor-injected analog I/O implementation. It exposes a raw read and a normalized
-`{ raw, position }` sample, with optional direction inversion. Angle uses the normal direction; Fader uses the inverted
-direction. Both use `PollingInput` for event delivery.
+`{ raw, position }` sample, with optional direction inversion. `AnalogInputEvents` owns polling and deadband comparison.
+Angle uses the normal direction; Fader uses the inverted direction.
 
 Angle accepts `sensor: { io, pin }`. Fader accepts the same `sensor` option and `leds: { io, pin }`. 8Angle, 8Encoder,
 Encoder, Joystick v1.1, JoyStick2, Scroll, ByteButton, ByteSwitch, and Mini JoyC accept an `io` bus constructor. These
@@ -41,9 +42,9 @@ I/O without changing product logic. The corresponding Moddable I/O implementatio
 provides `SMBusDevice` as the base class for sharing bus creation, active-resource access, address changes, and close
 handling across the I2C drivers.
 
-8Angle, 8Encoder, Encoder, Scroll, ByteButton, and ByteSwitch use `PollingInput` directly because their state is not a
-two-axis joystick. They provide the same automatic callback lifecycle and separate input-transition callbacks without
-introducing joystick axis semantics.
+8Angle and 8Encoder expose product-specific input controllers for their multi-channel transitions. ByteButton and
+ByteSwitch adapt the shared BytePanel bit-field input controller to product-specific callback names. These controllers
+compose `PollingInput` without adding polling or callback forwarding methods to the hardware-facing product classes.
 
 ## Deliberate boundaries
 

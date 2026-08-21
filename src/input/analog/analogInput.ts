@@ -1,3 +1,5 @@
+import PollingInput, { type InputSource } from "hmi/polling";
+
 export interface AnalogInputSample {
 	raw: number;
 	position: number;
@@ -21,6 +23,14 @@ export interface AnalogInputOptions extends AnalogIOOptions {
 	io: AnalogIO;
 	invert?: boolean;
 }
+
+export interface AnalogInputEventOptions<State extends AnalogInputSample = AnalogInputSample> {
+	pollingInterval?: number;
+	deadband?: number;
+	onChange?: AnalogInputChangeCallback<State>;
+}
+
+export type AnalogInputChangeCallback<State extends AnalogInputSample = AnalogInputSample> = (sample: State) => void;
 
 export default class AnalogInput {
 	#io?: AnalogIOInstance;
@@ -54,5 +64,55 @@ export default class AnalogInput {
 		const maximum = 2 ** io.resolution - 1;
 		const position = raw / maximum;
 		return { raw, position: this.#invert ? 1 - position : position };
+	}
+}
+
+export class AnalogInputEvents<State extends AnalogInputSample = AnalogInputSample> {
+	#polling: PollingInput<State>;
+	#deadband: number;
+
+	constructor(target: object, source: InputSource<State>, name: string, options: AnalogInputEventOptions<State> = {}) {
+		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
+		this.#polling = new PollingInput(target, source, name, {
+			pollingInterval: options.pollingInterval,
+			onChange: options.onChange,
+			changed: (sample, previous) => Math.abs(sample.raw - previous.raw) > this.#deadband,
+		});
+	}
+
+	close(): void {
+		this.#polling.close();
+	}
+
+	start(): void {
+		this.#polling.start();
+	}
+
+	stop(): void {
+		this.#polling.stop();
+	}
+
+	set pollingInterval(value: number) {
+		this.#polling.pollingInterval = value;
+	}
+
+	get pollingInterval(): number {
+		return this.#polling.pollingInterval;
+	}
+
+	set deadband(value: number) {
+		this.#deadband = PollingInput.nonNegativeInteger(value, "deadband");
+	}
+
+	get deadband(): number {
+		return this.#deadband;
+	}
+
+	set onChange(callback: AnalogInputChangeCallback<State> | null | undefined) {
+		this.#polling.onChange = callback;
+	}
+
+	get onChange(): AnalogInputChangeCallback<State> | null {
+		return this.#polling.onChange;
 	}
 }

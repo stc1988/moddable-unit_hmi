@@ -40,7 +40,7 @@ export default class JoyStick extends SMBusDevice<JoyStickIOInstance, SMBusOptio
 	static readonly DEFAULT_ADDRESS = 0x52;
 	static readonly STATE_LENGTH = 3;
 
-	#input: JoystickInput<JoyStickState>;
+	readonly input: JoystickInput<JoyStickState>;
 
 	constructor(options: JoyStickOptions = {}) {
 		super(
@@ -54,7 +54,7 @@ export default class JoyStick extends SMBusDevice<JoyStickIOInstance, SMBusOptio
 			"joystick",
 		);
 		try {
-			this.#input = new JoystickInput(this, this, "JoyStick", options);
+			this.input = new JoystickInput(this, this, "JoyStick", options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -62,48 +62,8 @@ export default class JoyStick extends SMBusDevice<JoyStickIOInstance, SMBusOptio
 	}
 
 	close(): void {
-		this.#input.close();
+		this.input.close();
 		super.close();
-	}
-
-	start(): void {
-		this.#input.start();
-	}
-
-	stop(): void {
-		this.#input.stop();
-	}
-
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-
-	set deadband(value: number) {
-		this.#input.deadband = value;
-	}
-
-	get deadband(): number {
-		return this.#input.deadband;
-	}
-
-	set onChange(callback: JoyStickChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
-	}
-
-	get onChange(): JoyStickChangeCallback | null {
-		return this.#input.onChange;
-	}
-
-	set onButtonChange(callback: JoyStickButtonChangeCallback | null | undefined) {
-		this.#input.onButtonChange = callback;
-	}
-
-	get onButtonChange(): JoyStickButtonChangeCallback | null {
-		return this.#input.onButtonChange;
 	}
 
 	read(): JoyStickState {

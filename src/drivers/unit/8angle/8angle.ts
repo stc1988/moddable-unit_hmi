@@ -52,24 +52,8 @@ export type Angle8ChangeCallback = (state: Angle8State) => void;
 export type Angle8AngleChangeCallback = (angle: number, value: number) => void;
 export type Angle8SwitchChangeCallback = (on: boolean) => void;
 
-// https://docs.m5stack.com/en/unit/8Angle
-export default class Angle8 extends SMBusDevice<Angle8IOInstance, SMBusOptions> {
-	static readonly DEFAULT_ADDRESS = 0x43;
-	static readonly DEFAULT_HZ = 400_000;
-	static readonly ANGLE_COUNT = 8;
-	static readonly LED_COUNT = 9;
-	static readonly SWITCH_LED = 8;
-
-	static readonly REGISTER = {
-		ANALOG_12BIT: 0x00,
-		ANALOG_8BIT: 0x10,
-		SWITCH: 0x20,
-		RGB_LED: 0x30,
-		FIRMWARE_VERSION: 0xfe,
-		I2C_ADDRESS: 0xff,
-	} as const;
-
-	#address: number;
+export class Angle8Input {
+	#target: object;
 	#polling: PollingInput<Angle8State>;
 	#onChange: Angle8ChangeCallback | null;
 	#onAngleChange: Angle8AngleChangeCallback | null;
@@ -78,32 +62,17 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance, SMBusOptions> 
 	#deadband: number;
 	#closed = false;
 
-	constructor(options: Angle8Options = {}) {
-		super(
-			options.io ?? SMBusConstructor,
-			{
-				data: options.data ?? device.I2C.default.data,
-				clock: options.clock ?? device.I2C.default.clock,
-				hz: integerInRange(options.hz ?? Angle8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
-			},
-			integerInRange(options.address ?? Angle8.DEFAULT_ADDRESS, "address", 1, 0x7f),
-			"8angle",
-		);
-		this.#address = integerInRange(options.address ?? Angle8.DEFAULT_ADDRESS, "address", 1, 0x7f);
+	constructor(target: object, source: { read(): Angle8State }, options: Angle8Options) {
+		this.#target = target;
 		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onAngleChange = callbackOrNull(options.onAngleChange, "onAngleChange");
 		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
-		try {
-			this.#polling = new PollingInput(this, this, "8Angle", {
-				pollingInterval: options.pollingInterval,
-				changed: (state, previous) => this.#stateChanged(state, previous),
-			});
-			this.#updatePollingState();
-		} catch (error) {
-			super.close();
-			throw error;
-		}
+		this.#polling = new PollingInput(this, source, "8Angle", {
+			pollingInterval: options.pollingInterval,
+			changed: (state, previous) => this.#stateChanged(state, previous),
+		});
+		this.#updatePollingState();
 	}
 
 	close(): void {
@@ -114,7 +83,6 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance, SMBusOptions> 
 		this.#onAngleChange = null;
 		this.#onSwitchChange = null;
 		this.#lastState = undefined;
-		super.close();
 	}
 
 	start(): void {
@@ -145,7 +113,7 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance, SMBusOptions> 
 
 	set onChange(callback: Angle8ChangeCallback | null | undefined) {
 		const next = callbackOrNull(callback, "onChange");
-		if (this.#closed && next) throw new Error("8angle is closed");
+		if (this.#closed && next) throw new Error("8angle input is closed");
 		if (next !== this.#onChange) this.#polling.onChange = null;
 		this.#onChange = next;
 		this.#updatePollingState();
@@ -157,7 +125,7 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance, SMBusOptions> 
 
 	set onAngleChange(callback: Angle8AngleChangeCallback | null | undefined) {
 		const next = callbackOrNull(callback, "onAngleChange");
-		if (this.#closed && next) throw new Error("8angle is closed");
+		if (this.#closed && next) throw new Error("8angle input is closed");
 		this.#onAngleChange = next;
 		this.#updatePollingState();
 	}
@@ -168,13 +136,86 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance, SMBusOptions> 
 
 	set onSwitchChange(callback: Angle8SwitchChangeCallback | null | undefined) {
 		const next = callbackOrNull(callback, "onSwitchChange");
-		if (this.#closed && next) throw new Error("8angle is closed");
+		if (this.#closed && next) throw new Error("8angle input is closed");
 		this.#onSwitchChange = next;
 		this.#updatePollingState();
 	}
 
 	get onSwitchChange(): Angle8SwitchChangeCallback | null {
 		return this.#onSwitchChange;
+	}
+
+	#updatePollingState(): void {
+		const callback = this.#onChange || this.#onAngleChange || this.#onSwitchChange ? this.#handleChange : null;
+		if (callback && !this.#polling.onChange) this.#lastState = undefined;
+		this.#polling.onChange = callback;
+	}
+
+	#handleChange(state: Angle8State): void {
+		const previous = this.#lastState;
+		this.#onChange?.call(this.#target, state);
+		if (previous && this.#onAngleChange) {
+			for (let angle = 0; angle < Angle8.ANGLE_COUNT; angle++) {
+				if (Math.abs(state.angles[angle] - previous.angles[angle]) > this.#deadband)
+					this.#onAngleChange.call(this.#target, angle, state.angles[angle]);
+			}
+		}
+		if (previous && state.switchOn !== previous.switchOn) this.#onSwitchChange?.call(this.#target, state.switchOn);
+		this.#lastState = state;
+	}
+
+	#stateChanged(state: Angle8State, previous: Angle8State): boolean {
+		if (state.switchOn !== previous.switchOn) return true;
+		for (let angle = 0; angle < Angle8.ANGLE_COUNT; angle++) {
+			if (Math.abs(state.angles[angle] - previous.angles[angle]) > this.#deadband) return true;
+		}
+		return false;
+	}
+}
+
+// https://docs.m5stack.com/en/unit/8Angle
+export default class Angle8 extends SMBusDevice<Angle8IOInstance, SMBusOptions> {
+	static readonly DEFAULT_ADDRESS = 0x43;
+	static readonly DEFAULT_HZ = 400_000;
+	static readonly ANGLE_COUNT = 8;
+	static readonly LED_COUNT = 9;
+	static readonly SWITCH_LED = 8;
+
+	static readonly REGISTER = {
+		ANALOG_12BIT: 0x00,
+		ANALOG_8BIT: 0x10,
+		SWITCH: 0x20,
+		RGB_LED: 0x30,
+		FIRMWARE_VERSION: 0xfe,
+		I2C_ADDRESS: 0xff,
+	} as const;
+
+	#address: number;
+	readonly input: Angle8Input;
+
+	constructor(options: Angle8Options = {}) {
+		super(
+			options.io ?? SMBusConstructor,
+			{
+				data: options.data ?? device.I2C.default.data,
+				clock: options.clock ?? device.I2C.default.clock,
+				hz: integerInRange(options.hz ?? Angle8.DEFAULT_HZ, "hz", 1, Number.MAX_SAFE_INTEGER),
+			},
+			integerInRange(options.address ?? Angle8.DEFAULT_ADDRESS, "address", 1, 0x7f),
+			"8angle",
+		);
+		this.#address = integerInRange(options.address ?? Angle8.DEFAULT_ADDRESS, "address", 1, 0x7f);
+		try {
+			this.input = new Angle8Input(this, this, options);
+		} catch (error) {
+			super.close();
+			throw error;
+		}
+	}
+
+	close(): void {
+		this.input.close();
+		super.close();
 	}
 
 	read(): Angle8State {
@@ -242,33 +283,6 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance, SMBusOptions> 
 		this.reconnect(nextAddress);
 		this.#address = nextAddress;
 		Timer.delay(10);
-	}
-
-	#updatePollingState(): void {
-		const callback = this.#onChange || this.#onAngleChange || this.#onSwitchChange ? this.#handleChange : null;
-		if (callback && !this.#polling.onChange) this.#lastState = undefined;
-		this.#polling.onChange = callback;
-	}
-
-	#handleChange(state: Angle8State): void {
-		const previous = this.#lastState;
-		this.#onChange?.call(this, state);
-		if (previous && this.#onAngleChange) {
-			for (let angle = 0; angle < Angle8.ANGLE_COUNT; angle++) {
-				if (Math.abs(state.angles[angle] - previous.angles[angle]) > this.#deadband)
-					this.#onAngleChange.call(this, angle, state.angles[angle]);
-			}
-		}
-		if (previous && state.switchOn !== previous.switchOn) this.#onSwitchChange?.call(this, state.switchOn);
-		this.#lastState = state;
-	}
-
-	#stateChanged(state: Angle8State, previous: Angle8State): boolean {
-		if (state.switchOn !== previous.switchOn) return true;
-		for (let angle = 0; angle < Angle8.ANGLE_COUNT; angle++) {
-			if (Math.abs(state.angles[angle] - previous.angles[angle]) > this.#deadband) return true;
-		}
-		return false;
 	}
 
 	get #activeBus(): Angle8IOInstance {
