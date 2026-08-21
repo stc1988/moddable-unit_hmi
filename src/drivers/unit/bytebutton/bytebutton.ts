@@ -27,7 +27,7 @@ export interface ByteButtonOptions extends BytePanelOptions<ByteButtonIO> {
 export type ByteButtonChangeCallback = (state: ByteButtonState) => void;
 export type ByteButtonButtonChangeCallback = (button: number, pressed: boolean) => void;
 
-export class ByteButtonInput extends BytePanelInput<ByteButtonState> {
+class ByteButtonInput extends BytePanelInput<ByteButtonState> {
 	constructor(target: object, source: { read(): ByteButtonState }, options: ByteButtonOptions) {
 		super(target, source, "ByteButton", (state) => state.buttons, {
 			pollingInterval: options.pollingInterval,
@@ -57,28 +57,44 @@ export default class ByteButton extends BytePanel<ByteButtonIOInstance> {
 		BUTTON: 1,
 	} as const;
 
-	readonly input: ByteButtonInput;
+	#input: ByteButtonInput;
 
 	set onChange(callback: ByteButtonChangeCallback | null | undefined) {
-		this.input.onChange = callback;
+		this.#input.onChange = callback;
 	}
 
 	get onChange(): ByteButtonChangeCallback | null {
-		return this.input.onChange;
+		return this.#input.onChange;
 	}
 
 	set onButtonChange(callback: ByteButtonButtonChangeCallback | null | undefined) {
-		this.input.onButtonChange = callback;
+		this.#input.onButtonChange = callback;
 	}
 
 	get onButtonChange(): ByteButtonButtonChangeCallback | null {
-		return this.input.onButtonChange;
+		return this.#input.onButtonChange;
+	}
+
+	set pollingInterval(value: number) {
+		this.#input.pollingInterval = value;
+	}
+
+	get pollingInterval(): number {
+		return this.#input.pollingInterval;
+	}
+
+	start(): void {
+		this.#input.start();
+	}
+
+	stop(): void {
+		this.#input.stop();
 	}
 
 	constructor(options: ByteButtonOptions = {}) {
 		super(options, ByteButton.DEFAULT_ADDRESS, "bytebutton");
 		try {
-			this.input = new ByteButtonInput(this, this, options);
+			this.#input = new ByteButtonInput(this, this, options);
 		} catch (error) {
 			super.close();
 			throw error;
@@ -86,7 +102,7 @@ export default class ByteButton extends BytePanel<ByteButtonIOInstance> {
 	}
 
 	close(): void {
-		this.input.close();
+		this.#input.close();
 		super.close();
 	}
 

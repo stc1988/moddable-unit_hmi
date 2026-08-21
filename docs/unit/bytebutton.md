@@ -33,8 +33,8 @@ byteButton.onButtonChange = (button, pressed) => {
 - `onButtonChange(button, pressed)` runs once for each pressed or released transition after the initial sample. If several
   buttons change in one sample, callbacks run in ascending button order.
 
-Assigning either callback starts polling automatically. Clearing both callbacks stops it. `input.pollingInterval` defaults to
-`30` milliseconds. `input.start()` and `input.stop()` control polling explicitly, and idempotent `close()` stops polling and releases
+Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
+`30` milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases
 the I2C resource.
 
 ## RGB LEDs
@@ -64,5 +64,5 @@ errors to the caller.
 
 ## Exported types
 
-The module exports `ByteButtonInput`, `ByteButtonOptions`, `ByteButtonIO`, `ByteButtonIOInstance`, `ByteButtonState`,
+The module exports `ByteButtonOptions`, `ByteButtonIO`, `ByteButtonIOInstance`, `ByteButtonState`,
 `ByteButtonLedMode`, `ByteButtonChangeCallback`, and `ByteButtonButtonChangeCallback` for TypeScript applications.
