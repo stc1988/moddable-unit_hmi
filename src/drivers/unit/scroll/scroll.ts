@@ -27,22 +27,22 @@ export interface ScrollOptions extends EncoderInputOptions<ScrollState>, SMBusDe
 export type ScrollChangeCallback = InputChangeCallback<ScrollState>;
 export type ScrollButtonChangeCallback = InputButtonChangeCallback;
 
+const REGISTER = {
+	ENCODER: 0x10,
+	BUTTON: 0x20,
+	RGB_LED: 0x30,
+	RESET: 0x40,
+	INCREMENT: 0x50,
+	BOOTLOADER_VERSION: 0xfc,
+	JUMP_TO_BOOTLOADER: 0xfd,
+	FIRMWARE_VERSION: 0xfe,
+	I2C_ADDRESS: 0xff,
+} as const;
+
 // https://docs.m5stack.com/ja/unit/UNIT-Scroll
 export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	static readonly DEFAULT_ADDRESS = 0x40;
 	static readonly DEFAULT_HZ = 400_000;
-
-	static readonly REGISTER = {
-		ENCODER: 0x10,
-		BUTTON: 0x20,
-		RGB_LED: 0x30,
-		RESET: 0x40,
-		INCREMENT: 0x50,
-		BOOTLOADER_VERSION: 0xfc,
-		JUMP_TO_BOOTLOADER: 0xfd,
-		FIRMWARE_VERSION: 0xfe,
-		I2C_ADDRESS: 0xff,
-	} as const;
 
 	readonly input: EncoderInput<ScrollState>;
 
@@ -69,29 +69,29 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	}
 
 	readEncoder(): number {
-		return signed16(this.activeBus.readUint16(Scroll.REGISTER.ENCODER, false));
+		return signed16(this.activeBus.readUint16(REGISTER.ENCODER, false));
 	}
 
 	readIncrement(): number {
-		return signed16(this.activeBus.readUint16(Scroll.REGISTER.INCREMENT, false));
+		return signed16(this.activeBus.readUint16(REGISTER.INCREMENT, false));
 	}
 
 	isButtonPressed(): boolean {
-		return this.activeBus.readUint8(Scroll.REGISTER.BUTTON) === 0;
+		return this.activeBus.readUint8(REGISTER.BUTTON) === 0;
 	}
 
 	setEncoder(value: number): void {
 		const encoder = integerInRange(value, "value", -0x8000, 0x7fff);
-		this.activeBus.writeUint16(Scroll.REGISTER.ENCODER, encoder & 0xffff, false);
+		this.activeBus.writeUint16(REGISTER.ENCODER, encoder & 0xffff, false);
 	}
 
 	resetEncoder(): void {
-		this.activeBus.writeUint8(Scroll.REGISTER.RESET, 1);
+		this.activeBus.writeUint8(REGISTER.RESET, 1);
 	}
 
 	setLed(color: RGBColor): void {
 		this.activeBus.writeBuffer(
-			Scroll.REGISTER.RGB_LED,
+			REGISTER.RGB_LED,
 			Uint8Array.of(
 				0,
 				integerInRange(color.r, "r", 0, 0xff),
@@ -102,28 +102,28 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	}
 
 	getLed(): RGBColor {
-		const data = new Uint8Array(this.activeBus.readBuffer(Scroll.REGISTER.RGB_LED, 4));
+		const data = new Uint8Array(this.activeBus.readBuffer(REGISTER.RGB_LED, 4));
 		return { r: data[1], g: data[2], b: data[3] };
 	}
 
 	getBootloaderVersion(): number {
-		return this.activeBus.readUint8(Scroll.REGISTER.BOOTLOADER_VERSION) & 0xff;
+		return this.activeBus.readUint8(REGISTER.BOOTLOADER_VERSION) & 0xff;
 	}
 
 	getFirmwareVersion(): number {
-		return this.activeBus.readUint8(Scroll.REGISTER.FIRMWARE_VERSION) & 0xff;
+		return this.activeBus.readUint8(REGISTER.FIRMWARE_VERSION) & 0xff;
 	}
 
 	getI2CAddress(): number {
-		return this.readAddress(Scroll.REGISTER.I2C_ADDRESS);
+		return this.readAddress(REGISTER.I2C_ADDRESS);
 	}
 
 	setI2CAddress(address: number): void {
-		this.changeAddress(Scroll.REGISTER.I2C_ADDRESS, address);
+		this.changeAddress(REGISTER.I2C_ADDRESS, address);
 	}
 
 	enterBootloader(): void {
 		this.input.stop();
-		this.activeBus.writeUint8(Scroll.REGISTER.JUMP_TO_BOOTLOADER, 1);
+		this.activeBus.writeUint8(REGISTER.JUMP_TO_BOOTLOADER, 1);
 	}
 }
