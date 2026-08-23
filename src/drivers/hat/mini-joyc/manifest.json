@@ -1,4 +1,7 @@
 {
-	"include": ["./manifest_include.json", "./manifest_module.json", "../../../hmi/smbus/manifest.json"],
+	"include": ["../../../input/joystick/manifest.json", "../../../hmi/smbus/manifest.json"],
+	"modules": {
+		"hat/mini-joyc": "./mini-joyc"
+	},
 	"preload": ["hat/mini-joyc"]
 }

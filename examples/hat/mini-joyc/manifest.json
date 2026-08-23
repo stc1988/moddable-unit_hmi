@@ -2,7 +2,7 @@
 	"include": [
 		"$(MODDABLE)/examples/manifest_mod.json",
 		"$(MODDABLE)/examples/manifest_typings.json",
-		"../../../src/drivers/hat/mini-joyc/manifest_module.json"
+		"../../../src/drivers/hat/mini-joyc/manifest.json"
 	],
 	"modules": {
 		"*": ["./mod"]
