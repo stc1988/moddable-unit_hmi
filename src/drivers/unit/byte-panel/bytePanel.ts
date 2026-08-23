@@ -34,7 +34,6 @@ const REGISTER = {
 	INPUT_OFF_RGB888: 0x70,
 	INPUT_ON_RGB888: 0x90,
 	SAVE_TO_FLASH: 0xf0,
-	IRQ_ENABLED: 0xf1,
 	FIRMWARE_VERSION: 0xfe,
 	I2C_ADDRESS: 0xff,
 } as const;
@@ -106,15 +105,6 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 
 	protected getLedModeValue(): 0 | 1 {
 		return this.activeBus.readUint8(REGISTER.LED_MODE) === 1 ? 1 : 0;
-	}
-
-	setIrqEnabled(enabled: boolean): void {
-		if (typeof enabled !== "boolean") throw new TypeError("enabled must be a boolean");
-		this.activeBus.writeUint8(REGISTER.IRQ_ENABLED, enabled ? 1 : 0);
-	}
-
-	getIrqEnabled(): boolean {
-		return this.activeBus.readUint8(REGISTER.IRQ_ENABLED) !== 0;
 	}
 
 	saveSettings(): void {

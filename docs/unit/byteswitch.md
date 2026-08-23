@@ -50,10 +50,10 @@ LED indices are `0` through `8`; LEDs 0 through 7 correspond to the switches and
 
 ## Device settings
 
-- `setIrqEnabled(enabled)` and `getIrqEnabled()` access the firmware's IRQ setting. The setting takes effect after the
-  ByteSwitch restarts. With IRQ enabled, the firmware drives its IRQ pad low on a switch change and releases it after the
-  combined switch register is read. Polling works without enabling IRQ.
-- `saveSettings()` writes the supported brightness, mode, automatic colors, IRQ, and address configuration to flash.
+- The firmware protocol defines an IRQ mode that repurposes the STM32's SWDIO (PA13) programming signal. SWDIO is
+  available only on the internal SWD programming pads and is not routed to either Grove connector. The driver therefore
+  does not expose IRQ configuration and detects switch changes by polling.
+- `saveSettings()` writes the supported brightness, mode, automatic colors, and address configuration to flash.
   Call it only when persistence is intended to avoid unnecessary flash writes.
 - `getFirmwareVersion()` reads the firmware version.
 - `getI2CAddress()` reads the configured address. `setI2CAddress(address)` accepts `0x01` through `0x7f` and reconnects
