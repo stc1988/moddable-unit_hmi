@@ -36,7 +36,7 @@ polarity, state, and callbacks.
 Angle uses the normal direction; Fader uses the inverted direction.
 
 Angle accepts `sensor: { io, pin }`. Fader accepts the same `sensor` option and `leds: { io, pin }`. 8Angle, 8Encoder,
-Encoder, Joystick v1.1, JoyStick2, Scroll, ByteButton, ByteSwitch, and Mini JoyC accept an `io` bus constructor. These
+Encoder, Joystick v1.1, JoyStick2, Scroll, ByteButton, ByteSwitch, and HAT Mini JoyC accept an `io` bus constructor. These
 entries are constructors compatible with the required operation subset, so tests and other boards can inject alternative
 I/O without changing product logic. The corresponding Moddable I/O implementations remain the defaults. `hmi/smbus`
 provides `SMBusDevice` as the base class for resolving bus pins, frequency, address, and injected I/O; it also owns

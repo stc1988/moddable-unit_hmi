@@ -14,7 +14,7 @@
 | M5Stack Unit Joystick v1.1 | Unit | I2C | [Driver](docs/unit/joystick.md) / [M5Stack](https://docs.m5stack.com/ja/unit/joystick_1.1) | • Joystick (X/Y)<br>• Button |
 | M5Stack Unit JoyStick2 | Unit | I2C | [Driver](docs/unit/joystick2.md) / [M5Stack](https://docs.m5stack.com/ja/unit/Unit-JoyStick2) | • Hall-effect joystick (X/Y)<br>• Button<br>• RGB LED |
 | M5Stack Unit Scroll | Unit | I2C | [Driver](docs/unit/scroll.md) / [M5Stack](https://docs.m5stack.com/ja/unit/UNIT-Scroll) | • Rotary encoder<br>• Button<br>• RGB LED |
-| M5Stack Mini JoyC HAT | HAT | I2C | [Driver](docs/hat/mini-joyc.md) / [M5Stack](https://docs.m5stack.com/en/hat/MiniJoyC) | • Joystick (X/Y)<br>• Button<br>• RGB LED<br>• Battery |
+| M5Stack HAT Mini JoyC | HAT | I2C | [Driver](docs/hat/mini-joyc.md) / [M5Stack](https://docs.m5stack.com/en/hat/MiniJoyC) | • Joystick (X/Y)<br>• Button<br>• RGB LED<br>• Battery |
 
 
 ## Setup
@@ -53,7 +53,7 @@ mcrun -dl -m -p esp32/m5stick_cplus
 - [Unit Joystick v1.1](examples/unit/joystick) — reports joystick and button changes over I2C.
 - [Unit JoyStick2](examples/unit/joystick2) — reports joystick and button changes and controls its RGB LED.
 - [Unit Scroll](examples/unit/scroll) — reports encoder and button changes and controls its RGB LED.
-- [M5Stack Mini JoyC HAT](examples/hat/mini-joyc) — reports joystick and button changes and toggles its RGB LED.
+- [M5Stack HAT Mini JoyC](examples/hat/mini-joyc) — reports joystick and button changes and toggles its RGB LED.
 
 ## Input events
 

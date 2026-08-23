@@ -1,4 +1,4 @@
-# moddable-M5Hat-Mini-JoyC (Developer/AI Guide)
+# moddable-M5Stack-HAT-Mini-JoyC (Developer/AI Guide)
 
 This document is a developer- and AI-oriented overview of the repository. It summarizes current structure and runtime behavior based on the implementation in this repo.
 

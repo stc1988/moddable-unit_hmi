@@ -1,6 +1,6 @@
-# Mini JoyC HAT
+# M5Stack HAT Mini JoyC
 
-The TypeScript driver in `src/drivers/hat/mini-joyc` supports the M5Stack Mini JoyC HAT. It reads the joystick and push button over I2C and controls the built-in RGB LED.
+The TypeScript driver in `src/drivers/hat/mini-joyc` supports the M5Stack HAT Mini JoyC. It reads the joystick and push button over I2C and controls the built-in RGB LED.
 
 The defaults use the HAT I2C port on M5StickC Plus, address `0x54`, and a 200 kHz bus. Pass `data`, `clock`, `address`, or `hz` when using another compatible configuration. The `io` option accepts an I2C-compatible constructor for alternate I/O providers or testing.
 
@@ -92,7 +92,7 @@ Changing the address modifies device configuration. Applications must use the ne
 
 Polling failures are written to the Moddable debug channel and do not stop the timer. Calls made directly through the public read or write methods throw their I/O errors to the caller.
 
-The built-in 200 mAh battery powers the HAT, but the published Mini JoyC I2C protocol has no battery-status register. The driver therefore does not expose battery telemetry.
+The built-in 200 mAh battery powers the HAT, but the published HAT Mini JoyC I2C protocol has no battery-status register. The driver therefore does not expose battery telemetry.
 
 ## Exported types
 
