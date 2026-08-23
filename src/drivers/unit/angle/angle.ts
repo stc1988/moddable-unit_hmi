@@ -4,7 +4,7 @@ import AnalogInput, {
 	type AnalogInputEventOptions,
 	AnalogInputEvents,
 	type AnalogIO,
-} from "input/analog";
+} from "hmi/input/analog";
 
 export interface AngleSample {
 	raw: number;

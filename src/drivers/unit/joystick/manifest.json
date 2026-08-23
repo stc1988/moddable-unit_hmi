@@ -1,5 +1,5 @@
 {
-	"include": ["../../../input/joystick/manifest.json", "../../../hmi/smbus/manifest.json"],
+	"include": ["../../../hmi/input/joystick/manifest.json", "../../../hmi/smbus/manifest.json"],
 	"modules": {
 		"unit/joystick": "./joystick"
 	},

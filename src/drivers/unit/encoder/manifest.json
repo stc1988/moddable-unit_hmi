@@ -1,5 +1,5 @@
 {
-	"include": ["../../../input/encoder/manifest.json", "../../../hmi/smbus/manifest.json"],
+	"include": ["../../../hmi/input/encoder/manifest.json", "../../../hmi/smbus/manifest.json"],
 	"modules": {
 		"unit/encoder": "./encoder"
 	},

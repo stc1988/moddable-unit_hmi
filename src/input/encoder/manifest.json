@@ -1,7 +1,0 @@
-{
-	"include": ["../../hmi/polling/manifest.json"],
-	"modules": {
-		"encoder/input": "./encoderInput"
-	},
-	"preload": ["encoder/input"]
-}

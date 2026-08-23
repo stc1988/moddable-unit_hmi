@@ -1,0 +1,7 @@
+{
+	"include": ["../../polling/manifest.json"],
+	"modules": {
+		"hmi/input/analog": "./analogInput"
+	},
+	"preload": ["hmi/input/analog"]
+}

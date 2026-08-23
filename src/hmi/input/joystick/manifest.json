@@ -1,0 +1,7 @@
+{
+	"include": ["../../polling/manifest.json"],
+	"modules": {
+		"hmi/input/joystick": "./joystickInput"
+	},
+	"preload": ["hmi/input/joystick"]
+}

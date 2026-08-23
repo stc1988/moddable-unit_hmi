@@ -2,7 +2,7 @@ import EncoderInput, {
 	type EncoderInputOptions,
 	type EncoderButtonChangeCallback as InputButtonChangeCallback,
 	type EncoderChangeCallback as InputChangeCallback,
-} from "encoder/input";
+} from "hmi/input/encoder";
 import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 

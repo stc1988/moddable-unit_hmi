@@ -1,8 +1,8 @@
 # Driver architecture
 
 The input drivers share behavior by responsibility instead of by bus or product family. Product drivers live under
-`src/drivers/unit` or `src/drivers/hat`; reusable input infrastructure lives separately under `src/input`. Every product
-exposes its polling lifecycle, callback properties, and comparison settings through a readonly `input` object.
+`src/drivers/unit` or `src/drivers/hat`; reusable input infrastructure lives under `src/hmi/input`. Every product exposes
+its polling lifecycle, callback properties, and comparison settings through a readonly `input` object.
 
 ```text
 Product driver       Angle / Fader    8Angle / 8Encoder / Encoder / Scroll / ByteButton / ByteSwitch    Joystick / JoyStick2 / MiniJoyC
@@ -31,7 +31,7 @@ polarity, state, and callbacks.
 
 ## AnalogInput
 
-`input/analog` wraps a constructor-injected analog I/O implementation. It exposes a raw read and a normalized
+`hmi/input/analog` wraps a constructor-injected analog I/O implementation. It exposes a raw read and a normalized
 `{ raw, position }` sample, with optional direction inversion. `AnalogInputEvents` owns polling and deadband comparison.
 Angle uses the normal direction; Fader uses the inverted direction.
 

@@ -1,12 +1,12 @@
-import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
-import { integerInRange, type RGBColor, signed8, signed16 } from "hmi/util";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,
 	type JoystickInputOptions,
 	type JoystickPosition,
 	type JoystickState,
-} from "joystick/input";
+} from "hmi/input/joystick";
+import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
+import { integerInRange, type RGBColor, signed8, signed16 } from "hmi/util";
 import Timer from "timer";
 
 export interface MiniJoyCIOInstance extends SMBusInstance {

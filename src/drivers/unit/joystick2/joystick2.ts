@@ -1,12 +1,12 @@
-import { SMBusDevice, type SMBusInstance, type SMBusIO, type SMBusPortOptions } from "hmi/smbus";
-import { integerInRange, type RGBColor } from "hmi/util";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,
 	type JoystickInputOptions,
 	type JoystickPosition,
 	type JoystickState,
-} from "joystick/input";
+} from "hmi/input/joystick";
+import { SMBusDevice, type SMBusInstance, type SMBusIO, type SMBusPortOptions } from "hmi/smbus";
+import { integerInRange, type RGBColor } from "hmi/util";
 
 export interface JoyStick2IOInstance extends SMBusInstance {
 	readUint8(register: number): number;

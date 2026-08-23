@@ -1,11 +1,11 @@
-import { SMBusDevice, type SMBusInstance, type SMBusIO, type SMBusPortOptions } from "hmi/smbus";
 import JoystickInput, {
 	type JoystickButtonChangeCallback,
 	type JoystickChangeCallback,
 	type JoystickInputOptions,
 	type JoystickPosition,
 	type JoystickState,
-} from "joystick/input";
+} from "hmi/input/joystick";
+import { SMBusDevice, type SMBusInstance, type SMBusIO, type SMBusPortOptions } from "hmi/smbus";
 
 export interface JoyStickIOInstance extends SMBusInstance {
 	read(byteLength: number, stop?: boolean): ArrayBuffer;

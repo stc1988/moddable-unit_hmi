@@ -1,11 +1,11 @@
 import Analog from "embedded:io/analog";
-import type { RGBColor } from "hmi/util";
 import AnalogInput, {
 	type AnalogInputChangeCallback,
 	type AnalogInputEventOptions,
 	AnalogInputEvents,
 	type AnalogIO,
-} from "input/analog";
+} from "hmi/input/analog";
+import type { RGBColor } from "hmi/util";
 import NeoPixel from "neopixel";
 
 export interface FaderSample {
