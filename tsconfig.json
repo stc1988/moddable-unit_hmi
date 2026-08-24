@@ -11,9 +11,8 @@
 		"checkJs": true,
 		"noEmit": true,
 		"strict": true,
-		"noImplicitAny": false,
-		"noImplicitThis": false,
-		"strictNullChecks": false,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
 		"paths": {
 			"hmi/input/encoder": ["./src/hmi/input/encoder/encoderInput"],
 			"hmi/smbus": ["./src/hmi/smbus/smbus"],

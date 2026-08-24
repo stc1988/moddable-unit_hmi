@@ -42,7 +42,7 @@ const SMBusConstructor = SMBus as unknown as SMBusIO;
 export class SMBusDevice<Bus extends SMBusInstance> {
 	#IO: SMBusIO<Bus>;
 	#options: Omit<SMBusOptions, "address">;
-	#bus?: Bus;
+	#bus: Bus | undefined;
 	#name: string;
 	#address: number;
 

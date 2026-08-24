@@ -124,7 +124,7 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 
 	readEncoder(encoder: number): number {
 		const data = this.activeBus.readBuffer(Encoder8.REGISTER.ENCODER + Encoder8.#encoderIndex(encoder) * 4, 4);
-		return signed32(new Uint8Array(data), 0);
+		return signed32(new DataView(data), 0);
 	}
 
 	setEncoder(encoder: number, value: number): void {
@@ -142,7 +142,7 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 
 	readIncrement(encoder: number): number {
 		const data = this.activeBus.readBuffer(Encoder8.REGISTER.INCREMENT + Encoder8.#encoderIndex(encoder) * 4, 4);
-		return signed32(new Uint8Array(data), 0);
+		return signed32(new DataView(data), 0);
 	}
 
 	readEncoderChangeFlags(): number {
@@ -183,8 +183,8 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 	}
 
 	getLed(led: number): RGBColor {
-		const data = new Uint8Array(this.activeBus.readBuffer(Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3, 3));
-		return { r: data[0], g: data[1], b: data[2] };
+		const data = new DataView(this.activeBus.readBuffer(Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3, 3));
+		return { r: data.getUint8(0), g: data.getUint8(1), b: data.getUint8(2) };
 	}
 
 	setAllLeds(color: RGBColor): void {
@@ -213,7 +213,7 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 	}
 
 	static #readSignedValues(buffer: ArrayBuffer): number[] {
-		const data = new Uint8Array(buffer);
+		const data = new DataView(buffer);
 		const values = new Array<number>(Encoder8.ENCODER_COUNT);
 		for (let encoder = 0; encoder < Encoder8.ENCODER_COUNT; encoder++) values[encoder] = signed32(data, encoder * 4);
 		return values;

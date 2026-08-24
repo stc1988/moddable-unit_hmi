@@ -76,11 +76,11 @@ export default class JoyStick extends SMBusDevice<JoyStickIOInstance> {
 	}
 
 	read(): JoyStickState {
-		const data = new Uint8Array(this.activeBus.read(JoyStick.STATE_LENGTH));
+		const data = new DataView(this.activeBus.read(JoyStick.STATE_LENGTH));
 		return {
-			x: data[0],
-			y: data[1],
-			pressed: data[2] !== 0,
+			x: data.getUint8(0),
+			y: data.getUint8(1),
+			pressed: data.getUint8(2) !== 0,
 		};
 	}
 

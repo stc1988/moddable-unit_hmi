@@ -18,9 +18,9 @@ export default class PollingInput<State> {
 	#target: object;
 	#name: string;
 	#changed: InputChangeDetector<State>;
-	#timer?: ReturnType<typeof Timer.repeat>;
+	#timer: ReturnType<typeof Timer.repeat> | undefined;
 	#onChange: InputChangeCallback<State> | null;
-	#lastNotifiedState?: State;
+	#lastNotifiedState: State | undefined;
 	#pollingInterval: number;
 	#closed = false;
 

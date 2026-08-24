@@ -127,8 +127,8 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	}
 
 	getLed(): RGBColor {
-		const data = new Uint8Array(this.activeBus.readBuffer(REGISTER.RGB_LED, 4));
-		return { r: data[1], g: data[2], b: data[3] };
+		const data = new DataView(this.activeBus.readBuffer(REGISTER.RGB_LED, 4));
+		return { r: data.getUint8(1), g: data.getUint8(2), b: data.getUint8(3) };
 	}
 
 	getBootloaderVersion(): number {

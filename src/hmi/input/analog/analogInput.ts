@@ -1,4 +1,4 @@
-import PollingInput, { type InputSource } from "hmi/polling";
+import PollingInput, { type InputSource, type PollingInputOptions } from "hmi/polling";
 
 export interface AnalogInputSample {
 	raw: number;
@@ -33,7 +33,7 @@ export interface AnalogInputEventOptions<State extends AnalogInputSample = Analo
 export type AnalogInputChangeCallback<State extends AnalogInputSample = AnalogInputSample> = (sample: State) => void;
 
 export default class AnalogInput {
-	#io?: AnalogIOInstance;
+	#io: AnalogIOInstance | undefined;
 	#invert: boolean;
 
 	constructor(options: AnalogInputOptions) {
@@ -73,11 +73,12 @@ export class AnalogInputEvents<State extends AnalogInputSample = AnalogInputSamp
 
 	constructor(target: object, source: InputSource<State>, name: string, options: AnalogInputEventOptions<State> = {}) {
 		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
-		this.#polling = new PollingInput(target, source, name, {
-			pollingInterval: options.pollingInterval,
-			onChange: options.onChange,
+		const pollingOptions: PollingInputOptions<State> = {
 			changed: (sample, previous) => Math.abs(sample.raw - previous.raw) > this.#deadband,
-		});
+		};
+		if (options.pollingInterval !== undefined) pollingOptions.pollingInterval = options.pollingInterval;
+		if (options.onChange !== undefined) pollingOptions.onChange = options.onChange;
+		this.#polling = new PollingInput(target, source, name, pollingOptions);
 	}
 
 	close(): void {

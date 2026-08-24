@@ -2,6 +2,7 @@ import type { RGBColor } from "hmi/util";
 import BytePanel, {
 	BytePanelInput,
 	type BytePanelInputChangeCallback,
+	type BytePanelInputOptions,
 	type BytePanelIO,
 	type BytePanelIOInstance,
 	type BytePanelOptions,
@@ -27,13 +28,17 @@ export interface ByteSwitchOptions extends BytePanelOptions<ByteSwitchIO> {
 export type ByteSwitchChangeCallback = (state: ByteSwitchState) => void;
 export type ByteSwitchSwitchChangeCallback = (switchIndex: number, on: boolean) => void;
 
+function inputOptions(options: ByteSwitchOptions): BytePanelInputOptions<ByteSwitchState> {
+	const result: BytePanelInputOptions<ByteSwitchState> = {};
+	if (options.pollingInterval !== undefined) result.pollingInterval = options.pollingInterval;
+	if (options.onChange !== undefined) result.onChange = options.onChange;
+	if (options.onSwitchChange !== undefined) result.onInputChange = options.onSwitchChange;
+	return result;
+}
+
 class ByteSwitchInput extends BytePanelInput<ByteSwitchState> {
 	constructor(target: object, source: { read(): ByteSwitchState }, options: ByteSwitchOptions) {
-		super(target, source, "ByteSwitch", (state) => state.switches, {
-			pollingInterval: options.pollingInterval,
-			onChange: options.onChange,
-			onInputChange: options.onSwitchChange,
-		});
+		super(target, source, "ByteSwitch", (state) => state.switches, inputOptions(options));
 	}
 
 	set onSwitchChange(callback: ByteSwitchSwitchChangeCallback | null | undefined) {

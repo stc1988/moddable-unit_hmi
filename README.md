@@ -63,12 +63,16 @@ control. Device reads, LEDs, settings, and `close()` remain on the product drive
 
 ## Development
 
-Format and lint:
+Install the development dependencies, then format, lint, and type-check the project:
 
 ```sh
+npm install
 npm run format
 npm run lint
+npm run typecheck
 ```
+
+`npm run check` runs both the Biome checks and the TypeScript type checker.
 
 ## License
 

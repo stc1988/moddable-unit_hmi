@@ -1,4 +1,4 @@
-import PollingInput from "hmi/polling";
+import PollingInput, { type PollingInputOptions } from "hmi/polling";
 
 export interface JoystickPosition {
 	x: number;
@@ -28,7 +28,7 @@ export default class JoystickInput<State extends JoystickState = JoystickState> 
 	#polling: PollingInput<State>;
 	#onChange: JoystickChangeCallback<State> | null;
 	#onButtonChange: JoystickButtonChangeCallback | null;
-	#lastButtonState?: boolean;
+	#lastButtonState: boolean | undefined;
 	#deadband: number;
 	#closed = false;
 
@@ -37,13 +37,14 @@ export default class JoystickInput<State extends JoystickState = JoystickState> 
 		this.#deadband = JoystickInput.#nonNegativeInteger(options.deadband ?? 0, "deadband");
 		this.#onChange = JoystickInput.#callback(options.onChange, "onChange");
 		this.#onButtonChange = JoystickInput.#callback(options.onButtonChange, "onButtonChange");
-		this.#polling = new PollingInput(this, source, name, {
-			pollingInterval: options.pollingInterval,
+		const pollingOptions: PollingInputOptions<State> = {
 			changed: (state, previous) =>
 				state.pressed !== previous.pressed ||
 				Math.abs(state.x - previous.x) > this.#deadband ||
 				Math.abs(state.y - previous.y) > this.#deadband,
-		});
+		};
+		if (options.pollingInterval !== undefined) pollingOptions.pollingInterval = options.pollingInterval;
+		this.#polling = new PollingInput(this, source, name, pollingOptions);
 		this.#updatePollingState();
 	}
 

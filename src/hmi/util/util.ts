@@ -25,8 +25,8 @@ export function signed16(value: number): number {
 	return word & 0x8000 ? word - 0x1_0000 : word;
 }
 
-export function signed32(data: Uint8Array, offset: number): number {
-	return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
+export function signed32(data: DataView, offset: number): number {
+	return data.getInt32(offset, true);
 }
 
 export function signed32ToLittleEndian(value: number, name: string): Uint8Array {

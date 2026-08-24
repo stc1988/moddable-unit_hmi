@@ -1,4 +1,4 @@
-import PollingInput from "hmi/polling";
+import PollingInput, { type PollingInputOptions } from "hmi/polling";
 import { callbackOrNull } from "hmi/util";
 import type {
 	Angle8AngleChangeCallback,
@@ -10,13 +10,19 @@ import type {
 
 const ANGLE_COUNT = 8;
 
+function angleValue(state: Angle8State, angle: number): number {
+	const value = state.angles[angle];
+	if (value === undefined) throw new RangeError(`angles must contain ${ANGLE_COUNT} values`);
+	return value;
+}
+
 export default class Angle8Input {
 	#target: object;
 	#polling: PollingInput<Angle8State>;
 	#onChange: Angle8ChangeCallback | null;
 	#onAngleChange: Angle8AngleChangeCallback | null;
 	#onSwitchChange: Angle8SwitchChangeCallback | null;
-	#lastState?: Angle8State;
+	#lastState: Angle8State | undefined;
 	#deadband: number;
 	#closed = false;
 
@@ -26,10 +32,11 @@ export default class Angle8Input {
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onAngleChange = callbackOrNull(options.onAngleChange, "onAngleChange");
 		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
-		this.#polling = new PollingInput(this, source, "8Angle", {
-			pollingInterval: options.pollingInterval,
+		const pollingOptions: PollingInputOptions<Angle8State> = {
 			changed: (state, previous) => this.#stateChanged(state, previous),
-		});
+		};
+		if (options.pollingInterval !== undefined) pollingOptions.pollingInterval = options.pollingInterval;
+		this.#polling = new PollingInput(this, source, "8Angle", pollingOptions);
 		this.#updatePollingState();
 	}
 
@@ -114,8 +121,9 @@ export default class Angle8Input {
 		this.#onChange?.call(this.#target, state);
 		if (previous && this.#onAngleChange) {
 			for (let angle = 0; angle < ANGLE_COUNT; angle++) {
-				if (Math.abs(state.angles[angle] - previous.angles[angle]) > this.#deadband)
-					this.#onAngleChange.call(this.#target, angle, state.angles[angle]);
+				const value = angleValue(state, angle);
+				if (Math.abs(value - angleValue(previous, angle)) > this.#deadband)
+					this.#onAngleChange.call(this.#target, angle, value);
 			}
 		}
 		if (previous && state.switchOn !== previous.switchOn) this.#onSwitchChange?.call(this.#target, state.switchOn);
@@ -125,7 +133,7 @@ export default class Angle8Input {
 	#stateChanged(state: Angle8State, previous: Angle8State): boolean {
 		if (state.switchOn !== previous.switchOn) return true;
 		for (let angle = 0; angle < ANGLE_COUNT; angle++) {
-			if (Math.abs(state.angles[angle] - previous.angles[angle]) > this.#deadband) return true;
+			if (Math.abs(angleValue(state, angle) - angleValue(previous, angle)) > this.#deadband) return true;
 		}
 		return false;
 	}

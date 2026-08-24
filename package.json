@@ -3,12 +3,14 @@
 	"version": "1.0.0",
 	"license": "MIT",
 	"scripts": {
-		"check": "biome check .",
+		"check": "biome check . && npm run typecheck",
 		"format": "biome format --write .",
-		"lint": "biome lint --write ."
+		"lint": "biome lint --write .",
+		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.5",
-		"@moddable/typings": "^8.3.1"
+		"@moddable/typings": "^8.3.1",
+		"typescript": "7.0.2"
 	}
 }

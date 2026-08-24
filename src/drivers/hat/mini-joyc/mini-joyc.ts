@@ -54,15 +54,6 @@ function calibrationValue(value: number): number {
 	return integerInRange(value, "calibration value", 0, 4095);
 }
 
-function wordLE(data: Uint8Array, offset: number): number {
-	return data[offset] | (data[offset + 1] << 8);
-}
-
-function setWordLE(data: Uint8Array, offset: number, value: number): void {
-	data[offset] = value;
-	data[offset + 1] = value >> 8;
-}
-
 // https://docs.m5stack.com/en/hat/MiniJoyC
 export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	static readonly DEFAULT_ADDRESS = 0x54;
@@ -207,14 +198,14 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	readCalibrationValues(): MiniJoyCCalibration {
-		const data = new Uint8Array(this.activeBus.readBuffer(MiniJoyC.REGISTER.CALIBRATION, 12));
+		const data = new DataView(this.activeBus.readBuffer(MiniJoyC.REGISTER.CALIBRATION, 12));
 		return {
-			xMin: wordLE(data, 0),
-			xMax: wordLE(data, 2),
-			yMin: wordLE(data, 4),
-			yMax: wordLE(data, 6),
-			xCenter: wordLE(data, 8),
-			yCenter: wordLE(data, 10),
+			xMin: data.getUint16(0, true),
+			xMax: data.getUint16(2, true),
+			yMin: data.getUint16(4, true),
+			yMax: data.getUint16(6, true),
+			xCenter: data.getUint16(8, true),
+			yCenter: data.getUint16(10, true),
 		};
 	}
 
@@ -228,14 +219,15 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	writeCalibrationValues(values: MiniJoyCCalibration): void {
-		const data = new Uint8Array(12);
-		setWordLE(data, 0, calibrationValue(values.xMin));
-		setWordLE(data, 2, calibrationValue(values.xMax));
-		setWordLE(data, 4, calibrationValue(values.yMin));
-		setWordLE(data, 6, calibrationValue(values.yMax));
-		setWordLE(data, 8, calibrationValue(values.xCenter));
-		setWordLE(data, 10, calibrationValue(values.yCenter));
-		this.activeBus.writeBuffer(MiniJoyC.REGISTER.CALIBRATION, data);
+		const buffer = new ArrayBuffer(12);
+		const data = new DataView(buffer);
+		data.setUint16(0, calibrationValue(values.xMin), true);
+		data.setUint16(2, calibrationValue(values.xMax), true);
+		data.setUint16(4, calibrationValue(values.yMin), true);
+		data.setUint16(6, calibrationValue(values.yMax), true);
+		data.setUint16(8, calibrationValue(values.xCenter), true);
+		data.setUint16(10, calibrationValue(values.yCenter), true);
+		this.activeBus.writeBuffer(MiniJoyC.REGISTER.CALIBRATION, buffer);
 		Timer.delay(1000);
 	}
 

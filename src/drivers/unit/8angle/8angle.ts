@@ -119,10 +119,9 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 		if (resolution === 8)
 			return Array.from(new Uint8Array(this.activeBus.readBuffer(Angle8.REGISTER.ANALOG_8BIT, Angle8.ANGLE_COUNT)));
 
-		const data = new Uint8Array(this.activeBus.readBuffer(Angle8.REGISTER.ANALOG_12BIT, Angle8.ANGLE_COUNT * 2));
+		const data = new DataView(this.activeBus.readBuffer(Angle8.REGISTER.ANALOG_12BIT, Angle8.ANGLE_COUNT * 2));
 		const angles = new Array<number>(Angle8.ANGLE_COUNT);
-		for (let angle = 0; angle < Angle8.ANGLE_COUNT; angle++)
-			angles[angle] = (data[angle * 2] | (data[angle * 2 + 1] << 8)) & 0x0fff;
+		for (let angle = 0; angle < Angle8.ANGLE_COUNT; angle++) angles[angle] = data.getUint16(angle * 2, true) & 0x0fff;
 		return angles;
 	}
 
@@ -131,8 +130,8 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 		Angle8.#resolution(resolution);
 		if (resolution === 8) return this.activeBus.readUint8(Angle8.REGISTER.ANALOG_8BIT + index) & 0xff;
 
-		const data = new Uint8Array(this.activeBus.readBuffer(Angle8.REGISTER.ANALOG_12BIT + index * 2, 2));
-		return (data[0] | (data[1] << 8)) & 0x0fff;
+		const data = new DataView(this.activeBus.readBuffer(Angle8.REGISTER.ANALOG_12BIT + index * 2, 2));
+		return data.getUint16(0, true) & 0x0fff;
 	}
 
 	isSwitchOn(): boolean {
@@ -152,8 +151,13 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 	}
 
 	getLed(led: number): Angle8Color {
-		const data = new Uint8Array(this.activeBus.readBuffer(Angle8.REGISTER.RGB_LED + Angle8.#ledIndex(led) * 4, 4));
-		return { r: data[0], g: data[1], b: data[2], brightness: data[3] };
+		const data = new DataView(this.activeBus.readBuffer(Angle8.REGISTER.RGB_LED + Angle8.#ledIndex(led) * 4, 4));
+		return {
+			r: data.getUint8(0),
+			g: data.getUint8(1),
+			b: data.getUint8(2),
+			brightness: data.getUint8(3),
+		};
 	}
 
 	getFirmwareVersion(): number {

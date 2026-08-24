@@ -1,4 +1,4 @@
-import PollingInput, { type InputSource } from "hmi/polling";
+import PollingInput, { type InputSource, type PollingInputOptions } from "hmi/polling";
 import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { callbackOrNull, integerInRange, type RGBColor } from "hmi/util";
 
@@ -131,8 +131,8 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 	}
 
 	#readColor(register: number): RGBColor {
-		const data = new Uint8Array(this.activeBus.readBuffer(register, 4));
-		return { r: data[2], g: data[1], b: data[0] };
+		const data = new DataView(this.activeBus.readBuffer(register, 4));
+		return { r: data.getUint8(2), g: data.getUint8(1), b: data.getUint8(0) };
 	}
 
 	static #inputIndex(value: number): number {
@@ -154,7 +154,7 @@ export class BytePanelInput<State> {
 	#selectInputs: (state: State) => number;
 	#onChange: BytePanelChangeCallback<State> | null;
 	#onInputChange: BytePanelInputChangeCallback | null;
-	#lastInputs?: number;
+	#lastInputs: number | undefined;
 	#closed = false;
 	#name: string;
 
@@ -170,10 +170,11 @@ export class BytePanelInput<State> {
 		this.#selectInputs = selectInputs;
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onInputChange = callbackOrNull(options.onInputChange, "onInputChange");
-		this.#polling = new PollingInput(this, source, name, {
-			pollingInterval: options.pollingInterval,
+		const pollingOptions: PollingInputOptions<State> = {
 			changed: (state, previous) => selectInputs(state) !== selectInputs(previous),
-		});
+		};
+		if (options.pollingInterval !== undefined) pollingOptions.pollingInterval = options.pollingInterval;
+		this.#polling = new PollingInput(this, source, name, pollingOptions);
 		this.#updatePollingState();
 	}
 

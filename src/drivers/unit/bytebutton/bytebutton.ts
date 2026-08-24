@@ -2,6 +2,7 @@ import type { RGBColor } from "hmi/util";
 import BytePanel, {
 	BytePanelInput,
 	type BytePanelInputChangeCallback,
+	type BytePanelInputOptions,
 	type BytePanelIO,
 	type BytePanelIOInstance,
 	type BytePanelOptions,
@@ -27,13 +28,17 @@ export interface ByteButtonOptions extends BytePanelOptions<ByteButtonIO> {
 export type ByteButtonChangeCallback = (state: ByteButtonState) => void;
 export type ByteButtonButtonChangeCallback = (button: number, pressed: boolean) => void;
 
+function inputOptions(options: ByteButtonOptions): BytePanelInputOptions<ByteButtonState> {
+	const result: BytePanelInputOptions<ByteButtonState> = {};
+	if (options.pollingInterval !== undefined) result.pollingInterval = options.pollingInterval;
+	if (options.onChange !== undefined) result.onChange = options.onChange;
+	if (options.onButtonChange !== undefined) result.onInputChange = options.onButtonChange;
+	return result;
+}
+
 class ByteButtonInput extends BytePanelInput<ByteButtonState> {
 	constructor(target: object, source: { read(): ByteButtonState }, options: ByteButtonOptions) {
-		super(target, source, "ByteButton", (state) => state.buttons, {
-			pollingInterval: options.pollingInterval,
-			onChange: options.onChange,
-			onInputChange: options.onButtonChange,
-		});
+		super(target, source, "ByteButton", (state) => state.buttons, inputOptions(options));
 	}
 
 	set onButtonChange(callback: ByteButtonButtonChangeCallback | null | undefined) {

@@ -1,4 +1,4 @@
-import PollingInput from "hmi/polling";
+import PollingInput, { type PollingInputOptions } from "hmi/polling";
 import { callbackOrNull } from "hmi/util";
 
 export interface EncoderState {
@@ -24,17 +24,18 @@ export default class EncoderInput<State extends EncoderState = EncoderState> {
 	#polling: PollingInput<State>;
 	#onChange: EncoderChangeCallback<State> | null;
 	#onButtonChange: EncoderButtonChangeCallback | null;
-	#lastButtonState?: boolean;
+	#lastButtonState: boolean | undefined;
 	#closed = false;
 
 	constructor(target: object, source: EncoderSource<State>, name: string, options: EncoderInputOptions<State> = {}) {
 		this.#target = target;
 		this.#onChange = callbackOrNull(options.onChange, "onChange");
 		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
-		this.#polling = new PollingInput(this, source, name, {
-			pollingInterval: options.pollingInterval,
+		const pollingOptions: PollingInputOptions<State> = {
 			changed: (state, previous) => state.value !== previous.value || state.pressed !== previous.pressed,
-		});
+		};
+		if (options.pollingInterval !== undefined) pollingOptions.pollingInterval = options.pollingInterval;
+		this.#polling = new PollingInput(this, source, name, pollingOptions);
 		this.#updatePollingState();
 	}
 

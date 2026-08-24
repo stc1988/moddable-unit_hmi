@@ -1,4 +1,4 @@
-import PollingInput from "hmi/polling";
+import PollingInput, { type PollingInputOptions } from "hmi/polling";
 import { callbackOrNull } from "hmi/util";
 import type {
 	Encoder8ButtonChangeCallback,
@@ -12,6 +12,12 @@ import type {
 const ENCODER_COUNT = 8;
 const BUTTON_COUNT = 8;
 
+function encoderValue(state: Encoder8State, encoder: number): number {
+	const value = state.encoders[encoder];
+	if (value === undefined) throw new RangeError(`encoders must contain ${ENCODER_COUNT} values`);
+	return value;
+}
+
 export default class Encoder8Input {
 	#target: object;
 	#polling: PollingInput<Encoder8State>;
@@ -19,7 +25,7 @@ export default class Encoder8Input {
 	#onEncoderChange: Encoder8EncoderChangeCallback | null;
 	#onButtonChange: Encoder8ButtonChangeCallback | null;
 	#onSwitchChange: Encoder8SwitchChangeCallback | null;
-	#lastState?: Encoder8State;
+	#lastState: Encoder8State | undefined;
 	#closed = false;
 
 	constructor(target: object, source: { read(): Encoder8State }, options: Encoder8Options) {
@@ -28,10 +34,11 @@ export default class Encoder8Input {
 		this.#onEncoderChange = callbackOrNull(options.onEncoderChange, "onEncoderChange");
 		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
 		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
-		this.#polling = new PollingInput(this, source, "8Encoder", {
-			pollingInterval: options.pollingInterval,
+		const pollingOptions: PollingInputOptions<Encoder8State> = {
 			changed: Encoder8Input.#stateChanged,
-		});
+		};
+		if (options.pollingInterval !== undefined) pollingOptions.pollingInterval = options.pollingInterval;
+		this.#polling = new PollingInput(this, source, "8Encoder", pollingOptions);
 		this.#updatePollingState();
 	}
 
@@ -124,8 +131,8 @@ export default class Encoder8Input {
 		if (previous) {
 			if (this.#onEncoderChange) {
 				for (let encoder = 0; encoder < ENCODER_COUNT; encoder++) {
-					if (state.encoders[encoder] !== previous.encoders[encoder])
-						this.#onEncoderChange.call(this.#target, encoder, state.encoders[encoder]);
+					const value = encoderValue(state, encoder);
+					if (value !== encoderValue(previous, encoder)) this.#onEncoderChange.call(this.#target, encoder, value);
 				}
 			}
 
@@ -145,7 +152,7 @@ export default class Encoder8Input {
 	static #stateChanged(state: Encoder8State, previous: Encoder8State): boolean {
 		if (state.buttons !== previous.buttons || state.switchOn !== previous.switchOn) return true;
 		for (let encoder = 0; encoder < ENCODER_COUNT; encoder++) {
-			if (state.encoders[encoder] !== previous.encoders[encoder]) return true;
+			if (encoderValue(state, encoder) !== encoderValue(previous, encoder)) return true;
 		}
 		return false;
 	}
