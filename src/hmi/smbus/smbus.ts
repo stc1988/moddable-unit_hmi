@@ -8,7 +8,7 @@ export interface SMBusInstance {
 }
 
 export type I2COptions = ConstructorParameters<typeof I2C>[0];
-export type SMBusOptions = I2COptions & { stop?: boolean };
+export type SMBusOptions = ConstructorParameters<typeof SMBus>[0];
 export type SMBusIO<Bus extends SMBusInstance = SMBusInstance> = new (options: SMBusOptions) => Bus;
 
 export interface SMBusPortOptions<IO extends SMBusIO = SMBusIO> {
@@ -35,10 +35,6 @@ interface SMBusRegisterIO {
 	writeUint8(register: number, value: number): void;
 }
 
-// @moddable/typings 8.3.1 declares the SMBus options as a tuple intersection.
-// Narrow the constructor to the object accepted by the runtime implementation.
-const SMBusConstructor = SMBus as unknown as SMBusIO;
-
 export class SMBusDevice<Bus extends SMBusInstance> {
 	#IO: SMBusIO<Bus>;
 	#options: Omit<SMBusOptions, "address">;
@@ -47,7 +43,7 @@ export class SMBusDevice<Bus extends SMBusInstance> {
 	#address: number;
 
 	protected constructor(options: SMBusDeviceOptions<SMBusIO<Bus>>, defaults: SMBusDeviceDefaults) {
-		this.#IO = options.io ?? (SMBusConstructor as SMBusIO<Bus>);
+		this.#IO = options.io ?? (SMBus as unknown as SMBusIO<Bus>);
 		this.#options = {
 			data: options.data ?? defaults.data ?? device.I2C.default.data,
 			clock: options.clock ?? defaults.clock ?? device.I2C.default.clock,
