@@ -8,7 +8,7 @@ export interface SMBusInstance {
 }
 
 export type I2COptions = ConstructorParameters<typeof I2C>[0];
-export type SMBusOptions = ConstructorParameters<typeof SMBus>[0];
+type SMBusOptions = ConstructorParameters<typeof SMBus>[0];
 export type SMBusIO<Bus extends SMBusInstance = SMBusInstance> = new (options: SMBusOptions) => Bus;
 
 export interface SMBusPortOptions<IO extends SMBusIO = SMBusIO> {

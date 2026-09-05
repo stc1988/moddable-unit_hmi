@@ -41,7 +41,7 @@ entries are constructors compatible with the required operation subset, so tests
 I/O without changing product logic. The corresponding Moddable I/O implementations remain the defaults. `hmi/smbus`
 provides `SMBusDevice` as the base class for resolving bus pins, frequency, address, and injected I/O; it also owns
 connection replacement, active-resource access, address changes, and close handling across the I2C drivers.
-Its `SMBusOptions` type is derived directly from the `embedded:io/smbus` constructor in `@moddable/typings`.
+Its internal `SMBusOptions` type is derived directly from the `embedded:io/smbus` constructor in `@moddable/typings`.
 
 8Angle and 8Encoder expose product-specific input controllers for their multi-channel transitions. ByteButton and
 ByteSwitch adapt the shared BytePanel bit-field input controller to product-specific callback names. These controllers
