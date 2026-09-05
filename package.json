@@ -10,7 +10,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.5",
-		"@moddable/typings": "^8.3.1",
+		"@moddable/typings": "^9.5.0",
 		"typescript": "7.0.2"
 	}
 }
