@@ -3,7 +3,7 @@ import Encoder8 from "unit/8encoder";
 export async function main(): Promise<void> {
 	const encoder8 = new Encoder8();
 
-	for (const led of encoder8.leds) led.color = { r: 0, g: 0, b: 16 };
+	encoder8.leds.color = { r: 0, g: 0, b: 16 };
 	{
 		const led = encoder8.leds[Encoder8.SWITCH_LED];
 		if (led) led.color = { r: 0, g: 0, b: 64 };

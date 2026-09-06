@@ -1,8 +1,35 @@
 # Common LED interface
 
 Mini JoyC, JoyStick2, and Scroll expose `driver.led`. Encoder, 8Encoder, 8Angle,
-ByteButton, ByteSwitch, and Fader expose a readonly `driver.leds` array in existing
+ByteButton, ByteSwitch, and Fader expose a fixed, iterable `driver.leds` collection in existing
 zero-based LED order. Fader indices can be obtained with `Fader.ledIndex(column, level)`.
+
+## All LEDs at once
+
+```ts
+encoder.leds.color = { r: 255, g: 0, b: 0 };
+encoder.leds.brightness = 128;
+encoder.leds.on = 0;
+encoder.leds.rainbow({ step: 3 });
+encoder.leds.rainbow(0);
+```
+
+Collection assignments update every member's logical state as well as hardware.
+`leds[index]`, `leds.length`, and `for...of` remain available; the collection is not
+an Array and does not expose mutating array methods. Individual LED changes are
+reflected in collection getters: `color`, `brightness`, and `on` return the shared
+value when all members agree, or `undefined` when that property differs.
+Reading `color` returns a copy.
+
+Group color changes retain each member's brightness; group brightness changes
+retain each member's color. Group animations start in phase and keep the same
+manual-write/stop behavior as individual animations. `leds.close()` closes all
+members without closing the product's input or shared hardware.
+
+Fader flushes once per group assignment. I2C products currently write each LED
+individually; group assignment is not an atomic hardware transaction. Invalid colors,
+brightness, and closed members are checked before writes start. A hardware error can
+leave an earlier portion updated; retry the assignment after resolving the error.
 
 Each LED follows the Moddable LED peripheral's property and animation model:
 

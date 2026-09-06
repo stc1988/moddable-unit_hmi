@@ -58,7 +58,8 @@ behavior matches those contracts; product-family protocol sharing stays separate
 
 ## LED control
 
-`hmi/led` owns logical colors, brightness, and the shared animation timer. Product-owned
+`hmi/led` provides fixed, iterable `LedCollection` objects for synchronized group assignments
+and owns logical colors, brightness, and the shared animation timer. Product-owned
 LED objects delegate output to product register operations. Products close the LED objects
 before releasing hardware. Fader supplies a shared flush callback to batch animation updates.
 See [LED API](led.md) for initialization, hardware reads, and direct-operation boundaries.

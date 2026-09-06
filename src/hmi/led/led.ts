@@ -99,6 +99,23 @@ export default class Led {
 		this.#stop();
 		this.#closed = true;
 	}
+	/** Apply a collection operation with one flush per output, after checking lifecycle. */
+	static batch(leds: readonly Led[], apply: (led: Led) => void): void {
+		for (const led of leds) led.#assertOpen();
+		const wasBatching = Led.#batching;
+		Led.#batching = true;
+		try {
+			for (const led of leds) apply(led);
+		} finally {
+			Led.#batching = wasBatching;
+			if (!wasBatching) {
+				const flushes = [...Led.#flushes];
+				Led.#flushes.clear();
+				for (const flush of flushes) flush();
+			}
+		}
+	}
+
 	#commit(): void {
 		if (!this.#flush) return;
 		if (Led.#batching) Led.#flushes.add(this.#flush);
@@ -128,6 +145,73 @@ export default class Led {
 		}
 		if (advance) state.phase = (state.phase + 1) % 8;
 		this.color = { r: state.rgb[0] ?? 0, g: state.rgb[1] ?? 0, b: state.rgb[2] ?? 0 };
+	}
+}
+
+/** Fixed, iterable LED collection with synchronized group controls. */
+export class LedCollection implements Iterable<Led> {
+	readonly [index: number]: Led;
+	readonly length: number;
+	#leds: readonly Led[];
+
+	constructor(leds: readonly Led[]) {
+		if (!leds.length) throw new RangeError("LED collection must not be empty");
+		this.#leds = Object.freeze([...leds]);
+		this.length = leds.length;
+		for (let index = 0; index < leds.length; index++)
+			Object.defineProperty(this, index, { value: leds[index], enumerable: true });
+		Object.freeze(this);
+	}
+
+	[Symbol.iterator](): ArrayIterator<Led> {
+		return this.#leds[Symbol.iterator]();
+	}
+
+	get color(): RGBColor | undefined {
+		const first = this.#leds[0]?.color;
+		return this.#leds.every((led) => {
+			const color = led.color;
+			return color.r === first?.r && color.g === first?.g && color.b === first?.b;
+		})
+			? first
+			: undefined;
+	}
+	set color(value: RGBColor) {
+		// Snapshot and validate before any output, including objects with getters.
+		const color = {
+			r: integerInRange(value.r, "r", 0, 255),
+			g: integerInRange(value.g, "g", 0, 255),
+			b: integerInRange(value.b, "b", 0, 255),
+		};
+		Led.batch(this.#leds, (led) => {
+			led.color = color;
+		});
+	}
+	get brightness(): number | undefined {
+		const first = this.#leds[0]?.brightness;
+		return this.#leds.every((led) => led.brightness === first) ? first : undefined;
+	}
+	set brightness(value: number) {
+		const brightness = integerInRange(value, "brightness", 0, 255);
+		Led.batch(this.#leds, (led) => {
+			led.brightness = brightness;
+		});
+	}
+	get on(): number | undefined {
+		const first = this.#leds[0]?.on;
+		return this.#leds.every((led) => led.on === first) ? first : undefined;
+	}
+	set on(value: number) {
+		Led.batch(this.#leds, (led) => {
+			led.on = value;
+		});
+	}
+	rainbow(value?: 0 | { step?: number }): void {
+		const options = value === 0 ? 0 : { step: integerInRange(value?.step ?? 3, "step", 1, 255) };
+		Led.batch(this.#leds, (led) => led.rainbow(options));
+	}
+	close(): void {
+		for (const led of this.#leds) led.close();
 	}
 }
 

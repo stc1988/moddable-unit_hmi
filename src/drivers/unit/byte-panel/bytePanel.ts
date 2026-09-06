@@ -1,4 +1,4 @@
-import Led from "hmi/led";
+import Led, { LedCollection } from "hmi/led";
 import PollingInput, { type InputSource, type PollingInputOptions } from "hmi/polling";
 import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { callbackOrNull, integerInRange, type RGBColor } from "hmi/util";
@@ -44,7 +44,7 @@ const INPUT_COUNT = 8;
 const LED_COUNT = 9;
 
 export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInstance> extends SMBusDevice<Bus> {
-	readonly leds: readonly Led[] = Object.freeze(
+	readonly leds = new LedCollection(
 		Array.from(
 			{ length: 9 },
 			(_, index) =>
@@ -65,7 +65,7 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 	}
 
 	close(): void {
-		for (const led of this.leds) led.close();
+		this.leds.close();
 		super.close();
 	}
 

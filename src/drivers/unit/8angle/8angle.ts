@@ -1,4 +1,4 @@
-import Led from "hmi/led";
+import Led, { LedCollection } from "hmi/led";
 import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor } from "hmi/util";
 import Angle8Input from "unit/8angle/input";
@@ -39,7 +39,7 @@ export type Angle8SwitchChangeCallback = (on: boolean) => void;
 
 // https://docs.m5stack.com/en/unit/8Angle
 export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
-	readonly leds: readonly Led[] = Object.freeze(
+	readonly leds = new LedCollection(
 		Array.from(
 			{ length: 9 },
 			(_, index) =>
@@ -116,7 +116,7 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 	}
 
 	close(): void {
-		for (const led of this.leds) led.close();
+		this.leds.close();
 		this.#input.close();
 		super.close();
 	}

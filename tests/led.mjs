@@ -25,9 +25,11 @@ const utilURL = `data:text/javascript;base64,${Buffer.from(util).toString("base6
 const source = readFileSync(join(outputDirectory, "src/hmi/led/led.js"), "utf8")
 	.replace('from "hmi/util"', `from "${utilURL}"`)
 	.replace('import Timer from "timer";', "const Timer = globalThis.__ledTestTimer;");
-const { default: Led, scaleColor } = await import(
-	`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
-);
+const {
+	default: Led,
+	LedCollection,
+	scaleColor,
+} = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
 let output;
 const led = new Led({
 	write(color, brightness) {
@@ -85,3 +87,62 @@ led.close();
 a.close();
 bad.close();
 console.log("LED state, validation, shared timer, flush batching, failure and close tests passed");
+
+const writes = [];
+let groupFlushes = 0;
+const groupFlush = () => {
+	groupFlushes++;
+};
+const members = [0, 1, 2].map(
+	(index) =>
+		new Led({
+			write(color, brightness) {
+				writes.push({ index, color, brightness });
+			},
+			flush: groupFlush,
+		}),
+);
+const group = new LedCollection(members);
+assert.equal(group.length, 3);
+assert.equal(group[1], members[1]);
+assert.deepEqual([...group], members);
+assert.throws(() => {
+	group[0] = members[1];
+}, TypeError);
+group.color = { r: 200, g: 20, b: 10 };
+assert.equal(writes.length, 3);
+assert.equal(groupFlushes, 1);
+for (const member of group) assert.deepEqual(member.color, group.color);
+group.brightness = 32;
+assert.equal(group.brightness, 32);
+assert.equal(groupFlushes, 2);
+assert.deepEqual(group.color, { r: 200, g: 20, b: 10 });
+group[1].color = { r: 0, g: 255, b: 0 };
+assert.equal(group.color, undefined);
+group[1].brightness = 64;
+assert.equal(group.brightness, undefined);
+group.on = 0;
+assert.equal(group.on, 0);
+assert.deepEqual(group.color, { r: 0, g: 0, b: 0 });
+const beforeInvalid = writes.length;
+assert.throws(() => {
+	group.color = { r: 1, g: 2, b: 256 };
+}, RangeError);
+assert.equal(writes.length, beforeInvalid);
+group.rainbow();
+assert.equal(timers.size, 1);
+for (const tick of timers.values()) tick();
+assert.deepEqual(group.color, { r: 3, g: 0, b: 0 });
+group.rainbow(0);
+assert.equal(timers.size, 0);
+assert.equal(group.on, 0);
+group[1].close();
+const beforeClosed = writes.length;
+assert.throws(() => {
+	group.color = { r: 1, g: 2, b: 3 };
+}, /closed/);
+assert.equal(writes.length, beforeClosed);
+group.close();
+group.close();
+assert.throws(() => group.rainbow(), /closed/);
+console.log("LED collection synchronization, mixed values, batching and lifecycle tests passed");

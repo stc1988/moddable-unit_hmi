@@ -3,7 +3,7 @@ import Encoder from "unit/encoder";
 export async function main(): Promise<void> {
 	const encoder = new Encoder();
 
-	for (const led of encoder.leds) led.color = { r: 0, g: 0, b: 24 };
+	encoder.leds.color = { r: 0, g: 0, b: 24 };
 
 	encoder.onChange = ({ value, pressed }) => {
 		trace(`[Encoder] value=${value}\tpressed=${pressed}\n`);
