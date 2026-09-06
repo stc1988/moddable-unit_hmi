@@ -56,3 +56,7 @@ fader.onChange = ({ raw, position }) => {
 	trace(`raw=${raw}, position=${position}\n`);
 };
 ```
+
+## Common LED objects
+
+See [Common LED interface](../led.md) for `leds[index]`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.

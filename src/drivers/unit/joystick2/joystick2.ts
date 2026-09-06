@@ -5,6 +5,7 @@ import JoystickInput, {
 	type JoystickPosition,
 	type JoystickState,
 } from "hmi/input/joystick";
+import Led, { scaleColor } from "hmi/led";
 import { SMBusDevice, type SMBusInstance, type SMBusIO, type SMBusPortOptions } from "hmi/smbus";
 import { integerInRange, type RGBColor } from "hmi/util";
 
@@ -26,6 +27,8 @@ export type JoyStick2ButtonChangeCallback = JoystickButtonChangeCallback;
 
 // https://docs.m5stack.com/ja/unit/Unit-JoyStick2
 export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance> {
+	readonly led = new Led({ write: (color, brightness) => this.setLed(scaleColor(color, brightness)) });
+
 	static readonly DEFAULT_ADDRESS = 0x63;
 	static readonly DEFAULT_HZ = 400_000;
 	static readonly REGISTER = {
@@ -85,6 +88,7 @@ export default class JoyStick2 extends SMBusDevice<JoyStick2IOInstance> {
 	}
 
 	close(): void {
+		this.led.close();
 		this.#input.close();
 		super.close();
 	}

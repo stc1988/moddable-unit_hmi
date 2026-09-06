@@ -76,3 +76,7 @@ errors to the caller.
 The module exports `Encoder8Options`, `Encoder8IO`, `Encoder8IOInstance`, `Encoder8State`,
 `Encoder8ChangeCallback`, `Encoder8EncoderChangeCallback`, `Encoder8ButtonChangeCallback`, and
 `Encoder8SwitchChangeCallback` for TypeScript applications.
+
+## Common LED objects
+
+See [Common LED interface](../led.md) for `leds[index]`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.

@@ -5,6 +5,7 @@ import JoystickInput, {
 	type JoystickPosition,
 	type JoystickState,
 } from "hmi/input/joystick";
+import Led, { scaleColor } from "hmi/led";
 import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed8, signed16 } from "hmi/util";
 import Timer from "timer";
@@ -56,6 +57,8 @@ function calibrationValue(value: number): number {
 
 // https://docs.m5stack.com/en/hat/MiniJoyC
 export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
+	readonly led = new Led({ write: (color, brightness) => this.setLed(scaleColor(color, brightness)) });
+
 	static readonly DEFAULT_ADDRESS = 0x54;
 	static readonly DEFAULT_HZ = 200_000;
 
@@ -135,6 +138,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	close(): void {
+		this.led.close();
 		this.#input.close();
 		super.close();
 	}

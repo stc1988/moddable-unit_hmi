@@ -3,8 +3,13 @@ import Angle8 from "unit/8angle";
 export async function main(): Promise<void> {
 	const angle8 = new Angle8({ deadband: 8 });
 
-	for (let led = 0; led < Angle8.LED_COUNT; led++)
-		angle8.setLed(led, { r: 0, g: 0, b: led === Angle8.SWITCH_LED ? 255 : 32 }, 30);
+	for (let index = 0; index < Angle8.LED_COUNT; index++) {
+		const led = angle8.leds[index];
+		if (led) {
+			led.brightness = 77;
+			led.color = { r: 0, g: 0, b: index === Angle8.SWITCH_LED ? 255 : 32 };
+		}
+	}
 
 	angle8.onChange = ({ angles, switchOn }) => {
 		trace(`[8Angle] angles=${angles.join(",")}\tswitch=${switchOn}\n`);
@@ -12,11 +17,23 @@ export async function main(): Promise<void> {
 
 	angle8.onAngleChange = (angle, value) => {
 		trace(`[8Angle] angle=${angle}\tvalue=${value}\n`);
-		angle8.setLed(angle, { r: value >> 4, g: 255 - (value >> 4), b: 0 }, 30);
+		{
+			const led = angle8.leds[angle];
+			if (led) {
+				led.brightness = 77;
+				led.color = { r: value >> 4, g: 255 - (value >> 4), b: 0 };
+			}
+		}
 	};
 
 	angle8.onSwitchChange = (on) => {
 		trace(`[8Angle] switch=${on}\n`);
-		angle8.setLed(Angle8.SWITCH_LED, { r: on ? 255 : 0, g: 0, b: on ? 0 : 64 }, 30);
+		{
+			const led = angle8.leds[Angle8.SWITCH_LED];
+			if (led) {
+				led.brightness = 77;
+				led.color = { r: on ? 255 : 0, g: 0, b: on ? 0 : 64 };
+			}
+		}
 	};
 }

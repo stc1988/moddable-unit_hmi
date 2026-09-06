@@ -64,3 +64,7 @@ errors to the caller.
 
 The module exports `Angle8Options`, `Angle8IO`, `Angle8IOInstance`, `Angle8State`, `Angle8Color`, `Angle8Resolution`,
 `Angle8ChangeCallback`, `Angle8AngleChangeCallback`, and `Angle8SwitchChangeCallback` for TypeScript applications.
+
+## Common LED objects
+
+See [Common LED interface](../led.md) for `leds[index]`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.

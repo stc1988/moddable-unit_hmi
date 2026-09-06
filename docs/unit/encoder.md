@@ -62,3 +62,7 @@ errors to the caller.
 
 The module exports `EncoderOptions`, `EncoderIO`, `EncoderIOInstance`, `EncoderState`, `EncoderMode`,
 `EncoderChangeCallback`, and `EncoderButtonChangeCallback` for TypeScript applications.
+
+## Common LED objects
+
+See [Common LED interface](../led.md) for `leds[index]`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.

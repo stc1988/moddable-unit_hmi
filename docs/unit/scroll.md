@@ -59,3 +59,7 @@ errors to the caller.
 
 The module exports `ScrollOptions`, `ScrollIO`, `ScrollIOInstance`, `ScrollState`, `ScrollChangeCallback`,
 and `ScrollButtonChangeCallback` for TypeScript applications.
+
+## Common LED objects
+
+See [Common LED interface](../led.md) for `led`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.

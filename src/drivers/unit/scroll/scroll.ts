@@ -3,6 +3,7 @@ import EncoderInput, {
 	type EncoderButtonChangeCallback as InputButtonChangeCallback,
 	type EncoderChangeCallback as InputChangeCallback,
 } from "hmi/input/encoder";
+import Led, { scaleColor } from "hmi/led";
 import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 
@@ -41,6 +42,8 @@ const REGISTER = {
 
 // https://docs.m5stack.com/ja/unit/UNIT-Scroll
 export default class Scroll extends SMBusDevice<ScrollIOInstance> {
+	readonly led = new Led({ write: (color, brightness) => this.setLed(scaleColor(color, brightness)) });
+
 	static readonly DEFAULT_ADDRESS = 0x40;
 	static readonly DEFAULT_HZ = 400_000;
 
@@ -82,6 +85,7 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	}
 
 	close(): void {
+		this.led.close();
 		this.#input.close();
 		super.close();
 	}

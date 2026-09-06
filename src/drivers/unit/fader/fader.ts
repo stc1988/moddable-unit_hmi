@@ -5,6 +5,7 @@ import AnalogInput, {
 	AnalogInputEvents,
 	type AnalogIO,
 } from "hmi/input/analog";
+import Led, { scaleColor } from "hmi/led";
 import type { RGBColor } from "hmi/util";
 import NeoPixel from "neopixel";
 
@@ -41,6 +42,20 @@ export type FaderLedIOConstructor = new (options: { pin: number; length: number;
 
 // https://docs.m5stack.com/ja/unit/fader
 export default class Fader {
+	#flushLeds = () => this.show();
+	readonly leds: readonly Led[] = Object.freeze(
+		Array.from(
+			{ length: 14 },
+			(_, index) =>
+				new Led({
+					flush: this.#flushLeds,
+					write: (color, brightness) => {
+						this.setPixel(index, scaleColor(color, brightness), false);
+					},
+				}),
+		),
+	);
+
 	static readonly LED_COUNT = 14;
 	static readonly COLUMN_COUNT = 2;
 	static readonly LEVEL_COUNT = 7;
@@ -103,6 +118,7 @@ export default class Fader {
 	}
 
 	close(): void {
+		for (const led of this.leds) led.close();
 		if (this.#closed) return;
 		this.#closed = true;
 		this.#input.close();

@@ -99,3 +99,7 @@ The built-in 200 mAh battery powers the HAT, but the published HAT Mini JoyC I2C
 The module exports `MiniJoyCOptions`, `MiniJoyCIO`, `MiniJoyCPosition`, `MiniJoyCState`, `MiniJoyCReadMode`,
 `MiniJoyCCalibration`, `MiniJoyCCalibrationIndex`, `MiniJoyCChangeCallback`, and `MiniJoyCButtonChangeCallback` for
 TypeScript applications.
+
+## Common LED objects
+
+See [Common LED interface](../led.md) for `led`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.

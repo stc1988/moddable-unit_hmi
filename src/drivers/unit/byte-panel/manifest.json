@@ -1,5 +1,9 @@
 {
-	"include": ["../../../hmi/polling/manifest.json", "../../../hmi/smbus/manifest.json"],
+	"include": [
+		"../../../hmi/polling/manifest.json",
+		"../../../hmi/smbus/manifest.json",
+		"../../../hmi/led/manifest.json"
+	],
 	"modules": {
 		"unit/byte-panel": "./bytePanel"
 	},

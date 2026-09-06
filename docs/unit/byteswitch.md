@@ -66,3 +66,7 @@ errors to the caller.
 
 The module exports `ByteSwitchOptions`, `ByteSwitchIO`, `ByteSwitchIOInstance`, `ByteSwitchState`,
 `ByteSwitchLedMode`, `ByteSwitchChangeCallback`, and `ByteSwitchSwitchChangeCallback` for TypeScript applications.
+
+## Common LED objects
+
+See [Common LED interface](../led.md) for `leds[index]`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.

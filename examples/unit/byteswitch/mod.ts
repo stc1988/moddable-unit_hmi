@@ -4,9 +4,15 @@ export async function main(): Promise<void> {
 	const byteSwitch = new ByteSwitch();
 
 	byteSwitch.setLedMode(ByteSwitch.LED_MODE.MANUAL);
-	for (let led = 0; led < ByteSwitch.LED_COUNT; led++) {
-		byteSwitch.setLedBrightness(led, 64);
-		byteSwitch.setLed(led, { r: 0, g: 0, b: led === 8 ? 64 : 0 });
+	for (let index = 0; index < ByteSwitch.LED_COUNT; index++) {
+		{
+			const led = byteSwitch.leds[index];
+			if (led) led.brightness = 64;
+		}
+		{
+			const led = byteSwitch.leds[index];
+			if (led) led.color = { r: 0, g: 0, b: index === 8 ? 64 : 0 };
+		}
 	}
 
 	byteSwitch.onChange = ({ switches }) => {
@@ -15,6 +21,9 @@ export async function main(): Promise<void> {
 
 	byteSwitch.onSwitchChange = (switchIndex, on) => {
 		trace(`[ByteSwitch] switch=${switchIndex}\ton=${on}\n`);
-		byteSwitch.setLed(switchIndex, { r: on ? 255 : 0, g: on ? 128 : 0, b: 0 });
+		{
+			const led = byteSwitch.leds[switchIndex];
+			if (led) led.color = { r: on ? 255 : 0, g: on ? 128 : 0, b: 0 };
+		}
 	};
 }

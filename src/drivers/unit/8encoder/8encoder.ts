@@ -1,3 +1,4 @@
+import Led, { scaleColor } from "hmi/led";
 import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed32, signed32ToLittleEndian } from "hmi/util";
 import Encoder8Input from "unit/8encoder/input";
@@ -35,6 +36,18 @@ export type Encoder8SwitchChangeCallback = (on: boolean) => void;
 
 // https://docs.m5stack.com/en/unit/8Encoder
 export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
+	readonly leds: readonly Led[] = Object.freeze(
+		Array.from(
+			{ length: 9 },
+			(_, index) =>
+				new Led({
+					write: (color, brightness) => {
+						this.setLed(index, scaleColor(color, brightness));
+					},
+				}),
+		),
+	);
+
 	static readonly DEFAULT_ADDRESS = 0x41;
 	static readonly DEFAULT_HZ = 100_000;
 	static readonly ENCODER_COUNT = 8;
@@ -106,6 +119,7 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 	}
 
 	close(): void {
+		for (const led of this.leds) led.close();
 		this.#input.close();
 		super.close();
 	}

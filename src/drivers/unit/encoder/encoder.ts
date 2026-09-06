@@ -3,6 +3,7 @@ import EncoderInput, {
 	type EncoderButtonChangeCallback as InputButtonChangeCallback,
 	type EncoderChangeCallback as InputChangeCallback,
 } from "hmi/input/encoder";
+import Led, { scaleColor } from "hmi/led";
 import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 
@@ -32,6 +33,18 @@ export type EncoderButtonChangeCallback = InputButtonChangeCallback;
 
 // https://docs.m5stack.com/en/unit/encoder
 export default class Encoder extends SMBusDevice<EncoderIOInstance> {
+	readonly leds: readonly Led[] = Object.freeze(
+		Array.from(
+			{ length: 2 },
+			(_, index) =>
+				new Led({
+					write: (color, brightness) => {
+						this.setLed(index, scaleColor(color, brightness));
+					},
+				}),
+		),
+	);
+
 	static readonly DEFAULT_ADDRESS = 0x40;
 	static readonly DEFAULT_HZ = 200_000;
 	static readonly LED_COUNT = 2;
@@ -87,6 +100,7 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance> {
 	}
 
 	close(): void {
+		for (const led of this.leds) led.close();
 		this.#input.close();
 		super.close();
 	}

@@ -68,7 +68,8 @@
 			"embedded:network/dns/resolver/*": ["./node_modules/@moddable/typings/embedded_network/dns/resolver/*"],
 			"embedded:network/interface/*": ["./node_modules/@moddable/typings/embedded_network/interface/*"],
 			"embedded:storage/*": ["./node_modules/@moddable/typings/embedded/storage/*"],
-			"embedded:provider/*": ["./node_modules/@moddable/typings/embedded_provider/*"]
+			"embedded:provider/*": ["./node_modules/@moddable/typings/embedded_provider/*"],
+			"hmi/led": ["./src/hmi/led/led"]
 		},
 		"types": [
 			"./node_modules/@moddable/typings/xs",

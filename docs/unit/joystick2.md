@@ -31,3 +31,7 @@ joystick.onButtonChange = (pressed) => {
 	joystick.setLed({ r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 255 });
 };
 ```
+
+## Common LED objects
+
+See [Common LED interface](../led.md) for `led`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.

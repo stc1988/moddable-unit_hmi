@@ -4,9 +4,15 @@ export async function main(): Promise<void> {
 	const byteButton = new ByteButton();
 
 	byteButton.setLedMode(ByteButton.LED_MODE.MANUAL);
-	for (let led = 0; led < ByteButton.LED_COUNT; led++) {
-		byteButton.setLedBrightness(led, 64);
-		byteButton.setLed(led, { r: 0, g: 0, b: led === 8 ? 64 : 0 });
+	for (let index = 0; index < ByteButton.LED_COUNT; index++) {
+		{
+			const led = byteButton.leds[index];
+			if (led) led.brightness = 64;
+		}
+		{
+			const led = byteButton.leds[index];
+			if (led) led.color = { r: 0, g: 0, b: index === 8 ? 64 : 0 };
+		}
 	}
 
 	byteButton.onChange = ({ buttons }) => {
@@ -15,6 +21,9 @@ export async function main(): Promise<void> {
 
 	byteButton.onButtonChange = (button, pressed) => {
 		trace(`[ByteButton] button=${button}\tpressed=${pressed}\n`);
-		byteButton.setLed(button, { r: 0, g: pressed ? 255 : 0, b: 0 });
+		{
+			const led = byteButton.leds[button];
+			if (led) led.color = { r: 0, g: pressed ? 255 : 0, b: 0 };
+		}
 	};
 }

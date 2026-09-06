@@ -55,3 +55,10 @@ driver, consistent with the other single-product I2C drivers.
 Register maps, encoding, calibration, and LED protocols remain in product drivers unless multiple products implement the
 same protocol, as ByteButton and ByteSwitch do. New drivers should reuse the polling or analog layer only when their
 behavior matches those contracts; product-family protocol sharing stays separate from generic bus resource management.
+
+## LED control
+
+`hmi/led` owns logical colors, brightness, and the shared animation timer. Product-owned
+LED objects delegate output to product register operations. Products close the LED objects
+before releasing hardware. Fader supplies a shared flush callback to batch animation updates.
+See [LED API](led.md) for initialization, hardware reads, and direct-operation boundaries.

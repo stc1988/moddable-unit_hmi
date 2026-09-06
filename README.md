@@ -77,3 +77,5 @@ npm run typecheck
 ## License
 
 MIT
+
+RGB-capable products expose the [common LED interface](docs/led.md) through `led` or `leds[index]`.
