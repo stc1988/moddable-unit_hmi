@@ -1,0 +1,41 @@
+changelog:
+  exclude:
+    labels:
+      - no-release-notes
+      - skip-changelog
+  categories:
+    - title: "⚠️ Breaking Changes"
+      labels:
+        - breaking-change
+        - semver-major
+    - title: "🧩 Driver and Device Support"
+      labels:
+        - device
+        - devices
+        - driver
+        - drivers
+    - title: "✨ Features"
+      labels:
+        - enhancement
+        - feature
+        - semver-minor
+    - title: "🐛 Fixes"
+      labels:
+        - bug
+        - fix
+        - semver-patch
+    - title: "📚 Documentation and Examples"
+      labels:
+        - documentation
+        - examples
+    - title: "📦 Dependencies"
+      labels:
+        - dependencies
+    - title: "🛠 Maintenance"
+      labels:
+        - ci
+        - maintenance
+        - refactor
+    - title: Other Changes
+      labels:
+        - "*"

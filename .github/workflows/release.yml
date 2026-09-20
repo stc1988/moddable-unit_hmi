@@ -1,0 +1,103 @@
+name: Create GitHub Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (for example, 1.2.3)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.repository.default_branch }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Validate release request
+        run: |
+          if [[ -z "$VERSION" || "$VERSION" == *[[:space:]]* ]]; then
+            echo "version must be a non-empty npm version without whitespace" >&2
+            exit 1
+          fi
+
+          TAG="v${VERSION}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists" >&2
+            exit 1
+          fi
+
+      - name: Update package version
+        run: |
+          CURRENT_VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$CURRENT_VERSION" != "$VERSION" ]]; then
+            npm version "$VERSION" --no-git-tag-version
+          fi
+
+      - name: Verify version files
+        run: |
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          LOCK_VERSION="$(node -p "require('./package-lock.json').version")"
+
+          if [[ "$PACKAGE_VERSION" != "$VERSION" || "$LOCK_VERSION" != "$VERSION" ]]; then
+            echo "Requested version ${VERSION} was normalized or was not written to both version files" >&2
+            exit 1
+          fi
+
+          if ! git diff --quiet; then
+            CHANGED_FILES="$(git diff --name-only)"
+            if [[ "$CHANGED_FILES" != $'package-lock.json\npackage.json' ]]; then
+              echo "Expected only package.json and package-lock.json to change; got:" >&2
+              printf '%s\n' "$CHANGED_FILES" >&2
+              exit 1
+            fi
+          fi
+
+      - name: Commit and tag release
+        run: |
+          TAG="v${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit --allow-empty -m "Release ${TAG}"
+          git tag -a "$TAG" -m "Release ${TAG}"
+
+          TAG_VERSION="$(git show "${TAG}:package.json" | node -e "let data = ''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => process.stdout.write(JSON.parse(data).version));")"
+          if [[ "$TAG_VERSION" != "$VERSION" ]]; then
+            echo "Tag ${TAG} contains package version ${TAG_VERSION}, expected ${VERSION}" >&2
+            exit 1
+          fi
+
+          git push --atomic origin "HEAD:refs/heads/${DEFAULT_BRANCH}" "refs/tags/${TAG}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${VERSION}"
+          gh release create "$TAG" \
+            --verify-tag \
+            --generate-notes \
+            --title "$TAG"

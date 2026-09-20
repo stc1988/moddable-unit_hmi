@@ -77,6 +77,12 @@ npm run typecheck
 
 `npm run check` runs both the Biome checks and the TypeScript type checker.
 
+## Releases
+
+Maintainers create releases from the default branch with the **Create GitHub Release** workflow. Enter an
+npm-compatible version without the `v` prefix (for example, `1.1.0`). The workflow updates the package version, creates
+and pushes the release commit and `v<version>` tag, and publishes a GitHub Release with generated release notes.
+
 ## License
 
 MIT
