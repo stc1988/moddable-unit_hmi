@@ -6,11 +6,11 @@ export async function main(): Promise<void> {
 
 	trace(`[MiniJoyC] firmware=${joystick.getFirmwareVersion()}\taddress=0x${joystick.getI2CAddress().toString(16)}\n`);
 
-	joystick.onChange = ({ x, y, pressed }) => {
+	joystick.onChanged = ({ x, y, pressed }) => {
 		trace(`[MiniJoyC] x=${x}\ty=${y}\tpressed=${pressed}\n`);
 	};
 
-	joystick.onButtonChange = (pressed) => {
+	joystick.onButtonChanged = (pressed) => {
 		if (!pressed) return;
 		ledOn = !ledOn;
 		joystick.led.color = { r: 0, g: ledOn ? 128 : 0, b: ledOn ? 255 : 0 };

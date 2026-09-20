@@ -16,18 +16,18 @@ export interface JoystickSource<State extends JoystickState = JoystickState> {
 export interface JoystickInputOptions<State extends JoystickState = JoystickState> {
 	pollingInterval?: number;
 	deadband?: number;
-	onChange?: JoystickChangeCallback<State>;
-	onButtonChange?: JoystickButtonChangeCallback;
+	onChanged?: JoystickChangedCallback<State>;
+	onButtonChanged?: JoystickButtonChangedCallback;
 }
 
-export type JoystickChangeCallback<State extends JoystickState = JoystickState> = (state: State) => void;
-export type JoystickButtonChangeCallback = (pressed: boolean) => void;
+export type JoystickChangedCallback<State extends JoystickState = JoystickState> = (state: State) => void;
+export type JoystickButtonChangedCallback = (pressed: boolean) => void;
 
 export default class JoystickInput<State extends JoystickState = JoystickState> {
 	#target: object;
 	#polling: PollingInput<State>;
-	#onChange: JoystickChangeCallback<State> | null;
-	#onButtonChange: JoystickButtonChangeCallback | null;
+	#onChanged: JoystickChangedCallback<State> | null;
+	#onButtonChanged: JoystickButtonChangedCallback | null;
 	#lastButtonState: boolean | undefined;
 	#deadband: number;
 	#closed = false;
@@ -35,8 +35,8 @@ export default class JoystickInput<State extends JoystickState = JoystickState> 
 	constructor(target: object, source: JoystickSource<State>, name: string, options: JoystickInputOptions<State> = {}) {
 		this.#target = target;
 		this.#deadband = JoystickInput.#nonNegativeInteger(options.deadband ?? 0, "deadband");
-		this.#onChange = JoystickInput.#callback(options.onChange, "onChange");
-		this.#onButtonChange = JoystickInput.#callback(options.onButtonChange, "onButtonChange");
+		this.#onChanged = JoystickInput.#callback(options.onChanged, "onChanged");
+		this.#onButtonChanged = JoystickInput.#callback(options.onButtonChanged, "onButtonChanged");
 		const pollingOptions: PollingInputOptions<State> = {
 			changed: (state, previous) =>
 				state.pressed !== previous.pressed ||
@@ -52,8 +52,8 @@ export default class JoystickInput<State extends JoystickState = JoystickState> 
 		if (this.#closed) return;
 		this.#polling.close();
 		this.#closed = true;
-		this.#onChange = null;
-		this.#onButtonChange = null;
+		this.#onChanged = null;
+		this.#onButtonChanged = null;
 	}
 
 	start(): void {
@@ -82,36 +82,36 @@ export default class JoystickInput<State extends JoystickState = JoystickState> 
 		return this.#deadband;
 	}
 
-	set onChange(callback: JoystickChangeCallback<State> | null | undefined) {
-		const next = JoystickInput.#callback(callback, "onChange");
-		if (next !== this.#onChange) this.#polling.onChange = null;
-		this.#onChange = next;
+	set onChanged(callback: JoystickChangedCallback<State> | null | undefined) {
+		const next = JoystickInput.#callback(callback, "onChanged");
+		if (next !== this.#onChanged) this.#polling.onChanged = null;
+		this.#onChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onChange(): JoystickChangeCallback<State> | null {
-		return this.#onChange;
+	get onChanged(): JoystickChangedCallback<State> | null {
+		return this.#onChanged;
 	}
 
-	set onButtonChange(callback: JoystickButtonChangeCallback | null | undefined) {
-		this.#onButtonChange = JoystickInput.#callback(callback, "onButtonChange");
+	set onButtonChanged(callback: JoystickButtonChangedCallback | null | undefined) {
+		this.#onButtonChanged = JoystickInput.#callback(callback, "onButtonChanged");
 		this.#updatePollingState();
 	}
 
-	get onButtonChange(): JoystickButtonChangeCallback | null {
-		return this.#onButtonChange;
+	get onButtonChanged(): JoystickButtonChangedCallback | null {
+		return this.#onButtonChanged;
 	}
 
 	#updatePollingState(): void {
-		const callback = this.#onChange || this.#onButtonChange ? this.#handleChange : null;
-		if (callback && !this.#polling.onChange) this.#lastButtonState = undefined;
-		this.#polling.onChange = callback;
+		const callback = this.#onChanged || this.#onButtonChanged ? this.#handleChange : null;
+		if (callback && !this.#polling.onChanged) this.#lastButtonState = undefined;
+		this.#polling.onChanged = callback;
 	}
 
 	#handleChange(state: State): void {
 		const buttonChanged = this.#lastButtonState !== undefined && state.pressed !== this.#lastButtonState;
-		this.#onChange?.call(this.#target, state);
-		if (buttonChanged) this.#onButtonChange?.call(this.#target, state.pressed);
+		this.#onChanged?.call(this.#target, state);
+		if (buttonChanged) this.#onButtonChanged?.call(this.#target, state.pressed);
 		this.#lastButtonState = state.pressed;
 	}
 

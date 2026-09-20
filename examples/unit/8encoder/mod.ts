@@ -9,11 +9,11 @@ export async function main(): Promise<void> {
 		if (led) led.color = { r: 0, g: 0, b: 64 };
 	}
 
-	encoder8.onChange = ({ encoders, buttons, switchOn }) => {
+	encoder8.onChanged = ({ encoders, buttons, switchOn }) => {
 		trace(`[8Encoder] values=${encoders.join(",")}\tbuttons=0x${buttons.toString(16)}\tswitch=${switchOn}\n`);
 	};
 
-	encoder8.onEncoderChange = (encoder, value) => {
+	encoder8.onEncoderChanged = (encoder, value) => {
 		trace(`[8Encoder] encoder=${encoder}\tvalue=${value}\n`);
 		{
 			const led = encoder8.leds[encoder];
@@ -21,7 +21,7 @@ export async function main(): Promise<void> {
 		}
 	};
 
-	encoder8.onButtonChange = (button, pressed) => {
+	encoder8.onButtonChanged = (button, pressed) => {
 		trace(`[8Encoder] button=${button}\tpressed=${pressed}\n`);
 		{
 			const led = encoder8.leds[button];
@@ -29,7 +29,7 @@ export async function main(): Promise<void> {
 		}
 	};
 
-	encoder8.onSwitchChange = (on) => {
+	encoder8.onSwitchChanged = (on) => {
 		trace(`[8Encoder] switch=${on}\n`);
 		{
 			const led = encoder8.leds[Encoder8.SWITCH_LED];

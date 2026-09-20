@@ -23,16 +23,16 @@ export interface Encoder8State {
 
 export interface Encoder8Options extends SMBusDeviceOptions<Encoder8IO> {
 	pollingInterval?: number;
-	onChange?: Encoder8ChangeCallback;
-	onEncoderChange?: Encoder8EncoderChangeCallback;
-	onButtonChange?: Encoder8ButtonChangeCallback;
-	onSwitchChange?: Encoder8SwitchChangeCallback;
+	onChanged?: Encoder8ChangedCallback;
+	onEncoderChanged?: Encoder8EncoderChangedCallback;
+	onButtonChanged?: Encoder8ButtonChangedCallback;
+	onSwitchChanged?: Encoder8SwitchChangedCallback;
 }
 
-export type Encoder8ChangeCallback = (state: Encoder8State) => void;
-export type Encoder8EncoderChangeCallback = (encoder: number, value: number) => void;
-export type Encoder8ButtonChangeCallback = (button: number, pressed: boolean) => void;
-export type Encoder8SwitchChangeCallback = (on: boolean) => void;
+export type Encoder8ChangedCallback = (state: Encoder8State) => void;
+export type Encoder8EncoderChangedCallback = (encoder: number, value: number) => void;
+export type Encoder8ButtonChangedCallback = (button: number, pressed: boolean) => void;
+export type Encoder8SwitchChangedCallback = (on: boolean) => void;
 
 // https://docs.m5stack.com/en/unit/8Encoder
 export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
@@ -71,29 +71,29 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 
 	#input: Encoder8Input;
 
-	set onChange(callback: Encoder8ChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: Encoder8ChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
-	get onChange(): Encoder8ChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): Encoder8ChangedCallback | null {
+		return this.#input.onChanged;
 	}
-	set onEncoderChange(callback: Encoder8EncoderChangeCallback | null | undefined) {
-		this.#input.onEncoderChange = callback;
+	set onEncoderChanged(callback: Encoder8EncoderChangedCallback | null | undefined) {
+		this.#input.onEncoderChanged = callback;
 	}
-	get onEncoderChange(): Encoder8EncoderChangeCallback | null {
-		return this.#input.onEncoderChange;
+	get onEncoderChanged(): Encoder8EncoderChangedCallback | null {
+		return this.#input.onEncoderChanged;
 	}
-	set onButtonChange(callback: Encoder8ButtonChangeCallback | null | undefined) {
-		this.#input.onButtonChange = callback;
+	set onButtonChanged(callback: Encoder8ButtonChangedCallback | null | undefined) {
+		this.#input.onButtonChanged = callback;
 	}
-	get onButtonChange(): Encoder8ButtonChangeCallback | null {
-		return this.#input.onButtonChange;
+	get onButtonChanged(): Encoder8ButtonChangedCallback | null {
+		return this.#input.onButtonChanged;
 	}
-	set onSwitchChange(callback: Encoder8SwitchChangeCallback | null | undefined) {
-		this.#input.onSwitchChange = callback;
+	set onSwitchChanged(callback: Encoder8SwitchChangedCallback | null | undefined) {
+		this.#input.onSwitchChanged = callback;
 	}
-	get onSwitchChange(): Encoder8SwitchChangeCallback | null {
-		return this.#input.onSwitchChange;
+	get onSwitchChanged(): Encoder8SwitchChangedCallback | null {
+		return this.#input.onSwitchChanged;
 	}
 	set pollingInterval(value: number) {
 		this.#input.pollingInterval = value;

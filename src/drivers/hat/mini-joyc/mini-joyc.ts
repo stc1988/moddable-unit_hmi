@@ -1,6 +1,6 @@
 import JoystickInput, {
-	type JoystickButtonChangeCallback,
-	type JoystickChangeCallback,
+	type JoystickButtonChangedCallback,
+	type JoystickChangedCallback,
 	type JoystickInputOptions,
 	type JoystickPosition,
 	type JoystickState,
@@ -38,8 +38,8 @@ export interface MiniJoyCOptions extends JoystickInputOptions<MiniJoyCState>, SM
 	readMode?: MiniJoyCReadMode;
 }
 
-export type MiniJoyCChangeCallback = JoystickChangeCallback<MiniJoyCState>;
-export type MiniJoyCButtonChangeCallback = JoystickButtonChangeCallback;
+export type MiniJoyCChangedCallback = JoystickChangedCallback<MiniJoyCState>;
+export type MiniJoyCButtonChangedCallback = JoystickButtonChangedCallback;
 
 function readMode(value: string): MiniJoyCReadMode {
 	if (value !== "adc" && value !== "pos8" && value !== "pos10")
@@ -84,17 +84,17 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 
 	#input: JoystickInput<MiniJoyCState>;
 
-	set onChange(callback: MiniJoyCChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: MiniJoyCChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
-	get onChange(): MiniJoyCChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): MiniJoyCChangedCallback | null {
+		return this.#input.onChanged;
 	}
-	set onButtonChange(callback: MiniJoyCButtonChangeCallback | null | undefined) {
-		this.#input.onButtonChange = callback;
+	set onButtonChanged(callback: MiniJoyCButtonChangedCallback | null | undefined) {
+		this.#input.onButtonChanged = callback;
 	}
-	get onButtonChange(): MiniJoyCButtonChangeCallback | null {
-		return this.#input.onButtonChange;
+	get onButtonChanged(): MiniJoyCButtonChangedCallback | null {
+		return this.#input.onButtonChanged;
 	}
 	set pollingInterval(value: number) {
 		this.#input.pollingInterval = value;

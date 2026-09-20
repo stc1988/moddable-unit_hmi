@@ -14,11 +14,11 @@ import ByteButton from "unit/bytebutton";
 
 const byteButton = new ByteButton();
 
-byteButton.onChange = ({ buttons }) => {
+byteButton.onChanged = ({ buttons }) => {
 	trace(`button mask: 0x${buttons.toString(16)}\n`);
 };
 
-byteButton.onButtonChange = (button, pressed) => {
+byteButton.onButtonChanged = (button, pressed) => {
 	byteButton.setLed(button, { r: 0, g: pressed ? 255 : 0, b: 0 });
 };
 ```
@@ -29,8 +29,8 @@ byteButton.onButtonChange = (button, pressed) => {
   values are normalized so that a set bit means pressed.
 - `readButtons()` returns the button bit mask directly.
 - `readButton(button)` reads an individual button register and returns its pressed state.
-- `onChange(state)` runs for the first sample and whenever the button mask changes.
-- `onButtonChange(button, pressed)` runs once for each pressed or released transition after the initial sample. If several
+- `onChanged(state)` runs for the first sample and whenever the button mask changes.
+- `onButtonChanged(button, pressed)` runs once for each pressed or released transition after the initial sample. If several
   buttons change in one sample, callbacks run in ascending button order.
 
 Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
@@ -65,7 +65,7 @@ errors to the caller.
 ## Exported types
 
 The module exports `ByteButtonOptions`, `ByteButtonIO`, `ByteButtonIOInstance`, `ByteButtonState`,
-`ByteButtonLedMode`, `ByteButtonChangeCallback`, and `ByteButtonButtonChangeCallback` for TypeScript applications.
+`ByteButtonLedMode`, `ByteButtonChangedCallback`, and `ByteButtonButtonChangedCallback` for TypeScript applications.
 
 ## Common LED objects
 

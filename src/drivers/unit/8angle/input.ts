@@ -1,11 +1,11 @@
 import PollingInput, { type PollingInputOptions } from "hmi/polling";
 import { callbackOrNull } from "hmi/util";
 import type {
-	Angle8AngleChangeCallback,
-	Angle8ChangeCallback,
+	Angle8AngleChangedCallback,
+	Angle8ChangedCallback,
 	Angle8Options,
 	Angle8State,
-	Angle8SwitchChangeCallback,
+	Angle8SwitchChangedCallback,
 } from "unit/8angle";
 
 const ANGLE_COUNT = 8;
@@ -19,9 +19,9 @@ function angleValue(state: Angle8State, angle: number): number {
 export default class Angle8Input {
 	#target: object;
 	#polling: PollingInput<Angle8State>;
-	#onChange: Angle8ChangeCallback | null;
-	#onAngleChange: Angle8AngleChangeCallback | null;
-	#onSwitchChange: Angle8SwitchChangeCallback | null;
+	#onChanged: Angle8ChangedCallback | null;
+	#onAngleChanged: Angle8AngleChangedCallback | null;
+	#onSwitchChanged: Angle8SwitchChangedCallback | null;
 	#lastState: Angle8State | undefined;
 	#deadband: number;
 	#closed = false;
@@ -29,9 +29,9 @@ export default class Angle8Input {
 	constructor(target: object, source: { read(): Angle8State }, options: Angle8Options) {
 		this.#target = target;
 		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
-		this.#onChange = callbackOrNull(options.onChange, "onChange");
-		this.#onAngleChange = callbackOrNull(options.onAngleChange, "onAngleChange");
-		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
+		this.#onChanged = callbackOrNull(options.onChanged, "onChanged");
+		this.#onAngleChanged = callbackOrNull(options.onAngleChanged, "onAngleChanged");
+		this.#onSwitchChanged = callbackOrNull(options.onSwitchChanged, "onSwitchChanged");
 		const pollingOptions: PollingInputOptions<Angle8State> = {
 			changed: (state, previous) => this.#stateChanged(state, previous),
 		};
@@ -44,9 +44,9 @@ export default class Angle8Input {
 		if (this.#closed) return;
 		this.#polling.close();
 		this.#closed = true;
-		this.#onChange = null;
-		this.#onAngleChange = null;
-		this.#onSwitchChange = null;
+		this.#onChanged = null;
+		this.#onAngleChanged = null;
+		this.#onSwitchChanged = null;
 		this.#lastState = undefined;
 	}
 
@@ -76,57 +76,57 @@ export default class Angle8Input {
 		return this.#deadband;
 	}
 
-	set onChange(callback: Angle8ChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onChange");
+	set onChanged(callback: Angle8ChangedCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onChanged");
 		if (this.#closed && next) throw new Error("8angle input is closed");
-		if (next !== this.#onChange) this.#polling.onChange = null;
-		this.#onChange = next;
+		if (next !== this.#onChanged) this.#polling.onChanged = null;
+		this.#onChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onChange(): Angle8ChangeCallback | null {
-		return this.#onChange;
+	get onChanged(): Angle8ChangedCallback | null {
+		return this.#onChanged;
 	}
 
-	set onAngleChange(callback: Angle8AngleChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onAngleChange");
+	set onAngleChanged(callback: Angle8AngleChangedCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onAngleChanged");
 		if (this.#closed && next) throw new Error("8angle input is closed");
-		this.#onAngleChange = next;
+		this.#onAngleChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onAngleChange(): Angle8AngleChangeCallback | null {
-		return this.#onAngleChange;
+	get onAngleChanged(): Angle8AngleChangedCallback | null {
+		return this.#onAngleChanged;
 	}
 
-	set onSwitchChange(callback: Angle8SwitchChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onSwitchChange");
+	set onSwitchChanged(callback: Angle8SwitchChangedCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onSwitchChanged");
 		if (this.#closed && next) throw new Error("8angle input is closed");
-		this.#onSwitchChange = next;
+		this.#onSwitchChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onSwitchChange(): Angle8SwitchChangeCallback | null {
-		return this.#onSwitchChange;
+	get onSwitchChanged(): Angle8SwitchChangedCallback | null {
+		return this.#onSwitchChanged;
 	}
 
 	#updatePollingState(): void {
-		const callback = this.#onChange || this.#onAngleChange || this.#onSwitchChange ? this.#handleChange : null;
-		if (callback && !this.#polling.onChange) this.#lastState = undefined;
-		this.#polling.onChange = callback;
+		const callback = this.#onChanged || this.#onAngleChanged || this.#onSwitchChanged ? this.#handleChange : null;
+		if (callback && !this.#polling.onChanged) this.#lastState = undefined;
+		this.#polling.onChanged = callback;
 	}
 
 	#handleChange(state: Angle8State): void {
 		const previous = this.#lastState;
-		this.#onChange?.call(this.#target, state);
-		if (previous && this.#onAngleChange) {
+		this.#onChanged?.call(this.#target, state);
+		if (previous && this.#onAngleChanged) {
 			for (let angle = 0; angle < ANGLE_COUNT; angle++) {
 				const value = angleValue(state, angle);
 				if (Math.abs(value - angleValue(previous, angle)) > this.#deadband)
-					this.#onAngleChange.call(this.#target, angle, value);
+					this.#onAngleChanged.call(this.#target, angle, value);
 			}
 		}
-		if (previous && state.switchOn !== previous.switchOn) this.#onSwitchChange?.call(this.#target, state.switchOn);
+		if (previous && state.switchOn !== previous.switchOn) this.#onSwitchChanged?.call(this.#target, state.switchOn);
 		this.#lastState = state;
 	}
 

@@ -1,7 +1,7 @@
 import EncoderInput, {
 	type EncoderInputOptions,
-	type EncoderButtonChangeCallback as InputButtonChangeCallback,
-	type EncoderChangeCallback as InputChangeCallback,
+	type EncoderButtonChangedCallback as InputButtonChangedCallback,
+	type EncoderChangedCallback as InputChangedCallback,
 } from "hmi/input/encoder";
 import Led, { scaleColor } from "hmi/led";
 import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
@@ -25,8 +25,8 @@ export interface ScrollState {
 
 export interface ScrollOptions extends EncoderInputOptions<ScrollState>, SMBusDeviceOptions<ScrollIO> {}
 
-export type ScrollChangeCallback = InputChangeCallback<ScrollState>;
-export type ScrollButtonChangeCallback = InputButtonChangeCallback;
+export type ScrollChangedCallback = InputChangedCallback<ScrollState>;
+export type ScrollButtonChangedCallback = InputButtonChangedCallback;
 
 const REGISTER = {
 	ENCODER: 0x10,
@@ -49,17 +49,17 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 
 	#input: EncoderInput<ScrollState>;
 
-	set onChange(callback: ScrollChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: ScrollChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
-	get onChange(): ScrollChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): ScrollChangedCallback | null {
+		return this.#input.onChanged;
 	}
-	set onButtonChange(callback: ScrollButtonChangeCallback | null | undefined) {
-		this.#input.onButtonChange = callback;
+	set onButtonChanged(callback: ScrollButtonChangedCallback | null | undefined) {
+		this.#input.onButtonChanged = callback;
 	}
-	get onButtonChange(): ScrollButtonChangeCallback | null {
-		return this.#input.onButtonChange;
+	get onButtonChanged(): ScrollButtonChangedCallback | null {
+		return this.#input.onButtonChanged;
 	}
 	set pollingInterval(value: number) {
 		this.#input.pollingInterval = value;

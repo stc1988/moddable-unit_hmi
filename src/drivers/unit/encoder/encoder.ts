@@ -1,7 +1,7 @@
 import EncoderInput, {
 	type EncoderInputOptions,
-	type EncoderButtonChangeCallback as InputButtonChangeCallback,
-	type EncoderChangeCallback as InputChangeCallback,
+	type EncoderButtonChangedCallback as InputButtonChangedCallback,
+	type EncoderChangedCallback as InputChangedCallback,
 } from "hmi/input/encoder";
 import Led, { LedCollection, scaleColor } from "hmi/led";
 import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
@@ -28,8 +28,8 @@ export type EncoderMode = 0 | 1;
 
 export interface EncoderOptions extends EncoderInputOptions<EncoderState>, SMBusDeviceOptions<EncoderIO> {}
 
-export type EncoderChangeCallback = InputChangeCallback<EncoderState>;
-export type EncoderButtonChangeCallback = InputButtonChangeCallback;
+export type EncoderChangedCallback = InputChangedCallback<EncoderState>;
+export type EncoderButtonChangedCallback = InputButtonChangedCallback;
 
 // https://docs.m5stack.com/en/unit/encoder
 export default class Encoder extends SMBusDevice<EncoderIOInstance> {
@@ -64,17 +64,17 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance> {
 
 	#input: EncoderInput<EncoderState>;
 
-	set onChange(callback: EncoderChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: EncoderChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
-	get onChange(): EncoderChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): EncoderChangedCallback | null {
+		return this.#input.onChanged;
 	}
-	set onButtonChange(callback: EncoderButtonChangeCallback | null | undefined) {
-		this.#input.onButtonChange = callback;
+	set onButtonChanged(callback: EncoderButtonChangedCallback | null | undefined) {
+		this.#input.onButtonChanged = callback;
 	}
-	get onButtonChange(): EncoderButtonChangeCallback | null {
-		return this.#input.onButtonChange;
+	get onButtonChanged(): EncoderButtonChangedCallback | null {
+		return this.#input.onButtonChanged;
 	}
 	set pollingInterval(value: number) {
 		this.#input.pollingInterval = value;

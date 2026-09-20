@@ -1,6 +1,6 @@
 import JoystickInput, {
-	type JoystickButtonChangeCallback,
-	type JoystickChangeCallback,
+	type JoystickButtonChangedCallback,
+	type JoystickChangedCallback,
 	type JoystickInputOptions,
 	type JoystickPosition,
 	type JoystickState,
@@ -18,8 +18,8 @@ export type JoyStickState = JoystickState;
 
 export interface JoyStickOptions extends JoystickInputOptions<JoyStickState>, SMBusPortOptions<JoyStickIO> {}
 
-export type JoyStickChangeCallback = JoystickChangeCallback<JoyStickState>;
-export type JoyStickButtonChangeCallback = JoystickButtonChangeCallback;
+export type JoyStickChangedCallback = JoystickChangedCallback<JoyStickState>;
+export type JoyStickButtonChangedCallback = JoystickButtonChangedCallback;
 
 // https://docs.m5stack.com/ja/unit/joystick_1.1
 export default class JoyStick extends SMBusDevice<JoyStickIOInstance> {
@@ -29,17 +29,17 @@ export default class JoyStick extends SMBusDevice<JoyStickIOInstance> {
 
 	#input: JoystickInput<JoyStickState>;
 
-	set onChange(callback: JoyStickChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: JoyStickChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
-	get onChange(): JoyStickChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): JoyStickChangedCallback | null {
+		return this.#input.onChanged;
 	}
-	set onButtonChange(callback: JoyStickButtonChangeCallback | null | undefined) {
-		this.#input.onButtonChange = callback;
+	set onButtonChanged(callback: JoyStickButtonChangedCallback | null | undefined) {
+		this.#input.onButtonChanged = callback;
 	}
-	get onButtonChange(): JoyStickButtonChangeCallback | null {
-		return this.#input.onButtonChange;
+	get onButtonChanged(): JoyStickButtonChangedCallback | null {
+		return this.#input.onButtonChanged;
 	}
 	set pollingInterval(value: number) {
 		this.#input.pollingInterval = value;

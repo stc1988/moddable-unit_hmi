@@ -27,10 +27,10 @@ export interface AnalogInputOptions extends AnalogIOOptions {
 export interface AnalogInputEventOptions<State extends AnalogInputSample = AnalogInputSample> {
 	pollingInterval?: number;
 	deadband?: number;
-	onChange?: AnalogInputChangeCallback<State>;
+	onChanged?: AnalogInputChangedCallback<State>;
 }
 
-export type AnalogInputChangeCallback<State extends AnalogInputSample = AnalogInputSample> = (sample: State) => void;
+export type AnalogInputChangedCallback<State extends AnalogInputSample = AnalogInputSample> = (sample: State) => void;
 
 export default class AnalogInput {
 	#io: AnalogIOInstance | undefined;
@@ -77,7 +77,7 @@ export class AnalogInputEvents<State extends AnalogInputSample = AnalogInputSamp
 			changed: (sample, previous) => Math.abs(sample.raw - previous.raw) > this.#deadband,
 		};
 		if (options.pollingInterval !== undefined) pollingOptions.pollingInterval = options.pollingInterval;
-		if (options.onChange !== undefined) pollingOptions.onChange = options.onChange;
+		if (options.onChanged !== undefined) pollingOptions.onChanged = options.onChanged;
 		this.#polling = new PollingInput(target, source, name, pollingOptions);
 	}
 
@@ -109,11 +109,11 @@ export class AnalogInputEvents<State extends AnalogInputSample = AnalogInputSamp
 		return this.#deadband;
 	}
 
-	set onChange(callback: AnalogInputChangeCallback<State> | null | undefined) {
-		this.#polling.onChange = callback;
+	set onChanged(callback: AnalogInputChangedCallback<State> | null | undefined) {
+		this.#polling.onChanged = callback;
 	}
 
-	get onChange(): AnalogInputChangeCallback<State> | null {
-		return this.#polling.onChange;
+	get onChanged(): AnalogInputChangedCallback<State> | null {
+		return this.#polling.onChanged;
 	}
 }

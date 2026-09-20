@@ -1,7 +1,7 @@
 import type { RGBColor } from "hmi/util";
 import BytePanel, {
 	BytePanelInput,
-	type BytePanelInputChangeCallback,
+	type BytePanelInputChangedCallback,
 	type BytePanelInputOptions,
 	type BytePanelIO,
 	type BytePanelIOInstance,
@@ -21,18 +21,18 @@ export type ByteSwitchLedMode = 0 | 1;
 
 export interface ByteSwitchOptions extends BytePanelOptions<ByteSwitchIO> {
 	pollingInterval?: number;
-	onChange?: ByteSwitchChangeCallback;
-	onSwitchChange?: ByteSwitchSwitchChangeCallback;
+	onChanged?: ByteSwitchChangedCallback;
+	onSwitchChanged?: ByteSwitchSwitchChangedCallback;
 }
 
-export type ByteSwitchChangeCallback = (state: ByteSwitchState) => void;
-export type ByteSwitchSwitchChangeCallback = (switchIndex: number, on: boolean) => void;
+export type ByteSwitchChangedCallback = (state: ByteSwitchState) => void;
+export type ByteSwitchSwitchChangedCallback = (switchIndex: number, on: boolean) => void;
 
 function inputOptions(options: ByteSwitchOptions): BytePanelInputOptions<ByteSwitchState> {
 	const result: BytePanelInputOptions<ByteSwitchState> = {};
 	if (options.pollingInterval !== undefined) result.pollingInterval = options.pollingInterval;
-	if (options.onChange !== undefined) result.onChange = options.onChange;
-	if (options.onSwitchChange !== undefined) result.onInputChange = options.onSwitchChange;
+	if (options.onChanged !== undefined) result.onChanged = options.onChanged;
+	if (options.onSwitchChanged !== undefined) result.onInputChanged = options.onSwitchChanged;
 	return result;
 }
 
@@ -41,12 +41,12 @@ class ByteSwitchInput extends BytePanelInput<ByteSwitchState> {
 		super(target, source, "ByteSwitch", (state) => state.switches, inputOptions(options));
 	}
 
-	set onSwitchChange(callback: ByteSwitchSwitchChangeCallback | null | undefined) {
-		this.onInputChange = callback;
+	set onSwitchChanged(callback: ByteSwitchSwitchChangedCallback | null | undefined) {
+		this.onInputChanged = callback;
 	}
 
-	get onSwitchChange(): BytePanelInputChangeCallback | null {
-		return this.onInputChange;
+	get onSwitchChanged(): BytePanelInputChangedCallback | null {
+		return this.onInputChanged;
 	}
 }
 
@@ -64,20 +64,20 @@ export default class ByteSwitch extends BytePanel<ByteSwitchIOInstance> {
 
 	#input: ByteSwitchInput;
 
-	set onChange(callback: ByteSwitchChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: ByteSwitchChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
 
-	get onChange(): ByteSwitchChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): ByteSwitchChangedCallback | null {
+		return this.#input.onChanged;
 	}
 
-	set onSwitchChange(callback: ByteSwitchSwitchChangeCallback | null | undefined) {
-		this.#input.onSwitchChange = callback;
+	set onSwitchChanged(callback: ByteSwitchSwitchChangedCallback | null | undefined) {
+		this.#input.onSwitchChanged = callback;
 	}
 
-	get onSwitchChange(): ByteSwitchSwitchChangeCallback | null {
-		return this.#input.onSwitchChange;
+	get onSwitchChanged(): ByteSwitchSwitchChangedCallback | null {
+		return this.#input.onSwitchChanged;
 	}
 
 	set pollingInterval(value: number) {

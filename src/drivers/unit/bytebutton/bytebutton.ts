@@ -1,7 +1,7 @@
 import type { RGBColor } from "hmi/util";
 import BytePanel, {
 	BytePanelInput,
-	type BytePanelInputChangeCallback,
+	type BytePanelInputChangedCallback,
 	type BytePanelInputOptions,
 	type BytePanelIO,
 	type BytePanelIOInstance,
@@ -21,18 +21,18 @@ export type ByteButtonLedMode = 0 | 1;
 
 export interface ByteButtonOptions extends BytePanelOptions<ByteButtonIO> {
 	pollingInterval?: number;
-	onChange?: ByteButtonChangeCallback;
-	onButtonChange?: ByteButtonButtonChangeCallback;
+	onChanged?: ByteButtonChangedCallback;
+	onButtonChanged?: ByteButtonButtonChangedCallback;
 }
 
-export type ByteButtonChangeCallback = (state: ByteButtonState) => void;
-export type ByteButtonButtonChangeCallback = (button: number, pressed: boolean) => void;
+export type ByteButtonChangedCallback = (state: ByteButtonState) => void;
+export type ByteButtonButtonChangedCallback = (button: number, pressed: boolean) => void;
 
 function inputOptions(options: ByteButtonOptions): BytePanelInputOptions<ByteButtonState> {
 	const result: BytePanelInputOptions<ByteButtonState> = {};
 	if (options.pollingInterval !== undefined) result.pollingInterval = options.pollingInterval;
-	if (options.onChange !== undefined) result.onChange = options.onChange;
-	if (options.onButtonChange !== undefined) result.onInputChange = options.onButtonChange;
+	if (options.onChanged !== undefined) result.onChanged = options.onChanged;
+	if (options.onButtonChanged !== undefined) result.onInputChanged = options.onButtonChanged;
 	return result;
 }
 
@@ -41,12 +41,12 @@ class ByteButtonInput extends BytePanelInput<ByteButtonState> {
 		super(target, source, "ByteButton", (state) => state.buttons, inputOptions(options));
 	}
 
-	set onButtonChange(callback: ByteButtonButtonChangeCallback | null | undefined) {
-		this.onInputChange = callback;
+	set onButtonChanged(callback: ByteButtonButtonChangedCallback | null | undefined) {
+		this.onInputChanged = callback;
 	}
 
-	get onButtonChange(): BytePanelInputChangeCallback | null {
-		return this.onInputChange;
+	get onButtonChanged(): BytePanelInputChangedCallback | null {
+		return this.onInputChanged;
 	}
 }
 
@@ -64,20 +64,20 @@ export default class ByteButton extends BytePanel<ByteButtonIOInstance> {
 
 	#input: ByteButtonInput;
 
-	set onChange(callback: ByteButtonChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: ByteButtonChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
 
-	get onChange(): ByteButtonChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): ByteButtonChangedCallback | null {
+		return this.#input.onChanged;
 	}
 
-	set onButtonChange(callback: ByteButtonButtonChangeCallback | null | undefined) {
-		this.#input.onButtonChange = callback;
+	set onButtonChanged(callback: ByteButtonButtonChangedCallback | null | undefined) {
+		this.#input.onButtonChanged = callback;
 	}
 
-	get onButtonChange(): ByteButtonButtonChangeCallback | null {
-		return this.#input.onButtonChange;
+	get onButtonChanged(): ByteButtonButtonChangedCallback | null {
+		return this.#input.onButtonChanged;
 	}
 
 	set pollingInterval(value: number) {

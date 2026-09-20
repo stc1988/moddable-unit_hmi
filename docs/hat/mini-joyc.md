@@ -11,11 +11,11 @@ import MiniJoyC from "hat/mini-joyc";
 
 const joystick = new MiniJoyC({ deadband: 2, readMode: "pos8" });
 
-joystick.onChange = ({ x, y, pressed }) => {
+joystick.onChanged = ({ x, y, pressed }) => {
 	trace(`x=${x}, y=${y}, pressed=${pressed}\n`);
 };
 
-joystick.onButtonChange = (pressed) => {
+joystick.onButtonChanged = (pressed) => {
 	joystick.setLed({ r: 0, g: pressed ? 128 : 0, b: pressed ? 255 : 0 });
 };
 ```
@@ -29,7 +29,7 @@ joystick.onButtonChange = (pressed) => {
 - `readMode` selects `"adc"`, `"pos8"`, or `"pos10"` and defaults to `"pos8"`.
 - `pollingInterval` sets the polling period in milliseconds and defaults to `30`.
 - `deadband` suppresses axis notifications until either axis differs from the last notified state by more than this many native units. It defaults to `0`.
-- `onChange` and `onButtonChange` install the initial callbacks and start polling automatically.
+- `onChanged` and `onButtonChanged` install the initial callbacks and start polling automatically.
 
 ## Input
 
@@ -46,10 +46,10 @@ Each method performs a new device read. In particular, `read()` reads the positi
 
 Assigning either callback starts the internal polling timer. Clearing both callbacks stops it.
 
-- `onChange(state)` runs for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
-- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
+- `onChanged(state)` runs for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
+- `onButtonChanged(pressed)` runs on pressed and released transitions after the initial sample.
 
-The deadband comparison is made against the last state delivered to `onChange`, so several small movements accumulate. `deadband` is expressed in the native units of the selected `readMode`.
+The deadband comparison is made against the last state delivered to `onChanged`, so several small movements accumulate. `deadband` is expressed in the native units of the selected `readMode`.
 
 Use `read()` from an application-owned control loop when a state is required every frame or at a fixed rate. Change callbacks intentionally do not repeat while the joystick remains at the same position.
 
@@ -97,7 +97,7 @@ The built-in 200 mAh battery powers the HAT, but the published HAT Mini JoyC I2C
 ## Exported types
 
 The module exports `MiniJoyCOptions`, `MiniJoyCIO`, `MiniJoyCPosition`, `MiniJoyCState`, `MiniJoyCReadMode`,
-`MiniJoyCCalibration`, `MiniJoyCCalibrationIndex`, `MiniJoyCChangeCallback`, and `MiniJoyCButtonChangeCallback` for
+`MiniJoyCCalibration`, `MiniJoyCCalibrationIndex`, `MiniJoyCChangedCallback`, and `MiniJoyCButtonChangedCallback` for
 TypeScript applications.
 
 ## Common LED objects

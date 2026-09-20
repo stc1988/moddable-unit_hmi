@@ -11,11 +11,11 @@ export async function main(): Promise<void> {
 		}
 	}
 
-	angle8.onChange = ({ angles, switchOn }) => {
+	angle8.onChanged = ({ angles, switchOn }) => {
 		trace(`[8Angle] angles=${angles.join(",")}\tswitch=${switchOn}\n`);
 	};
 
-	angle8.onAngleChange = (angle, value) => {
+	angle8.onAngleChanged = (angle, value) => {
 		trace(`[8Angle] angle=${angle}\tvalue=${value}\n`);
 		{
 			const led = angle8.leds[angle];
@@ -26,7 +26,7 @@ export async function main(): Promise<void> {
 		}
 	};
 
-	angle8.onSwitchChange = (on) => {
+	angle8.onSwitchChanged = (on) => {
 		trace(`[8Angle] switch=${on}\n`);
 		{
 			const led = angle8.leds[Angle8.SWITCH_LED];

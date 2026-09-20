@@ -15,11 +15,11 @@ export async function main(): Promise<void> {
 		}
 	}
 
-	byteSwitch.onChange = ({ switches }) => {
+	byteSwitch.onChanged = ({ switches }) => {
 		trace(`[ByteSwitch] switches=0b${switches.toString(2).padStart(8, "0")}\n`);
 	};
 
-	byteSwitch.onSwitchChange = (switchIndex, on) => {
+	byteSwitch.onSwitchChanged = (switchIndex, on) => {
 		trace(`[ByteSwitch] switch=${switchIndex}\ton=${on}\n`);
 		{
 			const led = byteSwitch.leds[switchIndex];

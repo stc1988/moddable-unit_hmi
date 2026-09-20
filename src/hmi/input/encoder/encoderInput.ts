@@ -12,25 +12,25 @@ export interface EncoderSource<State extends EncoderState = EncoderState> {
 
 export interface EncoderInputOptions<State extends EncoderState = EncoderState> {
 	pollingInterval?: number;
-	onChange?: EncoderChangeCallback<State>;
-	onButtonChange?: EncoderButtonChangeCallback;
+	onChanged?: EncoderChangedCallback<State>;
+	onButtonChanged?: EncoderButtonChangedCallback;
 }
 
-export type EncoderChangeCallback<State extends EncoderState = EncoderState> = (state: State) => void;
-export type EncoderButtonChangeCallback = (pressed: boolean) => void;
+export type EncoderChangedCallback<State extends EncoderState = EncoderState> = (state: State) => void;
+export type EncoderButtonChangedCallback = (pressed: boolean) => void;
 
 export default class EncoderInput<State extends EncoderState = EncoderState> {
 	#target: object;
 	#polling: PollingInput<State>;
-	#onChange: EncoderChangeCallback<State> | null;
-	#onButtonChange: EncoderButtonChangeCallback | null;
+	#onChanged: EncoderChangedCallback<State> | null;
+	#onButtonChanged: EncoderButtonChangedCallback | null;
 	#lastButtonState: boolean | undefined;
 	#closed = false;
 
 	constructor(target: object, source: EncoderSource<State>, name: string, options: EncoderInputOptions<State> = {}) {
 		this.#target = target;
-		this.#onChange = callbackOrNull(options.onChange, "onChange");
-		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
+		this.#onChanged = callbackOrNull(options.onChanged, "onChanged");
+		this.#onButtonChanged = callbackOrNull(options.onButtonChanged, "onButtonChanged");
 		const pollingOptions: PollingInputOptions<State> = {
 			changed: (state, previous) => state.value !== previous.value || state.pressed !== previous.pressed,
 		};
@@ -43,8 +43,8 @@ export default class EncoderInput<State extends EncoderState = EncoderState> {
 		if (this.#closed) return;
 		this.#polling.close();
 		this.#closed = true;
-		this.#onChange = null;
-		this.#onButtonChange = null;
+		this.#onChanged = null;
+		this.#onButtonChanged = null;
 	}
 
 	start(): void {
@@ -65,39 +65,39 @@ export default class EncoderInput<State extends EncoderState = EncoderState> {
 		return this.#polling.pollingInterval;
 	}
 
-	set onChange(callback: EncoderChangeCallback<State> | null | undefined) {
-		const next = callbackOrNull(callback, "onChange");
+	set onChanged(callback: EncoderChangedCallback<State> | null | undefined) {
+		const next = callbackOrNull(callback, "onChanged");
 		if (this.#closed && next) throw new Error("encoder input is closed");
-		if (next !== this.#onChange) this.#polling.onChange = null;
-		this.#onChange = next;
+		if (next !== this.#onChanged) this.#polling.onChanged = null;
+		this.#onChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onChange(): EncoderChangeCallback<State> | null {
-		return this.#onChange;
+	get onChanged(): EncoderChangedCallback<State> | null {
+		return this.#onChanged;
 	}
 
-	set onButtonChange(callback: EncoderButtonChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onButtonChange");
+	set onButtonChanged(callback: EncoderButtonChangedCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onButtonChanged");
 		if (this.#closed && next) throw new Error("encoder input is closed");
-		this.#onButtonChange = next;
+		this.#onButtonChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onButtonChange(): EncoderButtonChangeCallback | null {
-		return this.#onButtonChange;
+	get onButtonChanged(): EncoderButtonChangedCallback | null {
+		return this.#onButtonChanged;
 	}
 
 	#updatePollingState(): void {
-		const callback = this.#onChange || this.#onButtonChange ? this.#handleChange : null;
-		if (callback && !this.#polling.onChange) this.#lastButtonState = undefined;
-		this.#polling.onChange = callback;
+		const callback = this.#onChanged || this.#onButtonChanged ? this.#handleChange : null;
+		if (callback && !this.#polling.onChanged) this.#lastButtonState = undefined;
+		this.#polling.onChanged = callback;
 	}
 
 	#handleChange(state: State): void {
 		const buttonChanged = this.#lastButtonState !== undefined && state.pressed !== this.#lastButtonState;
-		this.#onChange?.call(this.#target, state);
-		if (buttonChanged) this.#onButtonChange?.call(this.#target, state.pressed);
+		this.#onChanged?.call(this.#target, state);
+		if (buttonChanged) this.#onButtonChanged?.call(this.#target, state.pressed);
 		this.#lastButtonState = state.pressed;
 	}
 }

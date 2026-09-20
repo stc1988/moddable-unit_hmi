@@ -33,7 +33,7 @@ let state = 1;
 const delivered = [];
 const input = new PollingInput({}, { read: () => state }, "Test", {
 	changed: (current, previous) => current !== previous,
-	onChange(value) {
+	onChanged(value) {
 		delivered.push(value);
 	},
 });
@@ -55,7 +55,7 @@ tick();
 assert.deepEqual(delivered, [1, 2, 2]);
 
 let attempts = 0;
-input.onChange = () => {
+input.onChanged = () => {
 	attempts++;
 	if (attempts === 1) throw new Error("callback failure");
 };
@@ -64,7 +64,7 @@ tick();
 assert.equal(attempts, 2, "a failed notification must not advance the comparison baseline");
 assert.match(traces.at(-1), /callback failure/);
 
-input.onChange = null;
+input.onChanged = null;
 assert.equal(timers.size, 0);
 input.start();
 assert.equal(timers.size, 1);
@@ -73,7 +73,7 @@ assert.equal(timers.size, 0);
 input.close();
 assert.throws(() => input.start(), /closed/);
 assert.throws(() => {
-	input.onChange = () => {};
+	input.onChanged = () => {};
 }, /closed/);
 
 assert.throws(() => new PollingInput({}, { read: () => 0 }, "Invalid", { pollingInterval: 0 }), RangeError);

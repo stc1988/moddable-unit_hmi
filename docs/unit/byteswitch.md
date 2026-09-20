@@ -14,11 +14,11 @@ import ByteSwitch from "unit/byteswitch";
 
 const byteSwitch = new ByteSwitch();
 
-byteSwitch.onChange = ({ switches }) => {
+byteSwitch.onChanged = ({ switches }) => {
 	trace(`switch mask: 0x${switches.toString(16)}\n`);
 };
 
-byteSwitch.onSwitchChange = (switchIndex, on) => {
+byteSwitch.onSwitchChanged = (switchIndex, on) => {
 	byteSwitch.setLed(switchIndex, { r: on ? 255 : 0, g: on ? 128 : 0, b: 0 });
 };
 ```
@@ -29,8 +29,8 @@ byteSwitch.onSwitchChange = (switchIndex, on) => {
   corresponding switch is on.
 - `readSwitches()` returns the switch bit mask directly.
 - `readSwitch(switchIndex)` reads an individual switch register and returns its on/off state.
-- `onChange(state)` runs for the first sample and whenever the switch mask changes.
-- `onSwitchChange(switchIndex, on)` runs once for each transition after the initial sample. If several switches change in
+- `onChanged(state)` runs for the first sample and whenever the switch mask changes.
+- `onSwitchChanged(switchIndex, on)` runs once for each transition after the initial sample. If several switches change in
   one sample, callbacks run in ascending switch order.
 
 Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
@@ -65,7 +65,7 @@ errors to the caller.
 ## Exported types
 
 The module exports `ByteSwitchOptions`, `ByteSwitchIO`, `ByteSwitchIOInstance`, `ByteSwitchState`,
-`ByteSwitchLedMode`, `ByteSwitchChangeCallback`, and `ByteSwitchSwitchChangeCallback` for TypeScript applications.
+`ByteSwitchLedMode`, `ByteSwitchChangedCallback`, and `ByteSwitchSwitchChangedCallback` for TypeScript applications.
 
 ## Common LED objects
 

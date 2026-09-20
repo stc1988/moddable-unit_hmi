@@ -3,11 +3,11 @@ import JoyStick2 from "unit/joystick2";
 export async function main(): Promise<void> {
 	const joystick = new JoyStick2({ deadband: 2 });
 
-	joystick.onChange = ({ x, y, pressed }) => {
+	joystick.onChanged = ({ x, y, pressed }) => {
 		trace(`[JoyStick2] x=${x}\ty=${y}\tpressed=${pressed}\n`);
 	};
 
-	joystick.onButtonChange = (pressed) => {
+	joystick.onButtonChanged = (pressed) => {
 		trace(`[JoyStick2] button pressed: ${pressed}\n`);
 		joystick.led.color = { r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 255 };
 	};

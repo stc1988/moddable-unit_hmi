@@ -14,11 +14,11 @@ import Encoder from "unit/encoder";
 
 const encoder = new Encoder();
 
-encoder.onChange = ({ value, pressed }) => {
+encoder.onChanged = ({ value, pressed }) => {
 	trace(`value=${value}, pressed=${pressed}\n`);
 };
 
-encoder.onButtonChange = (pressed) => {
+encoder.onButtonChanged = (pressed) => {
 	encoder.setLed(1, { r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 64 });
 };
 ```
@@ -29,8 +29,8 @@ encoder.onButtonChange = (pressed) => {
   in separate I2C transactions.
 - `readEncoder()` returns the signed 16-bit accumulated encoder value.
 - `isButtonPressed()` returns `true` while the knob is pressed.
-- `onChange(state)` runs for the first sample and whenever the encoder value or button state changes.
-- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
+- `onChanged(state)` runs for the first sample and whenever the encoder value or button state changes.
+- `onButtonChanged(pressed)` runs on pressed and released transitions after the initial sample.
 
 Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
 `30` milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases
@@ -61,7 +61,7 @@ errors to the caller.
 ## Exported types
 
 The module exports `EncoderOptions`, `EncoderIO`, `EncoderIOInstance`, `EncoderState`, `EncoderMode`,
-`EncoderChangeCallback`, and `EncoderButtonChangeCallback` for TypeScript applications.
+`EncoderChangedCallback`, and `EncoderButtonChangedCallback` for TypeScript applications.
 
 ## Common LED objects
 

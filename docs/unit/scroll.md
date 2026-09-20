@@ -14,11 +14,11 @@ import Scroll from "unit/scroll";
 
 const scroll = new Scroll();
 
-scroll.onChange = ({ value, pressed }) => {
+scroll.onChanged = ({ value, pressed }) => {
 	trace(`value=${value}, pressed=${pressed}\n`);
 };
 
-scroll.onButtonChange = (pressed) => {
+scroll.onButtonChanged = (pressed) => {
 	scroll.setLed({ r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 64 });
 };
 ```
@@ -30,8 +30,8 @@ scroll.onButtonChange = (pressed) => {
 - `readEncoder()` returns the signed 16-bit accumulated encoder value.
 - `readIncrement()` returns the signed 16-bit increment register.
 - `isButtonPressed()` returns `true` while the wheel is pressed.
-- `onChange(state)` runs for the first sample and whenever the encoder value or button state changes.
-- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
+- `onChanged(state)` runs for the first sample and whenever the encoder value or button state changes.
+- `onButtonChanged(pressed)` runs on pressed and released transitions after the initial sample.
 
 Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
 `30` milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases
@@ -57,8 +57,8 @@ errors to the caller.
 
 ## Exported types
 
-The module exports `ScrollOptions`, `ScrollIO`, `ScrollIOInstance`, `ScrollState`, `ScrollChangeCallback`,
-and `ScrollButtonChangeCallback` for TypeScript applications.
+The module exports `ScrollOptions`, `ScrollIO`, `ScrollIOInstance`, `ScrollState`, `ScrollChangedCallback`,
+and `ScrollButtonChangedCallback` for TypeScript applications.
 
 ## Common LED objects
 

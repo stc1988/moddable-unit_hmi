@@ -2,12 +2,12 @@ export interface InputSource<State> {
 	read(): State;
 }
 
-export type InputChangeCallback<State> = (state: State) => void;
+export type InputChangedCallback<State> = (state: State) => void;
 export type InputChangeDetector<State> = (state: State, previous: State) => boolean;
 
 export interface PollingInputOptions<State> {
 	pollingInterval?: number;
-	onChange?: InputChangeCallback<State>;
+	onChanged?: InputChangedCallback<State>;
 	changed?: InputChangeDetector<State>;
 }
 
@@ -19,7 +19,7 @@ export default class PollingInput<State> {
 	#name: string;
 	#changed: InputChangeDetector<State>;
 	#timer: ReturnType<typeof Timer.repeat> | undefined;
-	#onChange: InputChangeCallback<State> | null;
+	#onChanged: InputChangedCallback<State> | null;
 	#lastNotifiedState: State | undefined;
 	#pollingInterval: number;
 	#closed = false;
@@ -29,7 +29,7 @@ export default class PollingInput<State> {
 		this.#source = source;
 		this.#name = name;
 		this.#pollingInterval = PollingInput.nonNegativeInteger(options.pollingInterval ?? 30, "pollingInterval", 1);
-		this.#onChange = PollingInput.callback(options.onChange, "onChange");
+		this.#onChanged = PollingInput.callback(options.onChanged, "onChanged");
 		this.#changed = options.changed ?? (() => true);
 		if (typeof this.#changed !== "function") throw new TypeError("changed must be a function");
 		this.#updatePollingState();
@@ -39,7 +39,7 @@ export default class PollingInput<State> {
 		if (this.#closed) return;
 		this.stop();
 		this.#closed = true;
-		this.#onChange = null;
+		this.#onChanged = null;
 		this.#lastNotifiedState = undefined;
 	}
 
@@ -76,20 +76,20 @@ export default class PollingInput<State> {
 		return this.#pollingInterval;
 	}
 
-	set onChange(callback: InputChangeCallback<State> | null | undefined) {
-		const next = PollingInput.callback(callback, "onChange");
+	set onChanged(callback: InputChangedCallback<State> | null | undefined) {
+		const next = PollingInput.callback(callback, "onChanged");
 		if (this.#closed && next) throw new Error(`${this.#name} input is closed`);
-		if (next !== this.#onChange) this.#lastNotifiedState = undefined;
-		this.#onChange = next;
+		if (next !== this.#onChanged) this.#lastNotifiedState = undefined;
+		this.#onChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onChange(): InputChangeCallback<State> | null {
-		return this.#onChange;
+	get onChanged(): InputChangedCallback<State> | null {
+		return this.#onChanged;
 	}
 
 	#updatePollingState(): void {
-		if (this.#onChange) this.start();
+		if (this.#onChanged) this.start();
 		else this.stop();
 	}
 
@@ -98,7 +98,7 @@ export default class PollingInput<State> {
 			const state = this.#source.read();
 			const previous = this.#lastNotifiedState;
 			if (previous === undefined || this.#changed(state, previous)) {
-				this.#onChange?.call(this.#target, state);
+				this.#onChanged?.call(this.#target, state);
 				this.#lastNotifiedState = state;
 			}
 		} catch (error) {

@@ -15,11 +15,11 @@ export async function main(): Promise<void> {
 		}
 	}
 
-	byteButton.onChange = ({ buttons }) => {
+	byteButton.onChanged = ({ buttons }) => {
 		trace(`[ByteButton] buttons=0b${buttons.toString(2).padStart(8, "0")}\n`);
 	};
 
-	byteButton.onButtonChange = (button, pressed) => {
+	byteButton.onButtonChanged = (button, pressed) => {
 		trace(`[ByteButton] button=${button}\tpressed=${pressed}\n`);
 		{
 			const led = byteButton.leds[button];

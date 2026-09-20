@@ -1,6 +1,6 @@
 import Analog from "embedded:io/analog";
 import AnalogInput, {
-	type AnalogInputChangeCallback,
+	type AnalogInputChangedCallback,
 	type AnalogInputEventOptions,
 	AnalogInputEvents,
 	type AnalogIO,
@@ -18,7 +18,7 @@ export interface AngleOptions extends AnalogInputEventOptions<AngleSample> {
 	};
 }
 
-export type AngleChangeCallback = AnalogInputChangeCallback<AngleSample>;
+export type AngleChangedCallback = AnalogInputChangedCallback<AngleSample>;
 
 // https://docs.m5stack.com/ja/unit/angle
 export default class Angle {
@@ -27,11 +27,11 @@ export default class Angle {
 	#sensor: AnalogInput;
 	#input: AnalogInputEvents<AngleSample>;
 
-	set onChange(callback: AngleChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: AngleChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
-	get onChange(): AngleChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): AngleChangedCallback | null {
+		return this.#input.onChanged;
 	}
 	set pollingInterval(value: number) {
 		this.#input.pollingInterval = value;

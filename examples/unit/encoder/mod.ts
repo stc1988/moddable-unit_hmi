@@ -5,7 +5,7 @@ export async function main(): Promise<void> {
 
 	encoder.leds.color = { r: 0, g: 0, b: 24 };
 
-	encoder.onChange = ({ value, pressed }) => {
+	encoder.onChanged = ({ value, pressed }) => {
 		trace(`[Encoder] value=${value}\tpressed=${pressed}\n`);
 		{
 			const led = encoder.leds[0];
@@ -13,7 +13,7 @@ export async function main(): Promise<void> {
 		}
 	};
 
-	encoder.onButtonChange = (pressed) => {
+	encoder.onButtonChanged = (pressed) => {
 		trace(`[Encoder] button pressed: ${pressed}\n`);
 		{
 			const led = encoder.leds[1];

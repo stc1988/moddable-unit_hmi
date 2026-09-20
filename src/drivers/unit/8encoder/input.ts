@@ -1,12 +1,12 @@
 import PollingInput, { type PollingInputOptions } from "hmi/polling";
 import { callbackOrNull } from "hmi/util";
 import type {
-	Encoder8ButtonChangeCallback,
-	Encoder8ChangeCallback,
-	Encoder8EncoderChangeCallback,
+	Encoder8ButtonChangedCallback,
+	Encoder8ChangedCallback,
+	Encoder8EncoderChangedCallback,
 	Encoder8Options,
 	Encoder8State,
-	Encoder8SwitchChangeCallback,
+	Encoder8SwitchChangedCallback,
 } from "unit/8encoder";
 
 const ENCODER_COUNT = 8;
@@ -21,19 +21,19 @@ function encoderValue(state: Encoder8State, encoder: number): number {
 export default class Encoder8Input {
 	#target: object;
 	#polling: PollingInput<Encoder8State>;
-	#onChange: Encoder8ChangeCallback | null;
-	#onEncoderChange: Encoder8EncoderChangeCallback | null;
-	#onButtonChange: Encoder8ButtonChangeCallback | null;
-	#onSwitchChange: Encoder8SwitchChangeCallback | null;
+	#onChanged: Encoder8ChangedCallback | null;
+	#onEncoderChanged: Encoder8EncoderChangedCallback | null;
+	#onButtonChanged: Encoder8ButtonChangedCallback | null;
+	#onSwitchChanged: Encoder8SwitchChangedCallback | null;
 	#lastState: Encoder8State | undefined;
 	#closed = false;
 
 	constructor(target: object, source: { read(): Encoder8State }, options: Encoder8Options) {
 		this.#target = target;
-		this.#onChange = callbackOrNull(options.onChange, "onChange");
-		this.#onEncoderChange = callbackOrNull(options.onEncoderChange, "onEncoderChange");
-		this.#onButtonChange = callbackOrNull(options.onButtonChange, "onButtonChange");
-		this.#onSwitchChange = callbackOrNull(options.onSwitchChange, "onSwitchChange");
+		this.#onChanged = callbackOrNull(options.onChanged, "onChanged");
+		this.#onEncoderChanged = callbackOrNull(options.onEncoderChanged, "onEncoderChanged");
+		this.#onButtonChanged = callbackOrNull(options.onButtonChanged, "onButtonChanged");
+		this.#onSwitchChanged = callbackOrNull(options.onSwitchChanged, "onSwitchChanged");
 		const pollingOptions: PollingInputOptions<Encoder8State> = {
 			changed: Encoder8Input.#stateChanged,
 		};
@@ -46,10 +46,10 @@ export default class Encoder8Input {
 		if (this.#closed) return;
 		this.#polling.close();
 		this.#closed = true;
-		this.#onChange = null;
-		this.#onEncoderChange = null;
-		this.#onButtonChange = null;
-		this.#onSwitchChange = null;
+		this.#onChanged = null;
+		this.#onEncoderChanged = null;
+		this.#onButtonChanged = null;
+		this.#onSwitchChanged = null;
 		this.#lastState = undefined;
 	}
 
@@ -71,80 +71,80 @@ export default class Encoder8Input {
 		return this.#polling.pollingInterval;
 	}
 
-	set onChange(callback: Encoder8ChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onChange");
+	set onChanged(callback: Encoder8ChangedCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onChanged");
 		if (this.#closed && next) throw new Error("8encoder input is closed");
-		if (next !== this.#onChange) this.#polling.onChange = null;
-		this.#onChange = next;
+		if (next !== this.#onChanged) this.#polling.onChanged = null;
+		this.#onChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onChange(): Encoder8ChangeCallback | null {
-		return this.#onChange;
+	get onChanged(): Encoder8ChangedCallback | null {
+		return this.#onChanged;
 	}
 
-	set onEncoderChange(callback: Encoder8EncoderChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onEncoderChange");
+	set onEncoderChanged(callback: Encoder8EncoderChangedCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onEncoderChanged");
 		if (this.#closed && next) throw new Error("8encoder input is closed");
-		this.#onEncoderChange = next;
+		this.#onEncoderChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onEncoderChange(): Encoder8EncoderChangeCallback | null {
-		return this.#onEncoderChange;
+	get onEncoderChanged(): Encoder8EncoderChangedCallback | null {
+		return this.#onEncoderChanged;
 	}
 
-	set onButtonChange(callback: Encoder8ButtonChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onButtonChange");
+	set onButtonChanged(callback: Encoder8ButtonChangedCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onButtonChanged");
 		if (this.#closed && next) throw new Error("8encoder input is closed");
-		this.#onButtonChange = next;
+		this.#onButtonChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onButtonChange(): Encoder8ButtonChangeCallback | null {
-		return this.#onButtonChange;
+	get onButtonChanged(): Encoder8ButtonChangedCallback | null {
+		return this.#onButtonChanged;
 	}
 
-	set onSwitchChange(callback: Encoder8SwitchChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onSwitchChange");
+	set onSwitchChanged(callback: Encoder8SwitchChangedCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onSwitchChanged");
 		if (this.#closed && next) throw new Error("8encoder input is closed");
-		this.#onSwitchChange = next;
+		this.#onSwitchChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onSwitchChange(): Encoder8SwitchChangeCallback | null {
-		return this.#onSwitchChange;
+	get onSwitchChanged(): Encoder8SwitchChangedCallback | null {
+		return this.#onSwitchChanged;
 	}
 
 	#updatePollingState(): void {
 		const callback =
-			this.#onChange || this.#onEncoderChange || this.#onButtonChange || this.#onSwitchChange
+			this.#onChanged || this.#onEncoderChanged || this.#onButtonChanged || this.#onSwitchChanged
 				? this.#handleChange
 				: null;
-		if (callback && !this.#polling.onChange) this.#lastState = undefined;
-		this.#polling.onChange = callback;
+		if (callback && !this.#polling.onChanged) this.#lastState = undefined;
+		this.#polling.onChanged = callback;
 	}
 
 	#handleChange(state: Encoder8State): void {
 		const previous = this.#lastState;
-		this.#onChange?.call(this.#target, state);
+		this.#onChanged?.call(this.#target, state);
 		if (previous) {
-			if (this.#onEncoderChange) {
+			if (this.#onEncoderChanged) {
 				for (let encoder = 0; encoder < ENCODER_COUNT; encoder++) {
 					const value = encoderValue(state, encoder);
-					if (value !== encoderValue(previous, encoder)) this.#onEncoderChange.call(this.#target, encoder, value);
+					if (value !== encoderValue(previous, encoder)) this.#onEncoderChanged.call(this.#target, encoder, value);
 				}
 			}
 
 			const changedButtons = state.buttons ^ previous.buttons;
-			if (changedButtons && this.#onButtonChange) {
+			if (changedButtons && this.#onButtonChanged) {
 				for (let button = 0; button < BUTTON_COUNT; button++) {
 					const bit = 1 << button;
-					if (changedButtons & bit) this.#onButtonChange.call(this.#target, button, Boolean(state.buttons & bit));
+					if (changedButtons & bit) this.#onButtonChanged.call(this.#target, button, Boolean(state.buttons & bit));
 				}
 			}
 
-			if (state.switchOn !== previous.switchOn) this.#onSwitchChange?.call(this.#target, state.switchOn);
+			if (state.switchOn !== previous.switchOn) this.#onSwitchChanged?.call(this.#target, state.switchOn);
 		}
 		this.#lastState = state;
 	}

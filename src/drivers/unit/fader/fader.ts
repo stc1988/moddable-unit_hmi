@@ -1,6 +1,6 @@
 import Analog from "embedded:io/analog";
 import AnalogInput, {
-	type AnalogInputChangeCallback,
+	type AnalogInputChangedCallback,
 	type AnalogInputEventOptions,
 	AnalogInputEvents,
 	type AnalogIO,
@@ -26,7 +26,7 @@ export interface FaderOptions extends AnalogInputEventOptions<FaderSample> {
 	brightness?: number;
 }
 
-export type FaderChangeCallback = AnalogInputChangeCallback<FaderSample>;
+export type FaderChangedCallback = AnalogInputChangedCallback<FaderSample>;
 export type FaderLedColumn = "left" | "right";
 
 export interface FaderLedIO {
@@ -67,11 +67,11 @@ export default class Fader {
 	#closed = false;
 	#input: AnalogInputEvents<FaderSample>;
 
-	set onChange(callback: FaderChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: FaderChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
-	get onChange(): FaderChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): FaderChangedCallback | null {
+		return this.#input.onChanged;
 	}
 	set pollingInterval(value: number) {
 		this.#input.pollingInterval = value;

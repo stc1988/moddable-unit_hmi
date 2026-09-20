@@ -28,14 +28,14 @@ export type Angle8Resolution = 8 | 12;
 export interface Angle8Options extends SMBusDeviceOptions<Angle8IO> {
 	pollingInterval?: number;
 	deadband?: number;
-	onChange?: Angle8ChangeCallback;
-	onAngleChange?: Angle8AngleChangeCallback;
-	onSwitchChange?: Angle8SwitchChangeCallback;
+	onChanged?: Angle8ChangedCallback;
+	onAngleChanged?: Angle8AngleChangedCallback;
+	onSwitchChanged?: Angle8SwitchChangedCallback;
 }
 
-export type Angle8ChangeCallback = (state: Angle8State) => void;
-export type Angle8AngleChangeCallback = (angle: number, value: number) => void;
-export type Angle8SwitchChangeCallback = (on: boolean) => void;
+export type Angle8ChangedCallback = (state: Angle8State) => void;
+export type Angle8AngleChangedCallback = (angle: number, value: number) => void;
+export type Angle8SwitchChangedCallback = (on: boolean) => void;
 
 // https://docs.m5stack.com/en/unit/8Angle
 export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
@@ -68,23 +68,23 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 
 	#input: Angle8Input;
 
-	set onChange(callback: Angle8ChangeCallback | null | undefined) {
-		this.#input.onChange = callback;
+	set onChanged(callback: Angle8ChangedCallback | null | undefined) {
+		this.#input.onChanged = callback;
 	}
-	get onChange(): Angle8ChangeCallback | null {
-		return this.#input.onChange;
+	get onChanged(): Angle8ChangedCallback | null {
+		return this.#input.onChanged;
 	}
-	set onAngleChange(callback: Angle8AngleChangeCallback | null | undefined) {
-		this.#input.onAngleChange = callback;
+	set onAngleChanged(callback: Angle8AngleChangedCallback | null | undefined) {
+		this.#input.onAngleChanged = callback;
 	}
-	get onAngleChange(): Angle8AngleChangeCallback | null {
-		return this.#input.onAngleChange;
+	get onAngleChanged(): Angle8AngleChangedCallback | null {
+		return this.#input.onAngleChanged;
 	}
-	set onSwitchChange(callback: Angle8SwitchChangeCallback | null | undefined) {
-		this.#input.onSwitchChange = callback;
+	set onSwitchChanged(callback: Angle8SwitchChangedCallback | null | undefined) {
+		this.#input.onSwitchChanged = callback;
 	}
-	get onSwitchChange(): Angle8SwitchChangeCallback | null {
-		return this.#input.onSwitchChange;
+	get onSwitchChanged(): Angle8SwitchChangedCallback | null {
+		return this.#input.onSwitchChanged;
 	}
 	set pollingInterval(value: number) {
 		this.#input.pollingInterval = value;

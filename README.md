@@ -57,7 +57,7 @@ mcrun -dl -m -p esp32/m5stick_cplus
 
 ## Input events
 
-Each driver exposes change callbacks and polling controls directly. Assigning a callback such as `driver.onChange` starts
+Each driver exposes change callbacks and polling controls directly. Assigning a callback such as `driver.onChanged` starts
 polling automatically; clearing all callbacks stops it. Use `driver.start()` and `driver.stop()` for explicit control.
 Joystick and analog drivers also expose `driver.deadband`; all drivers expose `driver.pollingInterval`. Device reads,
 LEDs, settings, and `close()` remain on the same product driver.

@@ -18,12 +18,12 @@ export type BytePanelOptions<IO extends BytePanelIO = BytePanelIO> = SMBusDevice
 
 export interface BytePanelInputOptions<State> {
 	pollingInterval?: number;
-	onChange?: BytePanelChangeCallback<State>;
-	onInputChange?: BytePanelInputChangeCallback;
+	onChanged?: BytePanelChangedCallback<State>;
+	onInputChanged?: BytePanelInputChangedCallback;
 }
 
-export type BytePanelChangeCallback<State> = (state: State) => void;
-export type BytePanelInputChangeCallback = (index: number, on: boolean) => void;
+export type BytePanelChangedCallback<State> = (state: State) => void;
+export type BytePanelInputChangedCallback = (index: number, on: boolean) => void;
 
 const REGISTER = {
 	INPUTS: 0x00,
@@ -171,8 +171,8 @@ export class BytePanelInput<State> {
 	#target: object;
 	#polling: PollingInput<State>;
 	#selectInputs: (state: State) => number;
-	#onChange: BytePanelChangeCallback<State> | null;
-	#onInputChange: BytePanelInputChangeCallback | null;
+	#onChanged: BytePanelChangedCallback<State> | null;
+	#onInputChanged: BytePanelInputChangedCallback | null;
 	#lastInputs: number | undefined;
 	#closed = false;
 	#name: string;
@@ -187,8 +187,8 @@ export class BytePanelInput<State> {
 		this.#target = target;
 		this.#name = name;
 		this.#selectInputs = selectInputs;
-		this.#onChange = callbackOrNull(options.onChange, "onChange");
-		this.#onInputChange = callbackOrNull(options.onInputChange, "onInputChange");
+		this.#onChanged = callbackOrNull(options.onChanged, "onChanged");
+		this.#onInputChanged = callbackOrNull(options.onInputChanged, "onInputChanged");
 		const pollingOptions: PollingInputOptions<State> = {
 			changed: (state, previous) => selectInputs(state) !== selectInputs(previous),
 		};
@@ -201,8 +201,8 @@ export class BytePanelInput<State> {
 		if (this.#closed) return;
 		this.#polling.close();
 		this.#closed = true;
-		this.#onChange = null;
-		this.#onInputChange = null;
+		this.#onChanged = null;
+		this.#onInputChanged = null;
 	}
 
 	start(): void {
@@ -223,43 +223,43 @@ export class BytePanelInput<State> {
 		return this.#polling.pollingInterval;
 	}
 
-	set onChange(callback: BytePanelChangeCallback<State> | null | undefined) {
-		const next = callbackOrNull(callback, "onChange");
+	set onChanged(callback: BytePanelChangedCallback<State> | null | undefined) {
+		const next = callbackOrNull(callback, "onChanged");
 		if (this.#closed && next) throw new Error(`${this.#name} input is closed`);
-		if (next !== this.#onChange) this.#polling.onChange = null;
-		this.#onChange = next;
+		if (next !== this.#onChanged) this.#polling.onChanged = null;
+		this.#onChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onChange(): BytePanelChangeCallback<State> | null {
-		return this.#onChange;
+	get onChanged(): BytePanelChangedCallback<State> | null {
+		return this.#onChanged;
 	}
 
-	set onInputChange(callback: BytePanelInputChangeCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onInputChange");
+	set onInputChanged(callback: BytePanelInputChangedCallback | null | undefined) {
+		const next = callbackOrNull(callback, "onInputChanged");
 		if (this.#closed && next) throw new Error(`${this.#name} input is closed`);
-		this.#onInputChange = next;
+		this.#onInputChanged = next;
 		this.#updatePollingState();
 	}
 
-	get onInputChange(): BytePanelInputChangeCallback | null {
-		return this.#onInputChange;
+	get onInputChanged(): BytePanelInputChangedCallback | null {
+		return this.#onInputChanged;
 	}
 
 	#updatePollingState(): void {
-		const callback = this.#onChange || this.#onInputChange ? this.#handleChange : null;
-		if (callback && !this.#polling.onChange) this.#lastInputs = undefined;
-		this.#polling.onChange = callback;
+		const callback = this.#onChanged || this.#onInputChanged ? this.#handleChange : null;
+		if (callback && !this.#polling.onChanged) this.#lastInputs = undefined;
+		this.#polling.onChanged = callback;
 	}
 
 	#handleChange(state: State): void {
 		const inputs = this.#selectInputs(state);
 		const changed = this.#lastInputs === undefined ? 0 : inputs ^ this.#lastInputs;
-		this.#onChange?.call(this.#target, state);
-		if (changed && this.#onInputChange) {
+		this.#onChanged?.call(this.#target, state);
+		if (changed && this.#onInputChanged) {
 			for (let index = 0; index < INPUT_COUNT; index++) {
 				const bit = 1 << index;
-				if (changed & bit) this.#onInputChange.call(this.#target, index, Boolean(inputs & bit));
+				if (changed & bit) this.#onInputChanged.call(this.#target, index, Boolean(inputs & bit));
 			}
 		}
 		this.#lastInputs = inputs;
