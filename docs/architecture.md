@@ -2,7 +2,7 @@
 
 The input drivers share behavior by responsibility instead of by bus or product family. Product drivers live under
 `src/drivers/unit` or `src/drivers/hat`; reusable input infrastructure lives under `src/hmi/input`. Every product exposes
-its polling lifecycle, callback properties, and comparison settings through a readonly `input` object.
+its polling lifecycle, callback properties, and comparison settings directly on the product driver.
 
 ```text
 Product driver       Angle / Fader    8Angle / 8Encoder / Encoder / Scroll / ByteButton / ByteSwitch    Joystick / JoyStick2 / MiniJoyC
@@ -18,8 +18,8 @@ Hardware I/O         embedded:io/analog           embedded:io/i2c               
 
 `hmi/polling` owns the polling timer, callback lifecycle, error reporting, polling-interval validation, and comparison
 against the last notified state. A product supplies a synchronous `read()` source and a `changed(current, previous)`
-function. Assigning a callback on the public `input` object starts polling automatically; clearing all input callbacks
-stops polling. A product's `close()` closes its input controller before releasing hardware resources.
+function. Assigning a callback on the product driver starts polling automatically; clearing all input callbacks stops
+polling. A product's `close()` closes its input controller before releasing hardware resources.
 
 `JoystickInput` adds joystick-specific axis deadband and button-transition semantics on top of this layer. The three I2C
 joystick drivers therefore share event behavior without attempting to merge their different registers or wire protocols.
@@ -45,10 +45,10 @@ Its internal `SMBusOptions` type is derived directly from the `embedded:io/smbus
 
 8Angle and 8Encoder expose product-specific input controllers for their multi-channel transitions. ByteButton and
 ByteSwitch adapt the shared BytePanel bit-field input controller to product-specific callback names. These controllers
-compose `PollingInput` without adding polling or callback forwarding methods to the hardware-facing product classes.
-The multi-channel controllers live in each product's `input` module, keeping the main driver focused on registers and
-device operations. MiniJoyC keeps its public types, validation, and little-endian calibration encoding with its product
-driver, consistent with the other single-product I2C drivers.
+compose `PollingInput`; the product classes forward their callback properties and polling controls so every driver has a
+consistent public surface. The multi-channel controllers live in each product's `input` module, keeping event comparison
+separate from registers and device operations. MiniJoyC keeps its public types, validation, and little-endian calibration
+encoding with its product driver, consistent with the other single-product I2C drivers.
 
 ## Deliberate boundaries
 

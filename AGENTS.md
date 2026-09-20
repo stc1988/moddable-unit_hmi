@@ -1,15 +1,26 @@
-# moddable-M5Stack-HAT-Mini-JoyC (Developer/AI Guide)
+# moddable-unit_hmi (Developer/AI Guide)
 
 This document is a developer- and AI-oriented overview of the repository. It summarizes current structure and runtime behavior based on the implementation in this repo.
 
 ## Overview
 
+This repository provides TypeScript drivers and examples for M5Stack Unit and HAT human-interface devices. Drivers use
+Moddable's ECMA-419 I/O implementations by default and accept injected I/O constructors for testing and alternate boards.
+
 ## Key Features
 
+- Consistent polling, callback, and lifecycle behavior across joystick, encoder, switch, button, and analog inputs.
+- Shared logical LED API for single LEDs and synchronized LED collections.
+- Constructor-injected analog and SMBus I/O with product-specific protocols kept in each driver.
+- Mod examples for CoreS3 Unit products and M5StickC Plus HAT products.
 
 ## Repository Structure
 
-### Device Protocol PDFs
+- `src/hmi`: shared polling, input, LED, SMBus, and utility layers.
+- `src/drivers`: product drivers grouped by Unit and HAT form factor.
+- `examples`: the shared mod host and one hardware example per product.
+- `docs`: public driver API and architecture documentation.
+- `tests`: headless regression tests for hardware-independent behavior.
 
 ## Architecture Summary
 
@@ -22,19 +33,24 @@ injection points.
 ### Event Model
 
 All joystick drivers must expose the same state and callback model. `read()` returns the current `{ x, y, pressed }` state.
-Polling controls and callbacks live on the driver's public `input` object. Assigning `input.onChange` or
-`input.onButtonChange` starts polling automatically. Polling stops when both callbacks are cleared, and can also be
-controlled explicitly with `input.start()` and `input.stop()`.
+Polling controls and callbacks live directly on the product driver. Assigning `onChange` or `onButtonChange` starts
+polling automatically. Polling stops when both callbacks are cleared, and can also be controlled explicitly with
+`start()` and `stop()`.
 
-- `input.onChange(state)` runs for the first sample, when either axis moves by more than `input.deadband`, or when the
+- `onChange(state)` runs for the first sample, when either axis moves by more than `deadband`, or when the
   button state changes.
-- `input.onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
-- `input.deadband` is measured in each device's native axis units and defaults to `0`.
+- `onButtonChange(pressed)` runs on pressed and released transitions after the initial sample.
+- `deadband` is measured in each device's native axis units and defaults to `0`.
 
 Polling errors are reported through the Moddable debug channel without stopping the timer. Angle and Fader use the same
 callback lifecycle; their change comparison operates on the raw analog value supplied by `AnalogInput`.
 
 ## Sequences
+
+Construction opens the hardware resource and creates the product's input controller. Assigning the first callback starts
+the shared polling timer. Each successful notification becomes the comparison baseline; a read or callback failure is
+logged and retried without advancing that baseline. Clearing the last callback stops the timer. `close()` stops polling,
+closes logical LEDs, and finally releases the hardware resource; repeated closes are safe.
 
 ## Hardware Verification
 

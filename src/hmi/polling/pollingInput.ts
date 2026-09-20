@@ -98,8 +98,8 @@ export default class PollingInput<State> {
 			const state = this.#source.read();
 			const previous = this.#lastNotifiedState;
 			if (previous === undefined || this.#changed(state, previous)) {
-				this.#lastNotifiedState = state;
 				this.#onChange?.call(this.#target, state);
+				this.#lastNotifiedState = state;
 			}
 		} catch (error) {
 			trace(`[${this.#name}][ERROR] poll failed: ${error instanceof Error ? error.message : String(error)}\n`);

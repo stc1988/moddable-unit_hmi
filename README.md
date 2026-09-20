@@ -57,9 +57,12 @@ mcrun -dl -m -p esp32/m5stick_cplus
 
 ## Input events
 
-Each driver exposes a readonly `input` object for change callbacks and polling controls. Assigning an input callback starts
-polling automatically; clearing all callbacks stops it. Use `driver.input.start()` and `driver.input.stop()` for explicit
-control. Device reads, LEDs, settings, and `close()` remain on the product driver.
+Each driver exposes change callbacks and polling controls directly. Assigning a callback such as `driver.onChange` starts
+polling automatically; clearing all callbacks stops it. Use `driver.start()` and `driver.stop()` for explicit control.
+Joystick and analog drivers also expose `driver.deadband`; all drivers expose `driver.pollingInterval`. Device reads,
+LEDs, settings, and `close()` remain on the same product driver.
+
+RGB-capable products expose the [common LED interface](docs/led.md) through `led` or `leds[index]`.
 
 ## Development
 
@@ -77,5 +80,3 @@ npm run typecheck
 ## License
 
 MIT
-
-RGB-capable products expose the [common LED interface](docs/led.md) through `led` or `leds[index]`.

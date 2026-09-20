@@ -3,9 +3,10 @@
 	"version": "1.0.0",
 	"license": "MIT",
 	"scripts": {
-		"check": "biome check . && npm run typecheck",
+		"check": "biome check . && npm run typecheck && npm test",
 		"format": "biome format --write .",
 		"lint": "biome lint --write .",
+		"test": "node --test tests/*.mjs",
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
