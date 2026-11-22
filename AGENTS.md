@@ -10,6 +10,7 @@ sample fields, LEDs, calibration, and maintenance operations extend that core.
 
 ## Repository Structure
 
+- `src/hmi/watch`: optional caller-facing polling, comparison, and notification helper.
 - `src/hmi/peripheral`: shared lifecycle, target, configuration, resource ownership, and disposal.
 - `src/hmi/smbus`: injected bus ownership and internal connection helpers.
 - `src/hmi/input/analog`: internal analog normalization adapter.
@@ -29,7 +30,7 @@ extension requested for normal use; preserve constructor injection for alternate
 
 `sample()` returns a fresh object with a host capture `time`. `configure()` changes only known properties present in its
 options object, and `configuration` reports current settings and `interrupt: false`. Drivers do not synthesize sample
-callbacks through polling. The application owns polling, deadband, and change detection. Product `read()` and register
+callbacks through polling. The application owns polling, deadband, and change detection, directly or through `hmi/watch`. Product `read()` and register
 operations remain explicit extensions. Consult `docs/architecture.md` for the standard/extension boundary.
 
 Construction probes hardware and restores runtime defaults; any failure releases acquired resources. Close releases

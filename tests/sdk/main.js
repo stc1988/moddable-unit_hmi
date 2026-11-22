@@ -1,5 +1,7 @@
 import MiniJoyC from "hat/mini-joyc";
+import watchInput from "hmi/watch";
 import Pixels from "neopixel";
+import Timer from "timer";
 import Angle8 from "unit/8angle";
 import Encoder8 from "unit/8encoder";
 import Angle from "unit/angle";
@@ -62,4 +64,36 @@ export default function () {
 	verify(new Angle({ sensor: { io: Analog, pin: 8 } }));
 	verify(new Fader({ sensor: { io: Analog, pin: 8 }, leds: { io: Pixels, pin: 9 } }));
 	trace("ECMA-419 smoke test: 11 drivers PASS\n");
+	let reads = 0;
+	let notifications = 0;
+	let closes = 0;
+	const deadline = Timer.set(() => {
+		throw new Error("watchInput smoke test timed out");
+	}, 1000);
+	const watcher = watchInput(
+		{
+			sample() {
+				return { value: Math.min(reads++, 3), time: Date.now() };
+			},
+			close() {
+				closes++;
+			},
+		},
+		{
+			interval: 1,
+			deadband: 2,
+			closeSource: true,
+			onChanged(sample, previous) {
+				notifications++;
+				if (sample.value !== 3) return;
+				watcher.close();
+				if (notifications !== 2 || previous?.value !== 0 || closes !== 1) throw new Error("invalid watcher state");
+				Timer.clear(deadline);
+				trace("watchInput smoke test: PASS\n");
+			},
+			onError(error) {
+				throw error;
+			},
+		},
+	);
 }

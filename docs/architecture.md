@@ -72,20 +72,19 @@ This is a breaking API change:
 - Pass an options object: `new Encoder({})` uses the standard IO and product wiring. Partial `sensor` overrides remain supported.
 - Analog products accept optional `sensor: { io?, pin? }`; Fader also accepts optional `leds: { io?, pin? }`.
 - Use `sample()` for common input access. Product `read()` methods remain available with their existing data shape.
-- Replace driver callbacks, `start`, `stop`, `pollingInterval`, and `deadband` with an application-owned polling loop and
-  change comparison. Internal polling/input-controller modules and their callback types have been removed.
+- Replace driver callbacks, `start`, `stop`, `pollingInterval`, and `deadband` with `watchInput(driver, options)` from `hmi/watch`, or an application-owned polling loop and change comparison. Internal polling/input-controller modules and their callback types have been removed.
 - Move MiniJoyC `readMode` and Fader `brightness` constructor settings to `configure()` after construction.
 - Clear application-owned timers before closing the driver. Close cancels product-owned LED animation timers only.
 - Address changes require close/reopen. Fader color components and hardware brightness now require integers in 0–255.
 
-Each hardware example uses default wiring and places its change-detecting loop in the application. For analog deadband, compare
+Each hardware example uses default wiring and opts into `hmi/watch` for change notifications. For a custom analog loop, compare
 `Math.abs(sample.raw - previous.raw)`; for joystick deadband, compare each axis and the button. Keep the last delivered
 sample as the baseline so small movements accumulate. Ignore `time` when comparing input values.
 
 ## Validation
 
 `npm run check` covers formatting/lint, TypeScript, all-driver mock conformance, failure cleanup, native sample encodings,
-and logical LEDs. `tests/sdk` is a separate smoke app that compiles the real driver manifests, preloads the classes,
+logical LEDs, and watcher lifecycle/comparison. `tests/sdk` is a separate smoke app that compiles the real driver manifests, preloads the classes,
 constructs all eleven products with mock IO, samples them, starts/stops LED animations, and disposes them under XS:
 
 ```sh
@@ -93,7 +92,7 @@ mkdir -p /tmp/unit-hmi-sdk-check
 mcconfig -dl -m -p sim -o /tmp/unit-hmi-sdk-check tests/sdk/manifest.json
 ```
 
-Look for `ECMA-419 smoke test: 11 drivers PASS`, then enter `quit` in xsdb. This verifies XS/preload behavior but does not
+Look for `ECMA-419 smoke test: 11 drivers PASS` and `watchInput smoke test: PASS`, then enter `quit` in xsdb. This verifies XS/preload behavior but does not
 verify electrical protocols or the real products. Build each hardware example with `mcrun -d -m -p <device> -t build`
 before deploying the corresponding host/mod for hardware verification.
 
@@ -111,3 +110,16 @@ const testJoystick = new JoyStick({ sensor: { io: MockSMBus, data: 1, clock: 2 }
 ```
 
 Close one instance before reusing the same address/pins for another. `MockSMBus` above is an application-supplied constructor.
+
+## Optional watcher layer
+
+`hmi/watch` is an application helper above the standard sensor drivers. `watchInput(source, options)` returns an
+`InputWatcher` that owns a timer and comparison snapshots. It reports the first available sample and subsequent changes,
+skips capture metadata, applies native-unit numeric deadband, and always reports button/switch transitions. Analog
+comparison uses raw values rather than the derived normalized position. A custom predicate can override this policy.
+
+Callbacks are copied privately, delivered only on timer ticks, and invoked with the source as `this`. Both stop and close
+invalidate stale ticks, including reentrant stops/closes from sampling or user callbacks. Successful notifications update
+the comparison baseline; failed reads, comparisons, and notifications preserve it for retry. Close discards references
+and cancels the timer. Source ownership is opt-in through `closeSource: true`; otherwise the caller closes the source.
+Product manifests do not pull in this optional layer. See [watchInput](watch.md) for options and examples.

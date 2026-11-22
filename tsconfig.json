@@ -65,7 +65,8 @@
 			"embedded:storage/*": ["./node_modules/@moddable/typings/embedded/storage/*"],
 			"embedded:provider/*": ["./node_modules/@moddable/typings/embedded_provider/*"],
 			"hmi/led": ["./src/hmi/led/led"],
-			"hmi/peripheral": ["./src/hmi/peripheral/peripheral"]
+			"hmi/peripheral": ["./src/hmi/peripheral/peripheral"],
+			"hmi/watch": ["./src/hmi/watch/watchInput"]
 		},
 		"types": [
 			"./node_modules/@moddable/typings/xs",

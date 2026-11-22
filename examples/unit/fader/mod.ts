@@ -1,20 +1,16 @@
-import Timer from "timer";
+import watchInput from "hmi/watch";
 import Fader from "unit/fader";
 
 export async function main(): Promise<void> {
 	const input = new Fader({});
-	let previous = "";
-	// Polling and change detection belong to the application. Clear this timer before input.close().
-	Timer.repeat(() => {
-		const sample = input.sample();
-		const { time: _time, ...values } = sample;
-		const current = JSON.stringify(values);
-		if (current === previous) return;
-		previous = current;
-		const lit = Math.round(sample.position * Fader.LEVEL_COUNT);
-		for (let level = 0; level < Fader.LEVEL_COUNT; level++)
-			input.setLevel(level, { r: 0, g: level < lit ? 128 : 0, b: level < lit ? 255 : 0 }, false);
-		input.show();
-		trace(`[Fader] ${current}\n`);
-	}, 30);
+	watchInput(input, {
+		deadband: 4,
+		onChanged(sample) {
+			const lit = Math.round(sample.position * Fader.LEVEL_COUNT);
+			for (let level = 0; level < Fader.LEVEL_COUNT; level++)
+				input.setLevel(level, { r: 0, g: level < lit ? 128 : 0, b: level < lit ? 255 : 0 }, false);
+			input.show();
+			trace(`[Fader] ${JSON.stringify(sample)}\n`);
+		},
+	});
 }

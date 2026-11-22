@@ -11,7 +11,8 @@
 		"../../src/drivers/unit/joystick",
 		"../../src/drivers/unit/joystick2",
 		"../../src/drivers/unit/scroll",
-		"../../src/drivers/hat/mini-joyc"
+		"../../src/drivers/hat/mini-joyc",
+		"../../src/hmi/watch"
 	],
 	"modules": {
 		"*": "./main",

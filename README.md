@@ -61,14 +61,19 @@ Samples include a capture timestamp. Standard IO and product wiring are used by 
 
 ```ts
 import Encoder from "unit/encoder";
+import watchInput from "hmi/watch";
 
 const encoder = new Encoder({});
-const sample = encoder.sample();
-encoder.configure({ mode: Encoder.MODE.AB });
-encoder.close();
+const watcher = watchInput(encoder, {
+	onChanged({ value, pressed }) {
+		trace(`value=${value}, pressed=${pressed}\n`);
+	},
+});
+// watcher.close(); encoder.close(); // when finished
 ```
 
-Polling and change detection run in the application. The previous callback/polling API has been removed; see the
+Use the optional [watchInput helper](docs/watch.md) for polling, deadband, change notifications, and cleanup.
+Custom application loops can still call `sample()` directly. The previous driver callback/polling API has been removed; see the
 [architecture and migration guide](docs/architecture.md) for breaking changes. Device-specific register operations and
 RGB [LED objects](docs/led.md) extend the common sensor API.
 
