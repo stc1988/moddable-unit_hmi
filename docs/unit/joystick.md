@@ -2,31 +2,51 @@
 
 The TypeScript driver in `src/drivers/unit/joystick` supports the M5Stack Unit Joystick v1.1 (U024-C). It reads the X/Y axes and push button over I2C at the device's fixed address, `0x52`.
 
-The defaults use Port A on the selected Moddable device. Pass `data` and `clock` to the constructor when using another I2C
-port. `io` can inject a compatible I2C constructor for another provider or for testing.
+IO and wiring overrides are optional. With `{}`, the driver uses `device.io.SMBus` and
+`device.i2c.default` pins. Address defaults to `0x52` and frequency to `400_000` Hz.
+Pass `sensor: { io?, data?, clock?, address?, hz?, ... }` to override only the fields needed.
+Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchanged.
 
-## API
-
-- `read()` performs one three-byte I2C transaction and returns `{ x, y, pressed }`. Axis values range from `0` through `255`; `pressed` is `true` while the stick is pushed.
-- `readXY()` returns `{ x, y }` from a new device reading.
-- `isButtonPressed()` returns the button state from a new device reading.
-- `onChanged` receives `{ x, y, pressed }` for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
-- `onButtonChanged` receives `true` or `false` when the button state changes after the initial sample.
-- Assigning either callback starts polling. Clearing both callbacks stops it.
-- `pollingInterval` controls the polling period in milliseconds and defaults to `30`.
-- `deadband` controls axis change suppression in native axis units and defaults to `0`.
-- `start()`, `stop()`, and `close()` control polling and the I2C resource explicitly.
+## Basic usage
 
 ```ts
 import JoyStick from "unit/joystick";
+import Timer from "timer";
 
-const joystick = new JoyStick({ deadband: 2 });
+const input = new JoyStick({});
+const timer = Timer.repeat(() => {
+	const sample = input.sample();
+	trace(`${JSON.stringify(sample)}\n`);
+}, 30);
 
-joystick.onChanged = ({ x, y, pressed }) => {
-	trace(`x=${x}, y=${y}, pressed=${pressed}\n`);
-};
-
-joystick.onButtonChanged = (pressed) => {
-	trace(`pressed=${pressed}\n`);
-};
+// When finished, clear the application's timer before releasing the driver:
+// Timer.clear(timer);
+// input.close(); // or input[Symbol.dispose]()
 ```
+
+## Common sensor API
+
+`sample()` returns a fresh `{ x, y, pressed, time }` object. `time` records host capture time in milliseconds since the Unix
+epoch. Values are read when requested; there is no cached sample or internal polling timer. Multiple register reads in a
+sample are sequential, so the snapshot is not a hardware-atomic transaction.
+
+`configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
+omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
+provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
+and change detection belong to the caller. See [architecture and migration](../architecture.md).
+
+`target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
+`close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
+from construction, reads, and configuration propagate synchronously.
+
+## Configuration and initialization
+
+There are currently no sensor configuration properties. `configure({})` is valid; unknown properties are ignored.
+
+## Product extensions
+
+- `read()`: returns `JoyStickState`.
+- `readXY()`: returns `JoyStickPosition`.
+- `isButtonPressed()`: returns `boolean`.
+
+Axes are unsigned 8-bit values; position and button arrive in a single three-byte transaction.

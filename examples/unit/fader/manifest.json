@@ -5,6 +5,7 @@
 		"../../../src/drivers/unit/fader/manifest.json"
 	],
 	"modules": {
-		"*": ["./mod"]
+		"*": ["./mod"],
+		"neopixel": "$(MODDABLE)/typings/neopixel"
 	}
 }

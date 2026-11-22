@@ -3,45 +3,46 @@
 The TypeScript driver in `src/drivers/unit/8encoder` supports the M5Stack Unit 8Encoder's eight rotary encoders, eight
 push buttons, physical toggle switch, and nine RGB LEDs over I2C.
 
-The defaults use Port A on the selected Moddable device, address `0x41`, and a 100 kHz bus. Pass `data`, `clock`,
-`address`, or `hz` for another compatible configuration. The `io` option accepts an I2C-compatible constructor for
-alternate I/O providers or testing.
+IO and wiring overrides are optional. With `{}`, the driver uses `device.io.SMBus` and
+`device.i2c.default` pins. Address defaults to `0x41` and frequency to `100_000` Hz.
+Pass `sensor: { io?, data?, clock?, address?, hz?, ... }` to override only the fields needed.
+Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchanged.
 
 ## Basic usage
 
 ```ts
 import Encoder8 from "unit/8encoder";
+import Timer from "timer";
 
-const encoder8 = new Encoder8();
+const input = new Encoder8({});
+const timer = Timer.repeat(() => {
+	const sample = input.sample();
+	trace(`${JSON.stringify(sample)}\n`);
+}, 30);
 
-encoder8.onChanged = ({ encoders, buttons, switchOn }) => {
-	trace(`values=${encoders.join(",")} buttons=0x${buttons.toString(16)} switch=${switchOn}\n`);
-};
-
-encoder8.onEncoderChanged = (encoder, value) => {
-	encoder8.setLed(encoder, { r: value < 0 ? 64 : 0, g: value > 0 ? 64 : 0, b: 0 });
-};
+// When finished, clear the application's timer before releasing the driver:
+// Timer.clear(timer);
+// input.close(); // or input[Symbol.dispose]()
 ```
 
-## Inputs and callbacks
+## Common sensor API
 
-- `read()` returns `{ encoders, buttons, switchOn }`. `encoders` contains the eight signed 32-bit counter values and bit
-  `n` of `buttons` is set while encoder button `n` is pressed.
-- `readEncoders()` and `readEncoder(encoder)` read counter values.
-- `readIncrements()` and `readIncrement(encoder)` read the firmware's signed increment values. Reading an increment resets
-  the value reported by that register.
-- `readEncoderChangeFlags()` returns a bit mask of encoders changed since the register's previous read and clears those
-  flags.
-- `readButtons()` returns the pressed-button bit mask; `isButtonPressed(button)` reads one button.
-- `readButtonToggleCounts()` returns the eight button toggle counts and resets them.
-- `isSwitchOn()` reads the physical toggle switch.
-- `onChanged(state)` runs for the first sample and whenever an encoder, button, or toggle switch changes.
-- `onEncoderChanged(encoder, value)`, `onButtonChanged(button, pressed)`, and `onSwitchChanged(on)` report individual
-  transitions after the initial sample.
+`sample()` returns a fresh `{ encoders, buttons, switchOn, time }` object. `time` records host capture time in milliseconds since the Unix
+epoch. Values are read when requested; there is no cached sample or internal polling timer. Multiple register reads in a
+sample are sequential, so the snapshot is not a hardware-atomic transaction.
 
-If multiple inputs change in one sample, individual callbacks run in ascending channel order. Assigning any input callback
-starts polling automatically. Clearing all callbacks stops it. `pollingInterval` defaults to `30` milliseconds. `start()`
-and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases the I2C resource.
+`configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
+omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
+provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
+and change detection belong to the caller. See [architecture and migration](../architecture.md).
+
+`target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
+`close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
+from construction, reads, and configuration propagate synchronously.
+
+## Configuration and initialization
+
+There are currently no sensor configuration properties. `configure({})` is valid; unknown properties are ignored. Construction resets all encoder counters and clears the LEDs.
 
 ## Counters
 
@@ -66,17 +67,13 @@ RGB components accept `0` through `255`.
 
 - `getFirmwareVersion()` reads the firmware version.
 - `getI2CAddress()` reads the configured address.
-- `setI2CAddress(address)` accepts `0x01` through `0x7f`, changes the device address, and reconnects the driver.
+- `setI2CAddress(address)` accepts `0x01` through `0x7f`, changes the device address, and programs the device address.
 
-Polling failures are written to the Moddable debug channel without stopping the timer. Direct method calls propagate I/O
-errors to the caller.
-
-## Exported types
-
-The module exports `Encoder8Options`, `Encoder8IO`, `Encoder8IOInstance`, `Encoder8State`,
-`Encoder8ChangedCallback`, `Encoder8EncoderChangedCallback`, `Encoder8ButtonChangedCallback`, and
-`Encoder8SwitchChangedCallback` for TypeScript applications.
+The IO connection itself is fixed for the lifetime of an instance. After `setI2CAddress`, call `close()` and create a new
+instance with `sensor.address` set to the new address before making further device calls.
 
 ## Common LED objects
 
 See [Common LED interface](../led.md) for `leds[index]`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.
+
+`encoders` contains eight signed 32-bit counts. Bit n of `buttons` is one while button n is pressed.

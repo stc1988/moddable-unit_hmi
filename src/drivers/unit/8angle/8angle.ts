@@ -1,7 +1,15 @@
 import Led, { LedCollection } from "hmi/led";
-import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
+import { assertOpen, ownResource } from "hmi/peripheral";
+import {
+	busFor,
+	changeAddress,
+	readAddress,
+	SMBusDevice,
+	type SMBusDeviceOptions,
+	type SMBusInstance,
+	type SMBusIO,
+} from "hmi/smbus";
 import { integerInRange, type RGBColor } from "hmi/util";
-import Angle8Input from "unit/8angle/input";
 
 export interface Angle8IOInstance extends SMBusInstance {
 	readUint8(register: number): number;
@@ -25,17 +33,7 @@ export interface Angle8Color extends RGBColor {
 
 export type Angle8Resolution = 8 | 12;
 
-export interface Angle8Options extends SMBusDeviceOptions<Angle8IO> {
-	pollingInterval?: number;
-	deadband?: number;
-	onChanged?: Angle8ChangedCallback;
-	onAngleChanged?: Angle8AngleChangedCallback;
-	onSwitchChanged?: Angle8SwitchChangedCallback;
-}
-
-export type Angle8ChangedCallback = (state: Angle8State) => void;
-export type Angle8AngleChangedCallback = (angle: number, value: number) => void;
-export type Angle8SwitchChangedCallback = (on: boolean) => void;
+export interface Angle8Options extends SMBusDeviceOptions<Angle8IO> {}
 
 // https://docs.m5stack.com/en/unit/8Angle
 export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
@@ -66,62 +64,25 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	#input: Angle8Input;
-
-	set onChanged(callback: Angle8ChangedCallback | null | undefined) {
-		this.#input.onChanged = callback;
-	}
-	get onChanged(): Angle8ChangedCallback | null {
-		return this.#input.onChanged;
-	}
-	set onAngleChanged(callback: Angle8AngleChangedCallback | null | undefined) {
-		this.#input.onAngleChanged = callback;
-	}
-	get onAngleChanged(): Angle8AngleChangedCallback | null {
-		return this.#input.onAngleChanged;
-	}
-	set onSwitchChanged(callback: Angle8SwitchChangedCallback | null | undefined) {
-		this.#input.onSwitchChanged = callback;
-	}
-	get onSwitchChanged(): Angle8SwitchChangedCallback | null {
-		return this.#input.onSwitchChanged;
-	}
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-	set deadband(value: number) {
-		this.#input.deadband = value;
-	}
-	get deadband(): number {
-		return this.#input.deadband;
-	}
-	start(): void {
-		this.#input.start();
-	}
-	stop(): void {
-		this.#input.stop();
-	}
-
-	constructor(options: Angle8Options = {}) {
-		super(options, { address: Angle8.DEFAULT_ADDRESS, hz: Angle8.DEFAULT_HZ, name: "8angle" });
+	constructor(options: Angle8Options) {
+		super(options, { address: Angle8.DEFAULT_ADDRESS, hz: Angle8.DEFAULT_HZ, name: "Angle8" });
 		try {
-			this.#input = new Angle8Input(this, this, options);
+			ownResource(this, this.leds);
+			this.leds.color = { r: 0, g: 0, b: 0 };
+			this.read();
 		} catch (error) {
-			super.close();
+			this.close();
 			throw error;
 		}
 	}
 
-	close(): void {
-		this.leds.close();
-		this.#input.close();
-		super.close();
+	sample(): Angle8State & { time: number } {
+		assertOpen(this);
+		return { ...this.read(), time: Date.now() };
 	}
 
 	read(): Angle8State {
+		assertOpen(this);
 		return {
 			angles: this.readAngles(),
 			switchOn: this.isSwitchOn(),
@@ -129,31 +90,35 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 	}
 
 	readAngles(resolution: Angle8Resolution = 12): number[] {
+		assertOpen(this);
 		Angle8.#resolution(resolution);
 		if (resolution === 8)
-			return Array.from(new Uint8Array(this.activeBus.readBuffer(Angle8.REGISTER.ANALOG_8BIT, Angle8.ANGLE_COUNT)));
+			return Array.from(new Uint8Array(busFor(this).readBuffer(Angle8.REGISTER.ANALOG_8BIT, Angle8.ANGLE_COUNT)));
 
-		const data = new DataView(this.activeBus.readBuffer(Angle8.REGISTER.ANALOG_12BIT, Angle8.ANGLE_COUNT * 2));
+		const data = new DataView(busFor(this).readBuffer(Angle8.REGISTER.ANALOG_12BIT, Angle8.ANGLE_COUNT * 2));
 		const angles = new Array<number>(Angle8.ANGLE_COUNT);
 		for (let angle = 0; angle < Angle8.ANGLE_COUNT; angle++) angles[angle] = data.getUint16(angle * 2, true) & 0x0fff;
 		return angles;
 	}
 
 	readAngle(angle: number, resolution: Angle8Resolution = 12): number {
+		assertOpen(this);
 		const index = Angle8.#angleIndex(angle);
 		Angle8.#resolution(resolution);
-		if (resolution === 8) return this.activeBus.readUint8(Angle8.REGISTER.ANALOG_8BIT + index) & 0xff;
+		if (resolution === 8) return busFor(this).readUint8(Angle8.REGISTER.ANALOG_8BIT + index) & 0xff;
 
-		const data = new DataView(this.activeBus.readBuffer(Angle8.REGISTER.ANALOG_12BIT + index * 2, 2));
+		const data = new DataView(busFor(this).readBuffer(Angle8.REGISTER.ANALOG_12BIT + index * 2, 2));
 		return data.getUint16(0, true) & 0x0fff;
 	}
 
 	isSwitchOn(): boolean {
-		return this.activeBus.readUint8(Angle8.REGISTER.SWITCH) !== 0;
+		assertOpen(this);
+		return busFor(this).readUint8(Angle8.REGISTER.SWITCH) !== 0;
 	}
 
 	setLed(led: number, color: RGBColor, brightness = 100): void {
-		this.activeBus.writeBuffer(
+		assertOpen(this);
+		busFor(this).writeBuffer(
 			Angle8.REGISTER.RGB_LED + Angle8.#ledIndex(led) * 4,
 			Uint8Array.of(
 				Angle8.#byte(color.r, "r"),
@@ -165,7 +130,8 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 	}
 
 	getLed(led: number): Angle8Color {
-		const data = new DataView(this.activeBus.readBuffer(Angle8.REGISTER.RGB_LED + Angle8.#ledIndex(led) * 4, 4));
+		assertOpen(this);
+		const data = new DataView(busFor(this).readBuffer(Angle8.REGISTER.RGB_LED + Angle8.#ledIndex(led) * 4, 4));
 		return {
 			r: data.getUint8(0),
 			g: data.getUint8(1),
@@ -175,15 +141,18 @@ export default class Angle8 extends SMBusDevice<Angle8IOInstance> {
 	}
 
 	getFirmwareVersion(): number {
-		return this.activeBus.readUint8(Angle8.REGISTER.FIRMWARE_VERSION) & 0xff;
+		assertOpen(this);
+		return busFor(this).readUint8(Angle8.REGISTER.FIRMWARE_VERSION) & 0xff;
 	}
 
 	getI2CAddress(): number {
-		return this.readAddress(Angle8.REGISTER.I2C_ADDRESS);
+		assertOpen(this);
+		return readAddress(this, Angle8.REGISTER.I2C_ADDRESS);
 	}
 
 	setI2CAddress(address: number): void {
-		this.changeAddress(Angle8.REGISTER.I2C_ADDRESS, address);
+		assertOpen(this);
+		changeAddress(this, Angle8.REGISTER.I2C_ADDRESS, address);
 	}
 
 	static #angleIndex(value: number): number {

@@ -1,39 +1,21 @@
+import Timer from "timer";
 import Encoder8 from "unit/8encoder";
 
 export async function main(): Promise<void> {
-	const encoder8 = new Encoder8();
-
-	encoder8.leds.color = { r: 0, g: 0, b: 16 };
-	{
-		const led = encoder8.leds[Encoder8.SWITCH_LED];
-		if (led) led.color = { r: 0, g: 0, b: 64 };
-	}
-
-	encoder8.onChanged = ({ encoders, buttons, switchOn }) => {
-		trace(`[8Encoder] values=${encoders.join(",")}\tbuttons=0x${buttons.toString(16)}\tswitch=${switchOn}\n`);
-	};
-
-	encoder8.onEncoderChanged = (encoder, value) => {
-		trace(`[8Encoder] encoder=${encoder}\tvalue=${value}\n`);
-		{
-			const led = encoder8.leds[encoder];
-			if (led) led.color = { r: value < 0 ? 64 : 0, g: value > 0 ? 64 : 0, b: value === 0 ? 16 : 0 };
+	const input = new Encoder8({});
+	let previous = "";
+	// Polling and change detection belong to the application. Clear this timer before input.close().
+	Timer.repeat(() => {
+		const sample = input.sample();
+		const { time: _time, ...values } = sample;
+		const current = JSON.stringify(values);
+		if (current === previous) return;
+		previous = current;
+		for (let index = 0; index < sample.encoders.length; index++) {
+			const value = sample.encoders[index] ?? 0;
+			input.setLed(index, { r: sample.buttons & (1 << index) ? 64 : 0, g: value > 0 ? 64 : 0, b: value < 0 ? 64 : 0 });
 		}
-	};
-
-	encoder8.onButtonChanged = (button, pressed) => {
-		trace(`[8Encoder] button=${button}\tpressed=${pressed}\n`);
-		{
-			const led = encoder8.leds[button];
-			if (led) led.color = { r: pressed ? 64 : 0, g: 0, b: pressed ? 0 : 16 };
-		}
-	};
-
-	encoder8.onSwitchChanged = (on) => {
-		trace(`[8Encoder] switch=${on}\n`);
-		{
-			const led = encoder8.leds[Encoder8.SWITCH_LED];
-			if (led) led.color = { r: on ? 0 : 64, g: on ? 64 : 0, b: 0 };
-		}
-	};
+		input.setLed(8, { r: sample.switchOn ? 0 : 64, g: sample.switchOn ? 64 : 0, b: 0 });
+		trace(`[Encoder8] ${current}\n`);
+	}, 30);
 }

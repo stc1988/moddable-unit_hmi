@@ -1,9 +1,5 @@
 {
-	"include": [
-		"../../../hmi/input/encoder/manifest.json",
-		"../../../hmi/smbus/manifest.json",
-		"../../../hmi/led/manifest.json"
-	],
+	"include": ["../../../hmi/smbus/manifest.json", "../../../hmi/led/manifest.json"],
 	"modules": {
 		"unit/scroll": "./scroll"
 	},

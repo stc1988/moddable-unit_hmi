@@ -1,86 +1,86 @@
 import type I2C from "embedded:io/i2c";
-import SMBus from "embedded:io/smbus";
+import type SMBus from "embedded:io/smbus";
+import Peripheral, { assertOpen, optionsObject, ownResource, type PeripheralOptions } from "hmi/peripheral";
 import { integerInRange } from "hmi/util";
 import Timer from "timer";
-
 export interface SMBusInstance {
 	close(): void;
 }
-
 export type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = ConstructorParameters<typeof SMBus>[0];
 export type SMBusIO<Bus extends SMBusInstance = SMBusInstance> = new (options: SMBusOptions) => Bus;
-
-export interface SMBusPortOptions<IO extends SMBusIO = SMBusIO> {
-	data?: I2COptions["data"];
-	clock?: I2COptions["clock"];
-	io?: IO;
+export interface SMBusPortOptions<IO extends SMBusIO = SMBusIO> extends PeripheralOptions {
+	sensor?: Partial<Omit<SMBusOptions, "address" | "hz">> & { io?: IO; address?: number; hz?: number };
 }
-
-export interface SMBusDeviceOptions<IO extends SMBusIO = SMBusIO> extends SMBusPortOptions<IO> {
-	address?: number;
-	hz?: number;
-}
-
+export interface SMBusDeviceOptions<IO extends SMBusIO = SMBusIO> extends SMBusPortOptions<IO> {}
 export interface SMBusDeviceDefaults {
 	address: number;
 	hz: number;
 	name: string;
-	data?: I2COptions["data"];
-	clock?: I2COptions["clock"];
+	port?: "default" | "hat";
 }
-
-interface SMBusRegisterIO {
-	readUint8(register: number): number;
-	writeUint8(register: number, value: number): void;
+interface Connection {
+	bus: SMBusInstance | undefined;
+	address: number;
 }
-
-export class SMBusDevice<Bus extends SMBusInstance> {
-	#IO: SMBusIO<Bus>;
-	#options: Omit<SMBusOptions, "address">;
-	#bus: Bus | undefined;
-	#name: string;
-	#address: number;
-
+let connections: WeakMap<object, Connection> | undefined;
+export function busFor<Bus extends SMBusInstance>(instance: SMBusDevice<Bus>): Bus {
+	assertOpen(instance);
+	const bus = connections?.get(instance)?.bus;
+	if (!bus) throw new Error("bus is closed");
+	return bus as Bus;
+}
+export function readAddress(instance: object, register: number): number {
+	assertOpen(instance);
+	const bus = connections?.get(instance)?.bus as SMBusInstance & { readUint8(register: number): number };
+	return bus.readUint8(register) & 0x7f;
+}
+// Updating the device register is a product extension. The current IO connection stays fixed.
+// Close this instance and construct a new one at the new address after this operation.
+export function changeAddress(instance: object, register: number, address: number, delay = 10): void {
+	assertOpen(instance);
+	const next = integerInRange(address, "address", 1, 0x7f);
+	const connection = connections?.get(instance);
+	if (!connection?.bus) throw new Error("bus is closed");
+	if (next === connection.address) return;
+	(connection.bus as SMBusInstance & { writeUint8(register: number, value: number): void }).writeUint8(register, next);
+	Timer.delay(delay);
+}
+export class SMBusDevice<Bus extends SMBusInstance> extends Peripheral {
+	// Type-only brand preserves the injected bus type without exposing it at runtime.
+	declare private busType: Bus;
 	protected constructor(options: SMBusDeviceOptions<SMBusIO<Bus>>, defaults: SMBusDeviceDefaults) {
-		this.#IO = options.io ?? (SMBus as unknown as SMBusIO<Bus>);
-		this.#options = {
-			data: options.data ?? defaults.data ?? device.i2c.default.data,
-			clock: options.clock ?? defaults.clock ?? device.i2c.default.clock,
-			hz: integerInRange(options.hz ?? defaults.hz, "hz", 1, Number.MAX_SAFE_INTEGER),
-		};
-		this.#name = defaults.name;
-		this.#address = integerInRange(options.address ?? defaults.address, "address", 1, 0x7f);
-		this.reconnect(this.#address);
-	}
-
-	protected reconnect(address: number): void {
-		this.#bus?.close();
-		this.#bus = undefined;
-		this.#bus = new this.#IO({ ...this.#options, address } as SMBusOptions);
-		this.#address = address;
-	}
-
-	protected get activeBus(): Bus {
-		if (!this.#bus) throw new Error(`${this.#name} bus is closed`);
-		return this.#bus;
-	}
-
-	protected readAddress(register: number): number {
-		return (this.activeBus as Bus & SMBusRegisterIO).readUint8(register) & 0x7f;
-	}
-
-	protected changeAddress(register: number, address: number, delay = 10): void {
-		const nextAddress = integerInRange(address, "address", 1, 0x7f);
-		if (nextAddress === this.#address) return;
-
-		(this.activeBus as Bus & SMBusRegisterIO).writeUint8(register, nextAddress);
-		this.reconnect(nextAddress);
-		Timer.delay(delay);
-	}
-
-	public close(): void {
-		this.#bus?.close();
-		this.#bus = undefined;
+		super(options);
+		try {
+			const sensor = options.sensor === undefined ? {} : options.sensor;
+			optionsObject(sensor);
+			let host: { io?: { SMBus?: SMBusIO<Bus> }; i2c?: Record<string, Partial<SMBusOptions>> } | undefined;
+			if (sensor.io === undefined || sensor.data === undefined || sensor.clock === undefined)
+				host = (globalThis as unknown as { device?: typeof host }).device;
+			const IO = sensor.io === undefined ? host?.io?.SMBus : sensor.io;
+			if (typeof IO !== "function") throw new TypeError("sensor.io or device.io.SMBus must be a constructor");
+			const port =
+				sensor.data === undefined || sensor.clock === undefined ? host?.i2c?.[defaults.port ?? "default"] : undefined;
+			const data = sensor.data === undefined ? port?.data : sensor.data;
+			const clock = sensor.clock === undefined ? port?.clock : sensor.clock;
+			if (data === undefined || clock === undefined)
+				throw new TypeError("sensor.data and sensor.clock require explicit pins or a device I2C provider");
+			const address = integerInRange(sensor.address ?? defaults.address, "address", 1, 0x7f);
+			const hz = integerInRange(sensor.hz ?? defaults.hz, "hz", 1, Number.MAX_SAFE_INTEGER);
+			const connection: Connection = { bus: undefined, address };
+			connections ??= new WeakMap();
+			connections.set(this, connection);
+			connection.bus = new IO({ ...port, ...sensor, data, clock, address, hz });
+			ownResource(this, {
+				close() {
+					const bus = connection.bus;
+					connection.bus = undefined;
+					bus?.close();
+				},
+			});
+		} catch (error) {
+			this.close();
+			throw error;
+		}
 	}
 }

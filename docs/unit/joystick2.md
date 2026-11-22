@@ -1,37 +1,60 @@
 # JoyStick2
 
 The driver is implemented in TypeScript under `src/drivers/unit/joystick2` and exports `JoyStick2Options`, `JoyStick2IO`,
-`JoyStick2Position`, `JoyStick2State`, `JoyStick2ChangedCallback`, and `JoyStick2ButtonChangedCallback` for typed applications.
+`JoyStick2Position` and `JoyStick2State` for typed applications.
 
-The `examples/unit/joystick2` application is also written in TypeScript and demonstrates typed polling, button events, and LED updates.
+IO and wiring overrides are optional. With `{}`, the driver uses `device.io.SMBus` and
+`device.i2c.default` pins. Address defaults to `0x63` and frequency to `400_000` Hz.
+Pass `sensor: { io?, data?, clock?, address?, hz?, ... }` to override only the fields needed.
+Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchanged.
 
-The defaults use Port A on the selected Moddable device. Pass `data` and `clock` to select another I2C port. `io` can
-inject a compatible I2C constructor for another provider or for testing.
-
-- `read()` returns the current `{ x, y, pressed }` state. It performs separate coordinate and button register reads.
-- `readXY()` reads the calibrated signed 8-bit coordinates from registers `0x60` and `0x61`. Both axes use the device's native directions and return values in the range documented by M5Stack (`-127` to `127`).
-- `isButtonPressed()` returns the current active-low button state.
-- `onChanged` receives the complete state for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
-- `onButtonChanged` receives the new button state on transitions after the initial sample.
-- `pollingInterval` defaults to `30` milliseconds and `deadband` defaults to `0` native axis units.
-- Assigning either callback starts polling. Clearing both callbacks stops it.
-
-`JoyStick2#setLed({ r, g, b })` accepts RGB component values even though the device stores them in BGR register order: blue at `0x30`, green at `0x31`, and red at `0x32`.
+## Basic usage
 
 ```ts
 import JoyStick2 from "unit/joystick2";
+import Timer from "timer";
 
-const joystick = new JoyStick2({ deadband: 2 });
+const input = new JoyStick2({});
+const timer = Timer.repeat(() => {
+	const sample = input.sample();
+	trace(`${JSON.stringify(sample)}\n`);
+}, 30);
 
-joystick.onChanged = ({ x, y, pressed }) => {
-	trace(`x=${x}, y=${y}, pressed=${pressed}\n`);
-};
-
-joystick.onButtonChanged = (pressed) => {
-	joystick.setLed({ r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 255 });
-};
+// When finished, clear the application's timer before releasing the driver:
+// Timer.clear(timer);
+// input.close(); // or input[Symbol.dispose]()
 ```
+
+## Common sensor API
+
+`sample()` returns a fresh `{ x, y, pressed, time }` object. `time` records host capture time in milliseconds since the Unix
+epoch. Values are read when requested; there is no cached sample or internal polling timer. Multiple register reads in a
+sample are sequential, so the snapshot is not a hardware-atomic transaction.
+
+`configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
+omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
+provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
+and change detection belong to the caller. See [architecture and migration](../architecture.md).
+
+`target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
+`close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
+from construction, reads, and configuration propagate synchronously.
+
+## Configuration and initialization
+
+There are currently no sensor configuration properties. `configure({})` is valid; unknown properties are ignored. Construction clears the LEDs.
+
+## Product extensions
+
+- `read()`: returns `JoyStick2State`.
+- `readXY()`: returns `JoyStick2Position`.
+- `isButtonPressed()`: returns `boolean`.
+- `setLed(color: RGBColor)`: returns `void`.
 
 ## Common LED objects
 
 See [Common LED interface](../led.md) for `led`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.
+
+Axes are signed 8-bit mapped values from the offset registers. The button is active-low.
+
+`setLed` accepts RGB bytes and writes the device's BGR register order (blue at 0x30, green at 0x31, red at 0x32).

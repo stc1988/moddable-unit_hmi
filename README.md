@@ -54,14 +54,23 @@ mcrun -dl -m -p esp32/m5stick_cplus
 - [Unit Scroll](examples/unit/scroll) — reports encoder and button changes and controls its RGB LED.
 - [M5Stack HAT Mini JoyC](examples/hat/mini-joyc) — reports joystick and button changes and toggles its RGB LED.
 
-## Input events
+## Sensor API
 
-Each driver exposes change callbacks and polling controls directly. Assigning a callback such as `driver.onChanged` starts
-polling automatically; clearing all callbacks stops it. Use `driver.start()` and `driver.stop()` for explicit control.
-Joystick and analog drivers also expose `driver.deadband`; all drivers expose `driver.pollingInterval`. Device reads,
-LEDs, settings, and `close()` remain on the same product driver.
+All drivers share `sample()`, `configure(options)`, `configuration`, `target`, `close()`, and `[Symbol.dispose]`.
+Samples include a capture timestamp. Standard IO and product wiring are used by default; inject replacements when needed:
 
-RGB-capable products expose the [common LED interface](docs/led.md) through `led` or `leds[index]`.
+```ts
+import Encoder from "unit/encoder";
+
+const encoder = new Encoder({});
+const sample = encoder.sample();
+encoder.configure({ mode: Encoder.MODE.AB });
+encoder.close();
+```
+
+Polling and change detection run in the application. The previous callback/polling API has been removed; see the
+[architecture and migration guide](docs/architecture.md) for breaking changes. Device-specific register operations and
+RGB [LED objects](docs/led.md) extend the common sensor API.
 
 ## Development
 
@@ -74,7 +83,7 @@ npm run lint
 npm run typecheck
 ```
 
-`npm run check` runs both the Biome checks and the TypeScript type checker.
+`npm run check` runs Biome, the TypeScript type checker, and headless regression tests.
 
 ## Releases
 

@@ -1,12 +1,15 @@
-import JoystickInput, {
-	type JoystickButtonChangedCallback,
-	type JoystickChangedCallback,
-	type JoystickInputOptions,
-	type JoystickPosition,
-	type JoystickState,
-} from "hmi/input/joystick";
 import Led, { scaleColor } from "hmi/led";
-import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
+import { assertOpen, ownResource } from "hmi/peripheral";
+import {
+	busFor,
+	changeAddress,
+	readAddress,
+	SMBusDevice,
+	type SMBusDeviceOptions,
+	type SMBusInstance,
+	type SMBusIO,
+} from "hmi/smbus";
+import type { JoystickPosition, JoystickState } from "hmi/util";
 import { integerInRange, type RGBColor, signed8, signed16 } from "hmi/util";
 import Timer from "timer";
 
@@ -34,12 +37,7 @@ export interface MiniJoyCCalibration {
 	yCenter: number;
 }
 
-export interface MiniJoyCOptions extends JoystickInputOptions<MiniJoyCState>, SMBusDeviceOptions<MiniJoyCIO> {
-	readMode?: MiniJoyCReadMode;
-}
-
-export type MiniJoyCChangedCallback = JoystickChangedCallback<MiniJoyCState>;
-export type MiniJoyCButtonChangedCallback = JoystickButtonChangedCallback;
+export interface MiniJoyCOptions extends SMBusDeviceOptions<MiniJoyCIO> {}
 
 function readMode(value: string): MiniJoyCReadMode {
 	if (value !== "adc" && value !== "pos8" && value !== "pos10")
@@ -82,68 +80,43 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 		Y_CENTER: 5,
 	} as const;
 
-	#input: JoystickInput<MiniJoyCState>;
-
-	set onChanged(callback: MiniJoyCChangedCallback | null | undefined) {
-		this.#input.onChanged = callback;
+	#readMode: MiniJoyCReadMode = "pos8";
+	configure(options: { readMode?: MiniJoyCReadMode }): void {
+		super.configure(options);
+		if ("readMode" in options) this.#readMode = readMode(options.readMode as string);
 	}
-	get onChanged(): MiniJoyCChangedCallback | null {
-		return this.#input.onChanged;
+	get configuration(): { interrupt: boolean; readMode: MiniJoyCReadMode } {
+		return { ...super.configuration, readMode: this.#readMode };
 	}
-	set onButtonChanged(callback: MiniJoyCButtonChangedCallback | null | undefined) {
-		this.#input.onButtonChanged = callback;
+	get readMode(): MiniJoyCReadMode {
+		assertOpen(this);
+		return this.#readMode;
 	}
-	get onButtonChanged(): MiniJoyCButtonChangedCallback | null {
-		return this.#input.onButtonChanged;
-	}
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-	set deadband(value: number) {
-		this.#input.deadband = value;
-	}
-	get deadband(): number {
-		return this.#input.deadband;
-	}
-	start(): void {
-		this.#input.start();
-	}
-	stop(): void {
-		this.#input.stop();
+	set readMode(value: MiniJoyCReadMode) {
+		this.configure({ readMode: value });
 	}
 
-	readMode: MiniJoyCReadMode;
-
-	constructor(options: MiniJoyCOptions = {}) {
-		const hat = (device.i2c as typeof device.i2c & { hat: I2COptions }).hat;
-
-		super(options, {
-			address: MiniJoyC.DEFAULT_ADDRESS,
-			hz: MiniJoyC.DEFAULT_HZ,
-			name: "joystick",
-			data: hat.data,
-			clock: hat.clock,
-		});
-		this.readMode = readMode(options.readMode ?? "pos8");
-		Timer.delay(10);
+	constructor(options: MiniJoyCOptions) {
+		super(options, { address: MiniJoyC.DEFAULT_ADDRESS, hz: MiniJoyC.DEFAULT_HZ, name: "MiniJoyC", port: "hat" });
 		try {
-			this.#input = new JoystickInput(this, this, "MiniJoyC", options);
+			ownResource(this, this.led);
+			this.configure({ readMode: "pos8" });
+			Timer.delay(10);
+			this.led.color = { r: 0, g: 0, b: 0 };
+			this.read();
 		} catch (error) {
-			super.close();
+			this.close();
 			throw error;
 		}
 	}
 
-	close(): void {
-		this.led.close();
-		this.#input.close();
-		super.close();
+	sample(): MiniJoyCState & { time: number } {
+		assertOpen(this);
+		return { ...this.read(), time: Date.now() };
 	}
 
 	read(): MiniJoyCState {
+		assertOpen(this);
 		return {
 			...this.readXY(),
 			pressed: this.isButtonPressed(),
@@ -151,6 +124,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	readXY(mode: MiniJoyCReadMode = this.readMode): MiniJoyCPosition {
+		assertOpen(this);
 		switch (readMode(mode)) {
 			case "adc":
 				return this.readADC();
@@ -162,6 +136,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	readADC(): MiniJoyCPosition {
+		assertOpen(this);
 		return {
 			x: this.#readWordLE(MiniJoyC.REGISTER.ADC_VALUE),
 			y: this.#readWordLE(MiniJoyC.REGISTER.ADC_VALUE + 2),
@@ -169,6 +144,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	readPosition8Bit(): MiniJoyCPosition {
+		assertOpen(this);
 		return {
 			x: signed8(this.#readByte(MiniJoyC.REGISTER.POSITION_8_BIT)),
 			y: signed8(this.#readByte(MiniJoyC.REGISTER.POSITION_8_BIT + 1)),
@@ -176,6 +152,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	readPosition10Bit(): MiniJoyCPosition {
+		assertOpen(this);
 		return {
 			x: signed16(this.#readWordLE(MiniJoyC.REGISTER.POSITION_10_BIT)),
 			y: signed16(this.#readWordLE(MiniJoyC.REGISTER.POSITION_10_BIT + 2)),
@@ -183,11 +160,13 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	isButtonPressed(): boolean {
+		assertOpen(this);
 		return this.#readByte(MiniJoyC.REGISTER.BUTTON) !== 0;
 	}
 
 	setLed(color: RGBColor): void {
-		this.activeBus.writeBuffer(
+		assertOpen(this);
+		busFor(this).writeBuffer(
 			MiniJoyC.REGISTER.RGB_LED,
 			Uint8Array.of(
 				integerInRange(color.r, "r", 0, 0xff),
@@ -198,11 +177,13 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	readCalibration(index: MiniJoyCCalibrationIndex): number {
+		assertOpen(this);
 		return this.#readWordLE(MiniJoyC.REGISTER.CALIBRATION + calibrationIndex(index) * 2);
 	}
 
 	readCalibrationValues(): MiniJoyCCalibration {
-		const data = new DataView(this.activeBus.readBuffer(MiniJoyC.REGISTER.CALIBRATION, 12));
+		assertOpen(this);
+		const data = new DataView(busFor(this).readBuffer(MiniJoyC.REGISTER.CALIBRATION, 12));
 		return {
 			xMin: data.getUint16(0, true),
 			xMax: data.getUint16(2, true),
@@ -214,7 +195,8 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	writeCalibration(index: MiniJoyCCalibrationIndex, value: number): void {
-		this.activeBus.writeUint16(
+		assertOpen(this);
+		busFor(this).writeUint16(
 			MiniJoyC.REGISTER.CALIBRATION + calibrationIndex(index) * 2,
 			calibrationValue(value),
 			false,
@@ -223,6 +205,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	writeCalibrationValues(values: MiniJoyCCalibration): void {
+		assertOpen(this);
 		const buffer = new ArrayBuffer(12);
 		const data = new DataView(buffer);
 		data.setUint16(0, calibrationValue(values.xMin), true);
@@ -231,27 +214,30 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 		data.setUint16(6, calibrationValue(values.yMax), true);
 		data.setUint16(8, calibrationValue(values.xCenter), true);
 		data.setUint16(10, calibrationValue(values.yCenter), true);
-		this.activeBus.writeBuffer(MiniJoyC.REGISTER.CALIBRATION, buffer);
+		busFor(this).writeBuffer(MiniJoyC.REGISTER.CALIBRATION, buffer);
 		Timer.delay(1000);
 	}
 
 	getFirmwareVersion(): number {
+		assertOpen(this);
 		return this.#readByte(MiniJoyC.REGISTER.FIRMWARE_VERSION);
 	}
 
 	getI2CAddress(): number {
-		return this.readAddress(MiniJoyC.REGISTER.I2C_ADDRESS);
+		assertOpen(this);
+		return readAddress(this, MiniJoyC.REGISTER.I2C_ADDRESS);
 	}
 
 	setI2CAddress(address: number): void {
-		this.changeAddress(MiniJoyC.REGISTER.I2C_ADDRESS, address);
+		assertOpen(this);
+		changeAddress(this, MiniJoyC.REGISTER.I2C_ADDRESS, address);
 	}
 
 	#readByte(register: number): number {
-		return this.activeBus.readUint8(register) & 0xff;
+		return busFor(this).readUint8(register) & 0xff;
 	}
 
 	#readWordLE(register: number): number {
-		return this.activeBus.readUint16(register, false) & 0xffff;
+		return busFor(this).readUint16(register, false) & 0xffff;
 	}
 }

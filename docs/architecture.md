@@ -1,67 +1,113 @@
 # Driver architecture
 
-The input drivers share behavior by responsibility instead of by bus or product family. Product drivers live under
-`src/drivers/unit` or `src/drivers/hat`; reusable input infrastructure lives under `src/hmi/input`. Every product exposes
-its polling lifecycle, callback properties, and comparison settings directly on the product driver.
+Every product implements the ECMA-419 Base, Peripheral, and polled Sensor patterns described in the installed SDK's
+`guides/implement419`. Product-specific registers, sample fields, LED protocols, calibration, and maintenance operations
+extend that common surface. These extensions are not standardized ECMA-419 sensor classifications.
 
-```text
-Product driver       Angle / Fader    8Angle / 8Encoder / Encoder / Scroll / ByteButton / ByteSwitch    Joystick / JoyStick2 / MiniJoyC
-                            |                           |                                    |
-Input semantics      AnalogInputEvents             product input controllers                    JoystickInput
-                            |                           |                                    |
-Polling lifecycle    +--------------------------- PollingInput<State> ----------------------------+
-                            |                           |                                    |
-Hardware I/O         embedded:io/analog           embedded:io/i2c                       embedded:io/i2c
+## Common core
+
+`hmi/peripheral` owns the lifecycle shared by all products. Construction requires an options object, accepts immutable
+options, and copies `target` only when present. Resource registration and lifecycle assertions are module functions;
+internal state is held in module-private weak maps, never on the instance surface. Mutable registries and LED animation sets are allocated lazily at runtime so the preload image never contains collections
+that must later be mutated. An active-instance set keeps opened
+peripherals alive until explicitly closed. Successful `close()` releases resources in reverse registration order, closes
+logical LEDs before their hardware, clears ownership, and is safe to repeat. It also attempts the remaining releases if
+one release throws, then propagates the first error. `[Symbol.dispose]` aliases the same close method. All other driver
+methods and configuration accessors reject use after close.
+
+`hmi/smbus` extends this core with injected SMBus ownership. The optional `sensor` object overrides IO or wiring
+individually. Missing IO uses `device.io.SMBus`; missing pins come from `device.i2c.default`, or `device.i2c.hat` for MiniJoyC.
+Address and frequency retain their product defaults unless overridden. Other IO options are forwarded. A fully injected
+connection does not access `device`, including MiniJoyC on a board with no HAT provider. Bus access and address helpers
+remain internal module exports rather than instance methods.
+
+`hmi/input/analog` defaults to `device.io.Analog` on GPIO 8 and allows partial `sensor` overrides. Fader additionally
+defaults its LED output to SDK NeoPixel on GPIO 9, with partial `leds` overrides. These convenience defaults extend the
+strict constructor-injection guide at the user's request; the common lifecycle and polled Sensor surface are unchanged.
+An options object is still required, so use `new Encoder({})` to select defaults. The host must provide the omitted IO
+and I2C wiring, or the caller must supply them. Board configuration is resolved only during construction, never preload.
+
+Product constructors probe their hardware and initialize exposed runtime settings. A failure releases all resources
+opened so far. Encoder/Scroll counters reset on construction; RGB LEDs start black. ByteButton/ByteSwitch also restore
+manual LED mode, brightness 255, black input-off colors, and white input-on colors without saving to flash. MiniJoyC
+preserves persistent calibration as provisioning data. A successful analog read verifies the IO path, but cannot prove
+that the expected passive potentiometer is physically connected.
+
+## Samples and configuration
+
+`sample()` performs a fresh synchronous read and returns a new object, including host capture `time` in milliseconds
+since the Unix epoch. Composite register reads are sequential rather than hardware-atomic. These devices expose current
+values without a sample-ready flag; no cached old sample is returned. Future drivers with a ready flag must return
+`undefined` when no new sample is available.
+
+`configure(options)` modifies only recognized properties present at the root of its options object; missing values keep
+their current setting and unknown options are ignored. Invalid recognized values throw. The options object is never
+modified or retained. `configuration` returns a new report. Current extensions are Encoder `mode`, MiniJoyC `readMode`,
+Fader `brightness`, and ByteButton/ByteSwitch `ledMode`. Existing setting accessors/methods delegate to this path.
+
+These products have no implemented hardware sample-ready interrupt, so `configuration.interrupt` is always false.
+`onSample` is accepted but not stored or invoked. There are no synthetic sample notifications or polling timers in the
+drivers. All failures occur synchronously and throw; there is no asynchronous failure source requiring `onError`.
+If notification-capable hardware is added later, callbacks must be copied privately from constructor options, invoked
+asynchronously with `this` set to the product, and canceled by close.
+
+## Product extensions
+
+`read()`, per-channel reads, encoder writes/resets, firmware queries, calibration, and RGB methods are explicit product
+extensions. ByteButton and ByteSwitch share the BytePanel register protocol; their input-polarity and LED-map helpers are
+module functions, not publicly callable instance internals. Register layouts stay in product implementations.
+
+`setI2CAddress` programs the peripheral's address register without changing the current host IO connection. The caller
+must close the instance and open another with the new `sensor.address` before further access. Hardware communication
+settings are fixed at construction and cannot be changed through configure.
+
+`hmi/led` is a logical LED convenience extension, not an ECMA-419 sensor or IO implementation. It supports synchronized
+collections, colors, brightness, and a shared animation timer. Products own and close these objects before the underlying
+hardware. Fader batches pixel updates through one flush per output. See [LED API](led.md).
+
+## Migration from the polling API
+
+This is a breaking API change:
+
+- Pass an options object: `new Encoder({})` uses the standard IO and product wiring. Partial `sensor` overrides remain supported.
+- Analog products accept optional `sensor: { io?, pin? }`; Fader also accepts optional `leds: { io?, pin? }`.
+- Use `sample()` for common input access. Product `read()` methods remain available with their existing data shape.
+- Replace driver callbacks, `start`, `stop`, `pollingInterval`, and `deadband` with an application-owned polling loop and
+  change comparison. Internal polling/input-controller modules and their callback types have been removed.
+- Move MiniJoyC `readMode` and Fader `brightness` constructor settings to `configure()` after construction.
+- Clear application-owned timers before closing the driver. Close cancels product-owned LED animation timers only.
+- Address changes require close/reopen. Fader color components and hardware brightness now require integers in 0–255.
+
+Each hardware example uses default wiring and places its change-detecting loop in the application. For analog deadband, compare
+`Math.abs(sample.raw - previous.raw)`; for joystick deadband, compare each axis and the button. Keep the last delivered
+sample as the baseline so small movements accumulate. Ignore `time` when comparing input values.
+
+## Validation
+
+`npm run check` covers formatting/lint, TypeScript, all-driver mock conformance, failure cleanup, native sample encodings,
+and logical LEDs. `tests/sdk` is a separate smoke app that compiles the real driver manifests, preloads the classes,
+constructs all eleven products with mock IO, samples them, starts/stops LED animations, and disposes them under XS:
+
+```sh
+mkdir -p /tmp/unit-hmi-sdk-check
+mcconfig -dl -m -p sim -o /tmp/unit-hmi-sdk-check tests/sdk/manifest.json
 ```
 
-## PollingInput
+Look for `ECMA-419 smoke test: 11 drivers PASS`, then enter `quit` in xsdb. This verifies XS/preload behavior but does not
+verify electrical protocols or the real products. Build each hardware example with `mcrun -d -m -p <device> -t build`
+before deploying the corresponding host/mod for hardware verification.
 
-`hmi/polling` owns the polling timer, callback lifecycle, error reporting, polling-interval validation, and comparison
-against the last notified state. A product supplies a synchronous `read()` source and a `changed(current, previous)`
-function. Assigning a callback on the product driver starts polling automatically; clearing all input callbacks stops
-polling. A product's `close()` closes its input controller before releasing hardware resources.
+## Optional IO overrides
 
-`JoystickInput` adds joystick-specific axis deadband and button-transition semantics on top of this layer. The three I2C
-joystick drivers therefore share event behavior without attempting to merge their different registers or wire protocols.
-`EncoderInput` similarly owns `{ value, pressed }` comparison and button transitions for Encoder and Scroll.
+```ts
+// Normal use: product defaults.
+const joystick = new JoyStick({});
 
-ByteButton and ByteSwitch share the same register layout and LED/configuration protocol. Their `BytePanel` base keeps
-that product-family protocol in one place while the public drivers retain button- and switch-specific names, input
-polarity, state, and callbacks.
+// Different pins, standard SMBus implementation.
+const otherPort = new JoyStick({ sensor: { data: 32, clock: 33 } });
 
-## AnalogInput
+// Test or alternate IO: explicit connection, no board-provider dependency.
+const testJoystick = new JoyStick({ sensor: { io: MockSMBus, data: 1, clock: 2 } });
+```
 
-`hmi/input/analog` wraps a constructor-injected analog I/O implementation. It exposes a raw read and a normalized
-`{ raw, position }` sample, with optional direction inversion. `AnalogInputEvents` owns polling and deadband comparison.
-Angle uses the normal direction; Fader uses the inverted direction.
-
-Angle accepts `sensor: { io, pin }`. Fader accepts the same `sensor` option and `leds: { io, pin }`. 8Angle, 8Encoder,
-Encoder, Joystick v1.1, JoyStick2, Scroll, ByteButton, ByteSwitch, and HAT Mini JoyC accept an `io` bus constructor. These
-entries are constructors compatible with the required operation subset, so tests and other boards can inject alternative
-I/O without changing product logic. The corresponding Moddable I/O implementations remain the defaults. `hmi/smbus`
-provides `SMBusDevice` as the base class for resolving bus pins, frequency, address, and injected I/O; it also owns
-connection replacement, active-resource access, address changes, and close handling across the I2C drivers.
-Its internal `SMBusOptions` type is derived directly from the `embedded:io/smbus` constructor in `@moddable/typings`.
-Default bus pins come from `device.i2c.default`; MiniJoyC uses `device.i2c.hat`. These names require a current Moddable
-SDK host with lowercase `device.i2c` providers, matching `@moddable/typings` 10.
-
-8Angle and 8Encoder expose product-specific input controllers for their multi-channel transitions. ByteButton and
-ByteSwitch adapt the shared BytePanel bit-field input controller to product-specific callback names. These controllers
-compose `PollingInput`; the product classes forward their callback properties and polling controls so every driver has a
-consistent public surface. The multi-channel controllers live in each product's `input` module, keeping event comparison
-separate from registers and device operations. MiniJoyC keeps its public types, validation, and little-endian calibration
-encoding with its product driver, consistent with the other single-product I2C drivers.
-
-## Deliberate boundaries
-
-Register maps, encoding, calibration, and LED protocols remain in product drivers unless multiple products implement the
-same protocol, as ByteButton and ByteSwitch do. New drivers should reuse the polling or analog layer only when their
-behavior matches those contracts; product-family protocol sharing stays separate from generic bus resource management.
-
-## LED control
-
-`hmi/led` provides fixed, iterable `LedCollection` objects for synchronized group assignments
-and owns logical colors, brightness, and the shared animation timer. Product-owned
-LED objects delegate output to product register operations. Products close the LED objects
-before releasing hardware. Fader supplies a shared flush callback to batch animation updates.
-See [LED API](led.md) for initialization, hardware reads, and direct-operation boundaries.
+Close one instance before reusing the same address/pins for another. `MockSMBus` above is an application-supplied constructor.

@@ -2,7 +2,9 @@
 	"include": [
 		"$(MODDABLE)/examples/manifest_base.json",
 		"$(MODULES)/base/modules/manifest.json",
-		"$(MODULES)/drivers/neopixel/manifest.json"
+		"$(MODULES)/drivers/neopixel/manifest.json",
+		"$(MODDABLE)/modules/embedded/io/analog",
+		"$(MODDABLE)/modules/embedded/io/i2c"
 	],
 	"defines": {
 		"XS_MODS": 1,

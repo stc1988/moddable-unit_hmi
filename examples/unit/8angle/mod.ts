@@ -1,39 +1,20 @@
+import Timer from "timer";
 import Angle8 from "unit/8angle";
 
 export async function main(): Promise<void> {
-	const angle8 = new Angle8({ deadband: 8 });
-
-	for (let index = 0; index < Angle8.LED_COUNT; index++) {
-		const led = angle8.leds[index];
-		if (led) {
-			led.brightness = 77;
-			led.color = { r: 0, g: 0, b: index === Angle8.SWITCH_LED ? 255 : 32 };
+	const input = new Angle8({});
+	let previous = "";
+	// Polling and change detection belong to the application. Clear this timer before input.close().
+	Timer.repeat(() => {
+		const sample = input.sample();
+		const { time: _time, ...values } = sample;
+		const current = JSON.stringify(values);
+		if (current === previous) return;
+		previous = current;
+		for (let index = 0; index < sample.angles.length; index++) {
+			input.setLed(index, { r: 0, g: Math.round(((sample.angles[index] ?? 0) / 4095) * 64), b: 0 });
 		}
-	}
-
-	angle8.onChanged = ({ angles, switchOn }) => {
-		trace(`[8Angle] angles=${angles.join(",")}\tswitch=${switchOn}\n`);
-	};
-
-	angle8.onAngleChanged = (angle, value) => {
-		trace(`[8Angle] angle=${angle}\tvalue=${value}\n`);
-		{
-			const led = angle8.leds[angle];
-			if (led) {
-				led.brightness = 77;
-				led.color = { r: value >> 4, g: 255 - (value >> 4), b: 0 };
-			}
-		}
-	};
-
-	angle8.onSwitchChanged = (on) => {
-		trace(`[8Angle] switch=${on}\n`);
-		{
-			const led = angle8.leds[Angle8.SWITCH_LED];
-			if (led) {
-				led.brightness = 77;
-				led.color = { r: on ? 255 : 0, g: 0, b: on ? 0 : 64 };
-			}
-		}
-	};
+		input.setLed(8, { r: sample.switchOn ? 0 : 64, g: sample.switchOn ? 64 : 0, b: 0 });
+		trace(`[Angle8] ${current}\n`);
+	}, 30);
 }

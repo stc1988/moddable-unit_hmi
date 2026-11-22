@@ -3,39 +3,46 @@
 The TypeScript driver in `src/drivers/unit/byteswitch` supports the M5Stack Unit ByteSwitch's eight toggle switches and
 nine RGB LEDs over I2C.
 
-The defaults use Port A on the selected Moddable device, address `0x46`, and a 400 kHz bus. Pass `data`, `clock`,
-`address`, or `hz` for another compatible configuration. The `io` option accepts an I2C-compatible constructor for
-alternate I/O providers or testing.
+IO and wiring overrides are optional. With `{}`, the driver uses `device.io.SMBus` and
+`device.i2c.default` pins. Address defaults to `0x46` and frequency to `400_000` Hz.
+Pass `sensor: { io?, data?, clock?, address?, hz?, ... }` to override only the fields needed.
+Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchanged.
 
 ## Basic usage
 
 ```ts
 import ByteSwitch from "unit/byteswitch";
+import Timer from "timer";
 
-const byteSwitch = new ByteSwitch();
+const input = new ByteSwitch({});
+const timer = Timer.repeat(() => {
+	const sample = input.sample();
+	trace(`${JSON.stringify(sample)}\n`);
+}, 30);
 
-byteSwitch.onChanged = ({ switches }) => {
-	trace(`switch mask: 0x${switches.toString(16)}\n`);
-};
-
-byteSwitch.onSwitchChanged = (switchIndex, on) => {
-	byteSwitch.setLed(switchIndex, { r: on ? 255 : 0, g: on ? 128 : 0, b: 0 });
-};
+// When finished, clear the application's timer before releasing the driver:
+// Timer.clear(timer);
+// input.close(); // or input[Symbol.dispose]()
 ```
 
-## Switches and callbacks
+## Common sensor API
 
-- `read()` returns `{ switches }`, where bit 0 through bit 7 represent switches 0 through 7. A set bit means that the
-  corresponding switch is on.
-- `readSwitches()` returns the switch bit mask directly.
-- `readSwitch(switchIndex)` reads an individual switch register and returns its on/off state.
-- `onChanged(state)` runs for the first sample and whenever the switch mask changes.
-- `onSwitchChanged(switchIndex, on)` runs once for each transition after the initial sample. If several switches change in
-  one sample, callbacks run in ascending switch order.
+`sample()` returns a fresh `{ switches, time }` object. `time` records host capture time in milliseconds since the Unix
+epoch. Values are read when requested; there is no cached sample or internal polling timer. Multiple register reads in a
+sample are sequential, so the snapshot is not a hardware-atomic transaction.
 
-Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
-`30` milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases
-the I2C resource.
+`configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
+omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
+provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
+and change detection belong to the caller. See [architecture and migration](../architecture.md).
+
+`target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
+`close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
+from construction, reads, and configuration propagate synchronously.
+
+## Configuration and initialization
+
+`configure({ ledMode: 0 | 1 })` selects manual or input-linked LED mode; `configuration.ledMode` reports the hardware setting. Construction restores manual mode, brightness `255`, black LEDs, black input-off colors, and white input-on colors. This does not save settings to flash.
 
 ## RGB LEDs
 
@@ -52,20 +59,14 @@ LED indices are `0` through `8`; LEDs 0 through 7 correspond to the switches and
 
 - The firmware protocol defines an IRQ mode that repurposes the STM32's SWDIO (PA13) programming signal. SWDIO is
   available only on the internal SWD programming pads and is not routed to either Grove connector. The driver therefore
-  does not expose IRQ configuration and detects switch changes by polling.
+  does not expose IRQ configuration; the application polls for switch changes.
 - `saveSettings()` writes the supported brightness, mode, automatic colors, and address configuration to flash.
   Call it only when persistence is intended to avoid unnecessary flash writes.
 - `getFirmwareVersion()` reads the firmware version.
-- `getI2CAddress()` reads the configured address. `setI2CAddress(address)` accepts `0x01` through `0x7f` and reconnects
-  the driver at the new address. Use `saveSettings()` if the new address must survive a restart.
+- `getI2CAddress()` reads the configured address. `setI2CAddress(address)` accepts `0x01` through `0x7f` and programs the device address. Use `saveSettings()` if the new address must survive a restart.
 
-Polling failures are written to the Moddable debug channel without stopping the timer. Direct method calls propagate I/O
-errors to the caller.
-
-## Exported types
-
-The module exports `ByteSwitchOptions`, `ByteSwitchIO`, `ByteSwitchIOInstance`, `ByteSwitchState`,
-`ByteSwitchLedMode`, `ByteSwitchChangedCallback`, and `ByteSwitchSwitchChangedCallback` for TypeScript applications.
+The IO connection itself is fixed for the lifetime of an instance. After `setI2CAddress`, call `close()` and create a new
+instance with `sensor.address` set to the new address before making further device calls.
 
 ## Common LED objects
 

@@ -1,9 +1,16 @@
+import Timer from "timer";
 import Angle from "unit/angle";
 
 export async function main(): Promise<void> {
-	const angle = new Angle({ deadband: 4 });
-
-	angle.onChanged = ({ raw, position }) => {
-		trace(`[Angle] raw=${raw}\tposition=${position.toFixed(3)}\n`);
-	};
+	const input = new Angle({});
+	let previous = "";
+	// Polling and change detection belong to the application. Clear this timer before input.close().
+	Timer.repeat(() => {
+		const sample = input.sample();
+		const { time: _time, ...values } = sample;
+		const current = JSON.stringify(values);
+		if (current === previous) return;
+		previous = current;
+		trace(`[Angle] ${current}\n`);
+	}, 30);
 }

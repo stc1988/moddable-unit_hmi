@@ -3,43 +3,46 @@
 The TypeScript driver in `src/drivers/unit/8angle` supports the M5Stack Unit 8Angle's eight potentiometers, physical
 toggle switch, and nine RGB LEDs over I2C.
 
-The defaults use Port A on the selected Moddable device, address `0x43`, and a 400 kHz bus. Pass `data`, `clock`,
-`address`, or `hz` for another compatible configuration. The `io` option accepts an I2C-compatible constructor for
-alternate I/O providers or testing.
+IO and wiring overrides are optional. With `{}`, the driver uses `device.io.SMBus` and
+`device.i2c.default` pins. Address defaults to `0x43` and frequency to `400_000` Hz.
+Pass `sensor: { io?, data?, clock?, address?, hz?, ... }` to override only the fields needed.
+Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchanged.
 
 ## Basic usage
 
 ```ts
 import Angle8 from "unit/8angle";
+import Timer from "timer";
 
-const angle8 = new Angle8({ deadband: 8 });
+const input = new Angle8({});
+const timer = Timer.repeat(() => {
+	const sample = input.sample();
+	trace(`${JSON.stringify(sample)}\n`);
+}, 30);
 
-angle8.onChanged = ({ angles, switchOn }) => {
-	trace(`angles=${angles.join(",")} switch=${switchOn}\n`);
-};
-
-angle8.onAngleChanged = (angle, value) => {
-	angle8.setLed(angle, value >> 4, 255 - (value >> 4), 0, 30);
-};
+// When finished, clear the application's timer before releasing the driver:
+// Timer.clear(timer);
+// input.close(); // or input[Symbol.dispose]()
 ```
 
-## Inputs and callbacks
+## Common sensor API
 
-- `read()` returns `{ angles, switchOn }`. `angles` contains the raw 12-bit values for potentiometers 0 through 7.
-- `readAngles()` reads all eight potentiometers. Pass `8` to return the device's 8-bit values instead.
-- `readAngle(angle)` reads one potentiometer. Pass `8` as the second argument for its 8-bit value.
-- `isSwitchOn()` reads the physical toggle switch.
-- `onChanged(state)` runs for the first sample, when any potentiometer moves by more than `deadband`, or when the switch
-  changes.
-- `onAngleChanged(angle, value)` runs for each potentiometer transition after the initial sample.
-- `onSwitchChanged(on)` runs when the switch changes after the initial sample.
+`sample()` returns a fresh `{ angles, switchOn, time }` object. `time` records host capture time in milliseconds since the Unix
+epoch. Values are read when requested; there is no cached sample or internal polling timer. Multiple register reads in a
+sample are sequential, so the snapshot is not a hardware-atomic transaction.
 
-If multiple potentiometers change in one sample, `onAngleChanged` runs in ascending channel order. `deadband` uses native
-12-bit ADC units and defaults to `0`.
+`configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
+omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
+provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
+and change detection belong to the caller. See [architecture and migration](../architecture.md).
 
-Assigning any callback starts polling automatically. Clearing all callbacks stops it. `pollingInterval` defaults to `30`
-milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases the
-I2C resource.
+`target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
+`close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
+from construction, reads, and configuration propagate synchronously.
+
+## Configuration and initialization
+
+There are currently no sensor configuration properties. `configure({})` is valid; unknown properties are ignored. Construction clears the LEDs.
 
 ## RGB LEDs
 
@@ -55,16 +58,13 @@ switch.
 
 - `getFirmwareVersion()` reads the firmware version.
 - `getI2CAddress()` reads the configured address.
-- `setI2CAddress(address)` accepts `0x01` through `0x7f`, changes the device address, and reconnects the driver.
+- `setI2CAddress(address)` accepts `0x01` through `0x7f`, changes the device address, and programs the device address.
 
-Polling failures are written to the Moddable debug channel without stopping the timer. Direct method calls propagate I/O
-errors to the caller.
-
-## Exported types
-
-The module exports `Angle8Options`, `Angle8IO`, `Angle8IOInstance`, `Angle8State`, `Angle8Color`, `Angle8Resolution`,
-`Angle8ChangedCallback`, `Angle8AngleChangedCallback`, and `Angle8SwitchChangedCallback` for TypeScript applications.
+The IO connection itself is fixed for the lifetime of an instance. After `setI2CAddress`, call `close()` and create a new
+instance with `sensor.address` set to the new address before making further device calls.
 
 ## Common LED objects
 
 See [Common LED interface](../led.md) for `leds[index]`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.
+
+`angles` contains eight raw 12-bit readings. `readAngle(index, resolution?)` and `readAngles(resolution?)` also accept 8-bit resolution.
