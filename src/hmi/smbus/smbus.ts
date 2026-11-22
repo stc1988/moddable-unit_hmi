@@ -45,8 +45,8 @@ export class SMBusDevice<Bus extends SMBusInstance> {
 	protected constructor(options: SMBusDeviceOptions<SMBusIO<Bus>>, defaults: SMBusDeviceDefaults) {
 		this.#IO = options.io ?? (SMBus as unknown as SMBusIO<Bus>);
 		this.#options = {
-			data: options.data ?? defaults.data ?? device.I2C.default.data,
-			clock: options.clock ?? defaults.clock ?? device.I2C.default.clock,
+			data: options.data ?? defaults.data ?? device.i2c.default.data,
+			clock: options.clock ?? defaults.clock ?? device.i2c.default.clock,
 			hz: integerInRange(options.hz ?? defaults.hz, "hz", 1, Number.MAX_SAFE_INTEGER),
 		};
 		this.#name = defaults.name;

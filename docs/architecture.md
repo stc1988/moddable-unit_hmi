@@ -42,6 +42,8 @@ I/O without changing product logic. The corresponding Moddable I/O implementatio
 provides `SMBusDevice` as the base class for resolving bus pins, frequency, address, and injected I/O; it also owns
 connection replacement, active-resource access, address changes, and close handling across the I2C drivers.
 Its internal `SMBusOptions` type is derived directly from the `embedded:io/smbus` constructor in `@moddable/typings`.
+Default bus pins come from `device.i2c.default`; MiniJoyC uses `device.i2c.hat`. These names require a current Moddable
+SDK host with lowercase `device.i2c` providers, matching `@moddable/typings` 10.
 
 8Angle and 8Encoder expose product-specific input controllers for their multi-channel transitions. ByteButton and
 ByteSwitch adapt the shared BytePanel bit-field input controller to product-specific callback names. These controllers

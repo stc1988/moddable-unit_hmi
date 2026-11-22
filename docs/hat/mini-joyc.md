@@ -23,7 +23,7 @@ joystick.onButtonChanged = (pressed) => {
 ## Constructor options
 
 - `address` sets the 7-bit I2C address and defaults to `0x54`.
-- `data` and `clock` select the I2C pins. They default to `device.I2C.hat`.
+- `data` and `clock` select the I2C pins. They default to `device.i2c.hat`.
 - `hz` sets the I2C bus speed and defaults to `200_000`.
 - `io` provides the I2C-compatible I/O constructor.
 - `readMode` selects `"adc"`, `"pos8"`, or `"pos10"` and defaults to `"pos8"`.

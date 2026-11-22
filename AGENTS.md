@@ -70,10 +70,10 @@ mcrun -dl -m -p <device>
 
 `<device>`には製品形状に応じて次のプラットフォームを指定します。
 
-| Product category | `<device>` |
-| --- | --- |
-| Unit | `esp32/m5stack_cores3` |
-| HAT | `esp32/m5stick_cplus` |
+| Product category | `<device>`             |
+| ---------------- | ---------------------- |
+| Unit             | `esp32/m5stack_cores3` |
+| HAT              | `esp32/m5stick_cplus`  |
 
 動作しない場合は、必要に応じて一時的なログを追加し、初期化、バス通信、レジスタ読み書き、イベント通知などのどこまで動作しているかを段階的に切り分けてください。
 

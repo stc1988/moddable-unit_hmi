@@ -5,9 +5,9 @@ potentiometer with a 0–2500 mV analog output.
 
 The default targets the analog input on Port B of M5Stack CoreS3:
 
-| Signal | CoreS3 GPIO |
-| --- | --- |
-| Analog output (white wire) | 8 |
+| Signal                     | CoreS3 GPIO |
+| -------------------------- | ----------- |
+| Analog output (white wire) | 8           |
 
 Pass `sensor: { pin }` to the constructor when using another controller. The yellow wire is not connected by Unit Angle.
 `sensor.io` can inject another analog I/O constructor; Moddable's `embedded:io/analog` implementation is the default.

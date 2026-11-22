@@ -4,10 +4,10 @@ The TypeScript driver in `src/drivers/unit/fader` supports the M5Stack Unit Fade
 
 The defaults target Port B on M5Stack CoreS3:
 
-| Signal | CoreS3 GPIO |
-| --- | --- |
-| RGB data (yellow wire) | 9 |
-| Analog input (white wire) | 8 |
+| Signal                    | CoreS3 GPIO |
+| ------------------------- | ----------- |
+| RGB data (yellow wire)    | 9           |
+| Analog input (white wire) | 8           |
 
 Pass `sensor: { pin }` and `leds: { pin }` to the constructor when using another controller. For example, the original
 M5Stack Core uses GPIO 36 and GPIO 26 respectively. `sensor.io` and `leds.io` can inject compatible I/O constructors;
@@ -33,14 +33,14 @@ The shared host in `examples/manifest.json` includes the Moddable SDK NeoPixel n
 The serial chain runs up the right column and back down the left column. The coordinate mapping hides this reversal:
 
 | Level | Right index | Left index |
-| --- | --- | --- |
-| 0 | 0 | 13 |
-| 1 | 1 | 12 |
-| 2 | 2 | 11 |
-| 3 | 3 | 10 |
-| 4 | 4 | 9 |
-| 5 | 5 | 8 |
-| 6 | 6 | 7 |
+| ----- | ----------- | ---------- |
+| 0     | 0           | 13         |
+| 1     | 1           | 12         |
+| 2     | 2           | 11         |
+| 3     | 3           | 10         |
+| 4     | 4           | 9          |
+| 5     | 5           | 8          |
+| 6     | 6           | 7          |
 
 ```ts
 import Fader from "unit/fader";
@@ -50,7 +50,7 @@ const fader = new Fader({ deadband: 4, brightness: 128 });
 fader.onChanged = ({ raw, position }) => {
 	const lit = Math.round(position * Fader.LEVEL_COUNT);
 	for (let level = 0; level < Fader.LEVEL_COUNT; level++) {
-	fader.setLevel(level, { r: 0, g: level < lit ? 128 : 0, b: level < lit ? 255 : 0 }, false);
+		fader.setLevel(level, { r: 0, g: level < lit ? 128 : 0, b: level < lit ? 255 : 0 }, false);
 	}
 	fader.show();
 	trace(`raw=${raw}, position=${position}\n`);

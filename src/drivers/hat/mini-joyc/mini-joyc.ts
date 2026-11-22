@@ -118,7 +118,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	readMode: MiniJoyCReadMode;
 
 	constructor(options: MiniJoyCOptions = {}) {
-		const hat = (device.I2C as typeof device.I2C & { hat: I2COptions }).hat;
+		const hat = (device.i2c as typeof device.i2c & { hat: I2COptions }).hat;
 
 		super(options, {
 			address: MiniJoyC.DEFAULT_ADDRESS,
