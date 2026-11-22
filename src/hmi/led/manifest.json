@@ -1,4 +1,7 @@
 {
 	"include": ["../util/manifest.json"],
-	"modules": { "hmi/led": "./led", "timer": "$(MODDABLE)/typings/timer" }
+	"modules": {
+		"hmi/led": "./led",
+		"timer": "$(MODDABLE)/typings/timer"
+	}
 }

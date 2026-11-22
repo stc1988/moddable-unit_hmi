@@ -1,7 +1,16 @@
 import Led, { LedCollection } from "hmi/led";
-import PollingInput, { type InputSource, type PollingInputOptions } from "hmi/polling";
-import { type I2COptions, SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
-import { callbackOrNull, integerInRange, type RGBColor } from "hmi/util";
+import { assertOpen, ownResource } from "hmi/peripheral";
+import {
+	busFor,
+	changeAddress,
+	type I2COptions,
+	readAddress,
+	SMBusDevice,
+	type SMBusDeviceOptions,
+	type SMBusInstance,
+	type SMBusIO,
+} from "hmi/smbus";
+import { integerInRange, type RGBColor } from "hmi/util";
 
 export type BytePanelI2COptions = I2COptions;
 
@@ -15,15 +24,6 @@ export interface BytePanelIOInstance extends SMBusInstance {
 export type BytePanelIO<Bus extends BytePanelIOInstance = BytePanelIOInstance> = SMBusIO<Bus>;
 
 export type BytePanelOptions<IO extends BytePanelIO = BytePanelIO> = SMBusDeviceOptions<IO>;
-
-export interface BytePanelInputOptions<State> {
-	pollingInterval?: number;
-	onChanged?: BytePanelChangedCallback<State>;
-	onInputChanged?: BytePanelInputChangedCallback;
-}
-
-export type BytePanelChangedCallback<State> = (state: State) => void;
-export type BytePanelInputChangedCallback = (index: number, on: boolean) => void;
 
 const REGISTER = {
 	INPUTS: 0x00,
@@ -62,100 +62,96 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 
 	protected constructor(options: BytePanelOptions<BytePanelIO<Bus>>, defaultAddress: number, name: string) {
 		super(options, { address: defaultAddress, hz: DEFAULT_HZ, name });
+		try {
+			ownResource(this, this.leds);
+			this.configure({ ledMode: 0 });
+			for (let index = 0; index < LED_COUNT; index++) this.setLedBrightness(index, 255);
+			this.leds.color = { r: 0, g: 0, b: 0 };
+			for (let index = 0; index < INPUT_COUNT; index++) {
+				setInputLed(this, index, false, { r: 0, g: 0, b: 0 });
+				setInputLed(this, index, true, { r: 255, g: 255, b: 255 });
+			}
+			this.getFirmwareVersion();
+		} catch (error) {
+			this.close();
+			throw error;
+		}
 	}
 
-	close(): void {
-		this.leds.close();
-		super.close();
+	configure(options: { ledMode?: 0 | 1 }): void {
+		super.configure(options);
+		if ("ledMode" in options)
+			busFor(this).writeUint8(REGISTER.LED_MODE, integerInRange(options.ledMode as number, "ledMode", 0, 1));
 	}
-
-	protected readInputs(activeLow: boolean): number {
-		const inputs = this.activeBus.readUint8(REGISTER.INPUTS) & 0xff;
-		return activeLow ? ~inputs & 0xff : inputs;
-	}
-
-	protected readInput(index: number, activeLow: boolean): boolean {
-		const value = this.activeBus.readUint8(REGISTER.INPUT_VALUES + BytePanel.#inputIndex(index));
-		return activeLow ? value === 0 : value !== 0;
+	get configuration(): { interrupt: boolean; ledMode: 0 | 1 } {
+		assertOpen(this);
+		return { ...super.configuration, ledMode: busFor(this).readUint8(REGISTER.LED_MODE) === 1 ? 1 : 0 };
 	}
 
 	setLedBrightness(led: number, brightness: number): void {
-		this.activeBus.writeUint8(
+		assertOpen(this);
+		busFor(this).writeUint8(
 			REGISTER.LED_BRIGHTNESS + BytePanel.#ledIndex(led),
 			BytePanel.#byte(brightness, "brightness"),
 		);
 	}
 
 	getLedBrightness(led: number): number {
-		return this.activeBus.readUint8(REGISTER.LED_BRIGHTNESS + BytePanel.#ledIndex(led)) & 0xff;
+		assertOpen(this);
+		return busFor(this).readUint8(REGISTER.LED_BRIGHTNESS + BytePanel.#ledIndex(led)) & 0xff;
 	}
 
 	setLed(led: number, color: RGBColor): void {
+		assertOpen(this);
 		this.#writeColor(REGISTER.LED_RGB888 + BytePanel.#ledIndex(led) * 4, color);
 	}
 
 	getLed(led: number): RGBColor {
+		assertOpen(this);
 		return this.#readColor(REGISTER.LED_RGB888 + BytePanel.#ledIndex(led) * 4);
 	}
 
 	setLedCompact(led: number, color: RGBColor): void {
+		assertOpen(this);
 		const red = BytePanel.#byte(color.r, "r");
 		const green = BytePanel.#byte(color.g, "g");
 		const blue = BytePanel.#byte(color.b, "b");
-		this.activeBus.writeUint8(
+		busFor(this).writeUint8(
 			REGISTER.LED_RGB233 + BytePanel.#ledIndex(led),
 			(red & 0xc0) | ((green & 0xe0) >> 2) | ((blue & 0xe0) >> 5),
 		);
 	}
 
-	protected setInputLed(index: number, on: boolean, color: RGBColor): void {
-		const base = on ? REGISTER.INPUT_ON_RGB888 : REGISTER.INPUT_OFF_RGB888;
-		this.#writeColor(base + BytePanel.#inputIndex(index) * 4, color);
-	}
-
-	protected getInputLed(index: number, on: boolean): RGBColor {
-		const base = on ? REGISTER.INPUT_ON_RGB888 : REGISTER.INPUT_OFF_RGB888;
-		return this.#readColor(base + BytePanel.#inputIndex(index) * 4);
-	}
-
-	protected setLedModeValue(mode: number): void {
-		this.activeBus.writeUint8(REGISTER.LED_MODE, integerInRange(mode, "mode", 0, 1));
-	}
-
-	protected getLedModeValue(): 0 | 1 {
-		return this.activeBus.readUint8(REGISTER.LED_MODE) === 1 ? 1 : 0;
-	}
-
 	saveSettings(): void {
-		this.activeBus.writeUint8(REGISTER.SAVE_TO_FLASH, 1);
+		assertOpen(this);
+		busFor(this).writeUint8(REGISTER.SAVE_TO_FLASH, 1);
 	}
 
 	getFirmwareVersion(): number {
-		return this.activeBus.readUint8(REGISTER.FIRMWARE_VERSION) & 0xff;
+		assertOpen(this);
+		return busFor(this).readUint8(REGISTER.FIRMWARE_VERSION) & 0xff;
 	}
 
 	getI2CAddress(): number {
-		return this.readAddress(REGISTER.I2C_ADDRESS);
+		assertOpen(this);
+		return readAddress(this, REGISTER.I2C_ADDRESS);
 	}
 
 	setI2CAddress(address: number): void {
-		this.changeAddress(REGISTER.I2C_ADDRESS, address);
+		assertOpen(this);
+		changeAddress(this, REGISTER.I2C_ADDRESS, address);
 	}
 
 	#writeColor(register: number, color: RGBColor): void {
-		this.activeBus.writeBuffer(
+		busFor(this).writeBuffer(
 			register,
 			Uint8Array.of(BytePanel.#byte(color.b, "b"), BytePanel.#byte(color.g, "g"), BytePanel.#byte(color.r, "r"), 0),
 		);
 	}
 
 	#readColor(register: number): RGBColor {
-		const data = new DataView(this.activeBus.readBuffer(register, 4));
+		const data = new DataView(busFor(this).readBuffer(register, 4));
 		return { r: data.getUint8(2), g: data.getUint8(1), b: data.getUint8(0) };
-	}
-
-	static #inputIndex(value: number): number {
-		return integerInRange(value, "input", 0, INPUT_COUNT - 1);
 	}
 
 	static #ledIndex(value: number): number {
@@ -167,101 +163,32 @@ export default class BytePanel<Bus extends BytePanelIOInstance = BytePanelIOInst
 	}
 }
 
-export class BytePanelInput<State> {
-	#target: object;
-	#polling: PollingInput<State>;
-	#selectInputs: (state: State) => number;
-	#onChanged: BytePanelChangedCallback<State> | null;
-	#onInputChanged: BytePanelInputChangedCallback | null;
-	#lastInputs: number | undefined;
-	#closed = false;
-	#name: string;
-
-	constructor(
-		target: object,
-		source: InputSource<State>,
-		name: string,
-		selectInputs: (state: State) => number,
-		options: BytePanelInputOptions<State> = {},
-	) {
-		this.#target = target;
-		this.#name = name;
-		this.#selectInputs = selectInputs;
-		this.#onChanged = callbackOrNull(options.onChanged, "onChanged");
-		this.#onInputChanged = callbackOrNull(options.onInputChanged, "onInputChanged");
-		const pollingOptions: PollingInputOptions<State> = {
-			changed: (state, previous) => selectInputs(state) !== selectInputs(previous),
-		};
-		if (options.pollingInterval !== undefined) pollingOptions.pollingInterval = options.pollingInterval;
-		this.#polling = new PollingInput(this, source, name, pollingOptions);
-		this.#updatePollingState();
-	}
-
-	close(): void {
-		if (this.#closed) return;
-		this.#polling.close();
-		this.#closed = true;
-		this.#onChanged = null;
-		this.#onInputChanged = null;
-	}
-
-	start(): void {
-		const wasRunning = this.#polling.running;
-		this.#polling.start();
-		if (!wasRunning) this.#lastInputs = undefined;
-	}
-
-	stop(): void {
-		this.#polling.stop();
-	}
-
-	set pollingInterval(value: number) {
-		this.#polling.pollingInterval = value;
-	}
-
-	get pollingInterval(): number {
-		return this.#polling.pollingInterval;
-	}
-
-	set onChanged(callback: BytePanelChangedCallback<State> | null | undefined) {
-		const next = callbackOrNull(callback, "onChanged");
-		if (this.#closed && next) throw new Error(`${this.#name} input is closed`);
-		if (next !== this.#onChanged) this.#polling.onChanged = null;
-		this.#onChanged = next;
-		this.#updatePollingState();
-	}
-
-	get onChanged(): BytePanelChangedCallback<State> | null {
-		return this.#onChanged;
-	}
-
-	set onInputChanged(callback: BytePanelInputChangedCallback | null | undefined) {
-		const next = callbackOrNull(callback, "onInputChanged");
-		if (this.#closed && next) throw new Error(`${this.#name} input is closed`);
-		this.#onInputChanged = next;
-		this.#updatePollingState();
-	}
-
-	get onInputChanged(): BytePanelInputChangedCallback | null {
-		return this.#onInputChanged;
-	}
-
-	#updatePollingState(): void {
-		const callback = this.#onChanged || this.#onInputChanged ? this.#handleChange : null;
-		if (callback && !this.#polling.onChanged) this.#lastInputs = undefined;
-		this.#polling.onChanged = callback;
-	}
-
-	#handleChange(state: State): void {
-		const inputs = this.#selectInputs(state);
-		const changed = this.#lastInputs === undefined ? 0 : inputs ^ this.#lastInputs;
-		this.#onChanged?.call(this.#target, state);
-		if (changed && this.#onInputChanged) {
-			for (let index = 0; index < INPUT_COUNT; index++) {
-				const bit = 1 << index;
-				if (changed & bit) this.#onInputChanged.call(this.#target, index, Boolean(inputs & bit));
-			}
-		}
-		this.#lastInputs = inputs;
-	}
+export function readInputs(instance: BytePanel, activeLow: boolean): number {
+	const inputs = busFor(instance).readUint8(REGISTER.INPUTS) & 0xff;
+	return activeLow ? ~inputs & 0xff : inputs;
+}
+export function readInput(instance: BytePanel, index: number, activeLow: boolean): boolean {
+	const value = busFor(instance).readUint8(REGISTER.INPUT_VALUES + integerInRange(index, "input", 0, INPUT_COUNT - 1));
+	return activeLow ? value === 0 : value !== 0;
+}
+export function setInputLed(instance: BytePanel, index: number, on: boolean, color: RGBColor): void {
+	const register =
+		(on ? REGISTER.INPUT_ON_RGB888 : REGISTER.INPUT_OFF_RGB888) +
+		integerInRange(index, "input", 0, INPUT_COUNT - 1) * 4;
+	busFor(instance).writeBuffer(
+		register,
+		Uint8Array.of(
+			integerInRange(color.b, "b", 0, 255),
+			integerInRange(color.g, "g", 0, 255),
+			integerInRange(color.r, "r", 0, 255),
+			0,
+		),
+	);
+}
+export function getInputLed(instance: BytePanel, index: number, on: boolean): RGBColor {
+	const register =
+		(on ? REGISTER.INPUT_ON_RGB888 : REGISTER.INPUT_OFF_RGB888) +
+		integerInRange(index, "input", 0, INPUT_COUNT - 1) * 4;
+	const data = new DataView(busFor(instance).readBuffer(register, 4));
+	return { r: data.getUint8(2), g: data.getUint8(1), b: data.getUint8(0) };
 }

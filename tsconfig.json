@@ -14,17 +14,12 @@
 		"noUncheckedIndexedAccess": true,
 		"exactOptionalPropertyTypes": true,
 		"paths": {
-			"hmi/input/encoder": ["./src/hmi/input/encoder/encoderInput"],
 			"hmi/smbus": ["./src/hmi/smbus/smbus"],
 			"hmi/util": ["./src/hmi/util/util"],
 			"unit/byte-panel": ["./src/drivers/unit/byte-panel/bytePanel"],
 			"hmi/input/analog": ["./src/hmi/input/analog/analogInput"],
-			"hmi/polling": ["./src/hmi/polling/pollingInput"],
-			"hmi/input/joystick": ["./src/hmi/input/joystick/joystickInput"],
 			"unit/8angle": ["./src/drivers/unit/8angle/8angle"],
-			"unit/8angle/input": ["./src/drivers/unit/8angle/input"],
 			"unit/8encoder": ["./src/drivers/unit/8encoder/8encoder"],
-			"unit/8encoder/input": ["./src/drivers/unit/8encoder/input"],
 			"unit/angle": ["./src/drivers/unit/angle/angle"],
 			"unit/bytebutton": ["./src/drivers/unit/bytebutton/bytebutton"],
 			"unit/byteswitch": ["./src/drivers/unit/byteswitch/byteswitch"],
@@ -69,7 +64,8 @@
 			"embedded:network/interface/*": ["./node_modules/@moddable/typings/embedded_network/interface/*"],
 			"embedded:storage/*": ["./node_modules/@moddable/typings/embedded/storage/*"],
 			"embedded:provider/*": ["./node_modules/@moddable/typings/embedded_provider/*"],
-			"hmi/led": ["./src/hmi/led/led"]
+			"hmi/led": ["./src/hmi/led/led"],
+			"hmi/peripheral": ["./src/hmi/peripheral/peripheral"]
 		},
 		"types": [
 			"./node_modules/@moddable/typings/xs",

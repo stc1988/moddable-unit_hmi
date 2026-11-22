@@ -1,7 +1,15 @@
 import Led, { LedCollection, scaleColor } from "hmi/led";
-import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
+import { assertOpen, ownResource } from "hmi/peripheral";
+import {
+	busFor,
+	changeAddress,
+	readAddress,
+	SMBusDevice,
+	type SMBusDeviceOptions,
+	type SMBusInstance,
+	type SMBusIO,
+} from "hmi/smbus";
 import { integerInRange, type RGBColor, signed32, signed32ToLittleEndian } from "hmi/util";
-import Encoder8Input from "unit/8encoder/input";
 
 export interface Encoder8IOInstance extends SMBusInstance {
 	readUint8(register: number): number;
@@ -21,18 +29,7 @@ export interface Encoder8State {
 	switchOn: boolean;
 }
 
-export interface Encoder8Options extends SMBusDeviceOptions<Encoder8IO> {
-	pollingInterval?: number;
-	onChanged?: Encoder8ChangedCallback;
-	onEncoderChanged?: Encoder8EncoderChangedCallback;
-	onButtonChanged?: Encoder8ButtonChangedCallback;
-	onSwitchChanged?: Encoder8SwitchChangedCallback;
-}
-
-export type Encoder8ChangedCallback = (state: Encoder8State) => void;
-export type Encoder8EncoderChangedCallback = (encoder: number, value: number) => void;
-export type Encoder8ButtonChangedCallback = (button: number, pressed: boolean) => void;
-export type Encoder8SwitchChangedCallback = (on: boolean) => void;
+export interface Encoder8Options extends SMBusDeviceOptions<Encoder8IO> {}
 
 // https://docs.m5stack.com/en/unit/8Encoder
 export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
@@ -69,62 +66,26 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 		I2C_ADDRESS: 0xff,
 	} as const;
 
-	#input: Encoder8Input;
-
-	set onChanged(callback: Encoder8ChangedCallback | null | undefined) {
-		this.#input.onChanged = callback;
-	}
-	get onChanged(): Encoder8ChangedCallback | null {
-		return this.#input.onChanged;
-	}
-	set onEncoderChanged(callback: Encoder8EncoderChangedCallback | null | undefined) {
-		this.#input.onEncoderChanged = callback;
-	}
-	get onEncoderChanged(): Encoder8EncoderChangedCallback | null {
-		return this.#input.onEncoderChanged;
-	}
-	set onButtonChanged(callback: Encoder8ButtonChangedCallback | null | undefined) {
-		this.#input.onButtonChanged = callback;
-	}
-	get onButtonChanged(): Encoder8ButtonChangedCallback | null {
-		return this.#input.onButtonChanged;
-	}
-	set onSwitchChanged(callback: Encoder8SwitchChangedCallback | null | undefined) {
-		this.#input.onSwitchChanged = callback;
-	}
-	get onSwitchChanged(): Encoder8SwitchChangedCallback | null {
-		return this.#input.onSwitchChanged;
-	}
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-	start(): void {
-		this.#input.start();
-	}
-	stop(): void {
-		this.#input.stop();
-	}
-
-	constructor(options: Encoder8Options = {}) {
-		super(options, { address: Encoder8.DEFAULT_ADDRESS, hz: Encoder8.DEFAULT_HZ, name: "8encoder" });
+	constructor(options: Encoder8Options) {
+		super(options, { address: Encoder8.DEFAULT_ADDRESS, hz: Encoder8.DEFAULT_HZ, name: "Encoder8" });
 		try {
-			this.#input = new Encoder8Input(this, this, options);
+			ownResource(this, this.leds);
+			this.resetEncoders();
+			this.leds.color = { r: 0, g: 0, b: 0 };
+			this.read();
 		} catch (error) {
-			super.close();
+			this.close();
 			throw error;
 		}
 	}
 
-	close(): void {
-		this.leds.close();
-		this.#input.close();
-		super.close();
+	sample(): Encoder8State & { time: number } {
+		assertOpen(this);
+		return { ...this.read(), time: Date.now() };
 	}
 
 	read(): Encoder8State {
+		assertOpen(this);
 		return {
 			encoders: this.readEncoders(),
 			buttons: this.readButtons(),
@@ -133,75 +94,88 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 	}
 
 	readEncoders(): number[] {
-		return Encoder8.#readSignedValues(this.activeBus.readBuffer(Encoder8.REGISTER.ENCODER, Encoder8.ENCODER_COUNT * 4));
+		assertOpen(this);
+		return Encoder8.#readSignedValues(busFor(this).readBuffer(Encoder8.REGISTER.ENCODER, Encoder8.ENCODER_COUNT * 4));
 	}
 
 	readEncoder(encoder: number): number {
-		const data = this.activeBus.readBuffer(Encoder8.REGISTER.ENCODER + Encoder8.#encoderIndex(encoder) * 4, 4);
+		assertOpen(this);
+		const data = busFor(this).readBuffer(Encoder8.REGISTER.ENCODER + Encoder8.#encoderIndex(encoder) * 4, 4);
 		return signed32(new DataView(data), 0);
 	}
 
 	setEncoder(encoder: number, value: number): void {
-		this.activeBus.writeBuffer(
+		assertOpen(this);
+		busFor(this).writeBuffer(
 			Encoder8.REGISTER.ENCODER + Encoder8.#encoderIndex(encoder) * 4,
 			signed32ToLittleEndian(value, "value"),
 		);
 	}
 
 	readIncrements(): number[] {
-		return Encoder8.#readSignedValues(
-			this.activeBus.readBuffer(Encoder8.REGISTER.INCREMENT, Encoder8.ENCODER_COUNT * 4),
-		);
+		assertOpen(this);
+		return Encoder8.#readSignedValues(busFor(this).readBuffer(Encoder8.REGISTER.INCREMENT, Encoder8.ENCODER_COUNT * 4));
 	}
 
 	readIncrement(encoder: number): number {
-		const data = this.activeBus.readBuffer(Encoder8.REGISTER.INCREMENT + Encoder8.#encoderIndex(encoder) * 4, 4);
+		assertOpen(this);
+		const data = busFor(this).readBuffer(Encoder8.REGISTER.INCREMENT + Encoder8.#encoderIndex(encoder) * 4, 4);
 		return signed32(new DataView(data), 0);
 	}
 
 	readEncoderChangeFlags(): number {
-		return this.activeBus.readUint8(Encoder8.REGISTER.ENCODER_CHANGE_FLAGS) & 0xff;
+		assertOpen(this);
+		return busFor(this).readUint8(Encoder8.REGISTER.ENCODER_CHANGE_FLAGS) & 0xff;
 	}
 
 	resetEncoder(encoder: number): void {
-		this.activeBus.writeUint8(Encoder8.REGISTER.RESET_COUNTER + Encoder8.#encoderIndex(encoder), 1);
+		assertOpen(this);
+		busFor(this).writeUint8(Encoder8.REGISTER.RESET_COUNTER + Encoder8.#encoderIndex(encoder), 1);
 	}
 
 	resetEncoders(): void {
-		this.activeBus.writeBuffer(Encoder8.REGISTER.RESET_COUNTER, Uint8Array.of(1, 1, 1, 1, 1, 1, 1, 1));
+		assertOpen(this);
+		busFor(this).writeBuffer(Encoder8.REGISTER.RESET_COUNTER, Uint8Array.of(1, 1, 1, 1, 1, 1, 1, 1));
 	}
 
 	readButtons(): number {
-		return ~this.activeBus.readUint8(Encoder8.REGISTER.BUTTONS) & 0xff;
+		assertOpen(this);
+		return ~busFor(this).readUint8(Encoder8.REGISTER.BUTTONS) & 0xff;
 	}
 
 	isButtonPressed(button: number): boolean {
-		return this.activeBus.readUint8(Encoder8.REGISTER.BUTTON + Encoder8.#buttonIndex(button)) === 0;
+		assertOpen(this);
+		return busFor(this).readUint8(Encoder8.REGISTER.BUTTON + Encoder8.#buttonIndex(button)) === 0;
 	}
 
 	readButtonToggleCounts(): number[] {
+		assertOpen(this);
 		return Array.from(
-			new Uint8Array(this.activeBus.readBuffer(Encoder8.REGISTER.BUTTON_TOGGLE_COUNT, Encoder8.BUTTON_COUNT)),
+			new Uint8Array(busFor(this).readBuffer(Encoder8.REGISTER.BUTTON_TOGGLE_COUNT, Encoder8.BUTTON_COUNT)),
 		);
 	}
 
 	isSwitchOn(): boolean {
-		return this.activeBus.readUint8(Encoder8.REGISTER.SWITCH) !== 0;
+		assertOpen(this);
+		return busFor(this).readUint8(Encoder8.REGISTER.SWITCH) !== 0;
 	}
 
 	setLed(led: number, color: RGBColor): void {
-		this.activeBus.writeBuffer(
+		assertOpen(this);
+		busFor(this).writeBuffer(
 			Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3,
 			Uint8Array.of(Encoder8.#byte(color.r, "r"), Encoder8.#byte(color.g, "g"), Encoder8.#byte(color.b, "b")),
 		);
 	}
 
 	getLed(led: number): RGBColor {
-		const data = new DataView(this.activeBus.readBuffer(Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3, 3));
+		assertOpen(this);
+		const data = new DataView(busFor(this).readBuffer(Encoder8.REGISTER.RGB_LED + Encoder8.#ledIndex(led) * 3, 3));
 		return { r: data.getUint8(0), g: data.getUint8(1), b: data.getUint8(2) };
 	}
 
 	setAllLeds(color: RGBColor): void {
+		assertOpen(this);
 		const red = Encoder8.#byte(color.r, "r");
 		const green = Encoder8.#byte(color.g, "g");
 		const blue = Encoder8.#byte(color.b, "b");
@@ -211,19 +185,22 @@ export default class Encoder8 extends SMBusDevice<Encoder8IOInstance> {
 			data[offset + 1] = green;
 			data[offset + 2] = blue;
 		}
-		this.activeBus.writeBuffer(Encoder8.REGISTER.RGB_LED, data);
+		busFor(this).writeBuffer(Encoder8.REGISTER.RGB_LED, data);
 	}
 
 	getFirmwareVersion(): number {
-		return this.activeBus.readUint8(Encoder8.REGISTER.FIRMWARE_VERSION) & 0xff;
+		assertOpen(this);
+		return busFor(this).readUint8(Encoder8.REGISTER.FIRMWARE_VERSION) & 0xff;
 	}
 
 	getI2CAddress(): number {
-		return this.readAddress(Encoder8.REGISTER.I2C_ADDRESS);
+		assertOpen(this);
+		return readAddress(this, Encoder8.REGISTER.I2C_ADDRESS);
 	}
 
 	setI2CAddress(address: number): void {
-		this.changeAddress(Encoder8.REGISTER.I2C_ADDRESS, address);
+		assertOpen(this);
+		changeAddress(this, Encoder8.REGISTER.I2C_ADDRESS, address);
 	}
 
 	static #readSignedValues(buffer: ArrayBuffer): number[] {

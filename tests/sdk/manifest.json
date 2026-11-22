@@ -1,0 +1,20 @@
+{
+	"include": [
+		"$(MODDABLE)/examples/manifest_base.json",
+		"../../src/drivers/unit/8angle",
+		"../../src/drivers/unit/8encoder",
+		"../../src/drivers/unit/angle",
+		"../../src/drivers/unit/bytebutton",
+		"../../src/drivers/unit/byteswitch",
+		"../../src/drivers/unit/encoder",
+		"../../src/drivers/unit/fader",
+		"../../src/drivers/unit/joystick",
+		"../../src/drivers/unit/joystick2",
+		"../../src/drivers/unit/scroll",
+		"../../src/drivers/hat/mini-joyc"
+	],
+	"modules": {
+		"*": "./main"
+	},
+	"strip": "[]"
+}

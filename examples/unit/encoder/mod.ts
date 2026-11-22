@@ -1,23 +1,19 @@
+import SMBus from "embedded:io/smbus";
+import Timer from "timer";
 import Encoder from "unit/encoder";
 
 export async function main(): Promise<void> {
-	const encoder = new Encoder();
-
-	encoder.leds.color = { r: 0, g: 0, b: 24 };
-
-	encoder.onChanged = ({ value, pressed }) => {
-		trace(`[Encoder] value=${value}\tpressed=${pressed}\n`);
-		{
-			const led = encoder.leds[0];
-			if (led) led.color = { r: value < 0 ? 64 : 0, g: value > 0 ? 64 : 0, b: value === 0 ? 24 : 0 };
-		}
-	};
-
-	encoder.onButtonChanged = (pressed) => {
-		trace(`[Encoder] button pressed: ${pressed}\n`);
-		{
-			const led = encoder.leds[1];
-			if (led) led.color = { r: pressed ? 64 : 0, g: pressed ? 64 : 0, b: pressed ? 64 : 24 };
-		}
-	};
+	const input = new Encoder({ sensor: { io: SMBus, data: 2, clock: 1 } });
+	let previous = "";
+	// Polling and change detection belong to the application. Clear this timer before input.close().
+	Timer.repeat(() => {
+		const sample = input.sample();
+		const { time: _time, ...values } = sample;
+		const current = JSON.stringify(values);
+		if (current === previous) return;
+		previous = current;
+		input.setLed(0, { r: sample.value < 0 ? 64 : 0, g: sample.value > 0 ? 64 : 0, b: 0 });
+		input.setLed(1, { r: sample.pressed ? 64 : 0, g: 0, b: 0 });
+		trace(`[Encoder] ${current}\n`);
+	}, 30);
 }

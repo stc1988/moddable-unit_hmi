@@ -1,5 +1,3 @@
-import PollingInput, { type InputSource, type PollingInputOptions } from "hmi/polling";
-
 export interface AnalogInputSample {
 	raw: number;
 	position: number;
@@ -9,6 +7,7 @@ export interface AnalogIOOptions {
 	pin: number;
 	resolution?: number;
 	format?: "number";
+	[key: string]: unknown;
 }
 
 export interface AnalogIOInstance {
@@ -24,14 +23,6 @@ export interface AnalogInputOptions extends AnalogIOOptions {
 	invert?: boolean;
 }
 
-export interface AnalogInputEventOptions<State extends AnalogInputSample = AnalogInputSample> {
-	pollingInterval?: number;
-	deadband?: number;
-	onChanged?: AnalogInputChangedCallback<State>;
-}
-
-export type AnalogInputChangedCallback<State extends AnalogInputSample = AnalogInputSample> = (sample: State) => void;
-
 export default class AnalogInput {
 	#io: AnalogIOInstance | undefined;
 	#invert: boolean;
@@ -39,7 +30,7 @@ export default class AnalogInput {
 	constructor(options: AnalogInputOptions) {
 		if (typeof options.io !== "function") throw new TypeError("io must be a constructor");
 		this.#invert = options.invert ?? false;
-		const ioOptions: AnalogIOOptions = { pin: options.pin };
+		const ioOptions: AnalogIOOptions = { ...options, pin: options.pin };
 		if (options.resolution !== undefined) ioOptions.resolution = options.resolution;
 		if (options.format !== undefined) ioOptions.format = options.format;
 		this.#io = new options.io(ioOptions);
@@ -64,56 +55,5 @@ export default class AnalogInput {
 		const maximum = 2 ** io.resolution - 1;
 		const position = raw / maximum;
 		return { raw, position: this.#invert ? 1 - position : position };
-	}
-}
-
-export class AnalogInputEvents<State extends AnalogInputSample = AnalogInputSample> {
-	#polling: PollingInput<State>;
-	#deadband: number;
-
-	constructor(target: object, source: InputSource<State>, name: string, options: AnalogInputEventOptions<State> = {}) {
-		this.#deadband = PollingInput.nonNegativeInteger(options.deadband ?? 0, "deadband");
-		const pollingOptions: PollingInputOptions<State> = {
-			changed: (sample, previous) => Math.abs(sample.raw - previous.raw) > this.#deadband,
-		};
-		if (options.pollingInterval !== undefined) pollingOptions.pollingInterval = options.pollingInterval;
-		if (options.onChanged !== undefined) pollingOptions.onChanged = options.onChanged;
-		this.#polling = new PollingInput(target, source, name, pollingOptions);
-	}
-
-	close(): void {
-		this.#polling.close();
-	}
-
-	start(): void {
-		this.#polling.start();
-	}
-
-	stop(): void {
-		this.#polling.stop();
-	}
-
-	set pollingInterval(value: number) {
-		this.#polling.pollingInterval = value;
-	}
-
-	get pollingInterval(): number {
-		return this.#polling.pollingInterval;
-	}
-
-	set deadband(value: number) {
-		this.#deadband = PollingInput.nonNegativeInteger(value, "deadband");
-	}
-
-	get deadband(): number {
-		return this.#deadband;
-	}
-
-	set onChanged(callback: AnalogInputChangedCallback<State> | null | undefined) {
-		this.#polling.onChanged = callback;
-	}
-
-	get onChanged(): AnalogInputChangedCallback<State> | null {
-		return this.#polling.onChanged;
 	}
 }

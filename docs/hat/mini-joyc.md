@@ -2,56 +2,63 @@
 
 The TypeScript driver in `src/drivers/hat/mini-joyc` supports the M5Stack HAT Mini JoyC. It reads the joystick and push button over I2C and controls the built-in RGB LED.
 
-The defaults use the HAT I2C port on M5StickC Plus, address `0x54`, and a 200 kHz bus. Pass `data`, `clock`, `address`, or `hz` when using another compatible configuration. The `io` option accepts an I2C-compatible constructor for alternate I/O providers or testing.
+Pass an explicit `sensor` IO constructor and connection options. The device address defaults to `0x54` and
+bus frequency to `200_000` Hz; `sensor.address` and `sensor.hz` override them. Pins and the I/O constructor have no defaults.
+Additional IO options such as `port`, `stop`, and `timeout` are forwarded to `sensor.io`.
 
 ## Basic usage
 
 ```ts
+import SMBus from "embedded:io/smbus";
 import MiniJoyC from "hat/mini-joyc";
+import Timer from "timer";
 
-const joystick = new MiniJoyC({ deadband: 2, readMode: "pos8" });
+const input = new MiniJoyC({ sensor: { io: SMBus, data: 0, clock: 26 } });
+const timer = Timer.repeat(() => {
+	const sample = input.sample();
+	trace(`${JSON.stringify(sample)}\n`);
+}, 30);
 
-joystick.onChanged = ({ x, y, pressed }) => {
-	trace(`x=${x}, y=${y}, pressed=${pressed}\n`);
-};
-
-joystick.onButtonChanged = (pressed) => {
-	joystick.setLed({ r: 0, g: pressed ? 128 : 0, b: pressed ? 255 : 0 });
-};
+// When finished, clear the application's timer before releasing the driver:
+// Timer.clear(timer);
+// input.close(); // or input[Symbol.dispose]()
 ```
 
-## Constructor options
+## Common sensor API
 
-- `address` sets the 7-bit I2C address and defaults to `0x54`.
-- `data` and `clock` select the I2C pins. They default to `device.i2c.hat`.
-- `hz` sets the I2C bus speed and defaults to `200_000`.
-- `io` provides the I2C-compatible I/O constructor.
-- `readMode` selects `"adc"`, `"pos8"`, or `"pos10"` and defaults to `"pos8"`.
-- `pollingInterval` sets the polling period in milliseconds and defaults to `30`.
-- `deadband` suppresses axis notifications until either axis differs from the last notified state by more than this many native units. It defaults to `0`.
-- `onChanged` and `onButtonChanged` install the initial callbacks and start polling automatically.
+`sample()` returns a fresh `{ x, y, pressed, time }` object. `time` records host capture time in milliseconds since the Unix
+epoch. Values are read when requested; there is no cached sample or internal polling timer. Multiple register reads in a
+sample are sequential, so the snapshot is not a hardware-atomic transaction.
 
-## Input
+`configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
+omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
+provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
+and change detection belong to the caller. See [architecture and migration](../architecture.md).
 
-- `read()` returns the current `{ x, y, pressed }` state using `readMode`.
-- `readXY(mode?)` returns `{ x, y }` using the supplied mode or the current `readMode`.
-- `readADC()` returns the two raw ADC readings.
-- `readPosition8Bit()` returns the two signed 8-bit position values.
-- `readPosition10Bit()` returns the two signed 10-bit position values as JavaScript numbers.
-- `isButtonPressed()` returns `true` while the joystick button is pressed.
+`target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
+`close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
+from construction, reads, and configuration propagate synchronously.
 
-Each method performs a new device read. In particular, `read()` reads the position and button separately. Use the returned state as a snapshot rather than assuming that both I2C transactions occurred atomically.
+## Configuration and initialization
 
-## Change callbacks
+`configure({ readMode: "adc" | "pos8" | "pos10" })` selects the sample representation. `configuration.readMode` reports the setting; the `readMode` accessor delegates to the same configuration. Construction defaults to `"pos8"`. Persistent calibration is device provisioning data and is preserved. Construction also clears the LED.
 
-Assigning either callback starts the internal polling timer. Clearing both callbacks stops it.
+## Product extensions
 
-- `onChanged(state)` runs for the first sample, when either axis moves by more than `deadband`, or when the button state changes.
-- `onButtonChanged(pressed)` runs on pressed and released transitions after the initial sample.
-
-The deadband comparison is made against the last state delivered to `onChanged`, so several small movements accumulate. `deadband` is expressed in the native units of the selected `readMode`.
-
-Use `read()` from an application-owned control loop when a state is required every frame or at a fixed rate. Change callbacks intentionally do not repeat while the joystick remains at the same position.
+- `read()`: returns `MiniJoyCState`.
+- `readXY(mode: MiniJoyCReadMode = this.readMode)`: returns `MiniJoyCPosition`.
+- `readADC()`: returns `MiniJoyCPosition`.
+- `readPosition8Bit()`: returns `MiniJoyCPosition`.
+- `readPosition10Bit()`: returns `MiniJoyCPosition`.
+- `isButtonPressed()`: returns `boolean`.
+- `setLed(color: RGBColor)`: returns `void`.
+- `readCalibration(index: MiniJoyCCalibrationIndex)`: returns `number`.
+- `readCalibrationValues()`: returns `MiniJoyCCalibration`.
+- `writeCalibration(index: MiniJoyCCalibrationIndex, value: number)`: returns `void`.
+- `writeCalibrationValues(values: MiniJoyCCalibration)`: returns `void`.
+- `getFirmwareVersion()`: returns `number`.
+- `getI2CAddress()`: returns `number`.
+- `setI2CAddress(address: number)`: returns `void`.
 
 ## RGB LED
 
@@ -80,26 +87,17 @@ Calibration values must be integers from `0` through `4095`. A calibration write
 
 - `getFirmwareVersion()` reads the firmware version register.
 - `getI2CAddress()` reads the configured I2C address.
-- `setI2CAddress(address)` writes an address from `0x01` through `0x7f`, closes the old I2C connection, and reconnects using the new address.
+- `setI2CAddress(address)` writes an address from `0x01` through `0x7f`, then requires the caller to close this instance and construct another at the new address.
 
 Changing the address modifies device configuration. Applications must use the new address when constructing later driver instances.
 
-## Polling and lifetime
-
-- `start()` starts polling explicitly.
-- `stop()` stops polling without closing the I2C connection.
-- `close()` stops polling and releases the I2C resource. It is safe to call more than once.
-
-Polling failures are written to the Moddable debug channel and do not stop the timer. Calls made directly through the public read or write methods throw their I/O errors to the caller.
-
-The built-in 200 mAh battery powers the HAT, but the published HAT Mini JoyC I2C protocol has no battery-status register. The driver therefore does not expose battery telemetry.
-
-## Exported types
-
-The module exports `MiniJoyCOptions`, `MiniJoyCIO`, `MiniJoyCPosition`, `MiniJoyCState`, `MiniJoyCReadMode`,
-`MiniJoyCCalibration`, `MiniJoyCCalibrationIndex`, `MiniJoyCChangedCallback`, and `MiniJoyCButtonChangedCallback` for
-TypeScript applications.
+The IO connection itself is fixed for the lifetime of an instance. After `setI2CAddress`, call `close()` and create a new
+instance with `sensor.address` set to the new address before making further device calls.
 
 ## Common LED objects
 
 See [Common LED interface](../led.md) for `led`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.
+
+`readADC()` returns raw ADC values. `readPosition8Bit()` returns signed 8-bit positions, while
+`readPosition10Bit()` returns signed 10-bit positions decoded from little-endian 16-bit registers.
+The built-in battery has no published status register; battery telemetry is not exposed.

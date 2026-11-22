@@ -1,10 +1,6 @@
-import EncoderInput, {
-	type EncoderInputOptions,
-	type EncoderButtonChangedCallback as InputButtonChangedCallback,
-	type EncoderChangedCallback as InputChangedCallback,
-} from "hmi/input/encoder";
 import Led, { LedCollection, scaleColor } from "hmi/led";
-import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
+import { assertOpen, ownResource } from "hmi/peripheral";
+import { busFor, SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
 import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 
 export interface EncoderIOInstance extends SMBusInstance {
@@ -26,10 +22,7 @@ export interface EncoderState {
 
 export type EncoderMode = 0 | 1;
 
-export interface EncoderOptions extends EncoderInputOptions<EncoderState>, SMBusDeviceOptions<EncoderIO> {}
-
-export type EncoderChangedCallback = InputChangedCallback<EncoderState>;
-export type EncoderButtonChangedCallback = InputButtonChangedCallback;
+export interface EncoderOptions extends SMBusDeviceOptions<EncoderIO> {}
 
 // https://docs.m5stack.com/en/unit/encoder
 export default class Encoder extends SMBusDevice<EncoderIOInstance> {
@@ -62,50 +55,40 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance> {
 		RESET: 0x40,
 	} as const;
 
-	#input: EncoderInput<EncoderState>;
-
-	set onChanged(callback: EncoderChangedCallback | null | undefined) {
-		this.#input.onChanged = callback;
+	#mode: EncoderMode = 0;
+	configure(options: { mode?: EncoderMode }): void {
+		super.configure(options);
+		if ("mode" in options) {
+			const mode = integerInRange(options.mode as number, "mode", 0, 1) as EncoderMode;
+			busFor(this).writeUint8(Encoder.REGISTER.MODE, mode);
+			this.#mode = mode;
+		}
 	}
-	get onChanged(): EncoderChangedCallback | null {
-		return this.#input.onChanged;
-	}
-	set onButtonChanged(callback: EncoderButtonChangedCallback | null | undefined) {
-		this.#input.onButtonChanged = callback;
-	}
-	get onButtonChanged(): EncoderButtonChangedCallback | null {
-		return this.#input.onButtonChanged;
-	}
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-	start(): void {
-		this.#input.start();
-	}
-	stop(): void {
-		this.#input.stop();
+	get configuration(): { interrupt: boolean; mode: EncoderMode } {
+		return { ...super.configuration, mode: this.#mode };
 	}
 
-	constructor(options: EncoderOptions = {}) {
-		super(options, { address: Encoder.DEFAULT_ADDRESS, hz: Encoder.DEFAULT_HZ, name: "encoder" });
+	constructor(options: EncoderOptions) {
+		super(options, { address: Encoder.DEFAULT_ADDRESS, hz: Encoder.DEFAULT_HZ, name: "Encoder" });
 		try {
-			this.#input = new EncoderInput(this, this, "Encoder", options);
+			ownResource(this, this.leds);
+			this.configure({ mode: 0 });
+			this.resetEncoder();
+			this.leds.color = { r: 0, g: 0, b: 0 };
+			this.read();
 		} catch (error) {
-			super.close();
+			this.close();
 			throw error;
 		}
 	}
 
-	close(): void {
-		this.leds.close();
-		this.#input.close();
-		super.close();
+	sample(): EncoderState & { time: number } {
+		assertOpen(this);
+		return { ...this.read(), time: Date.now() };
 	}
 
 	read(): EncoderState {
+		assertOpen(this);
 		return {
 			value: this.readEncoder(),
 			pressed: this.isButtonPressed(),
@@ -113,36 +96,43 @@ export default class Encoder extends SMBusDevice<EncoderIOInstance> {
 	}
 
 	readEncoder(): number {
-		return signed16(this.activeBus.readUint16(Encoder.REGISTER.ENCODER, false));
+		assertOpen(this);
+		return signed16(busFor(this).readUint16(Encoder.REGISTER.ENCODER, false));
 	}
 
 	setEncoder(value: number): void {
+		assertOpen(this);
 		const encoder = integerInRange(value, "value", -0x8000, 0x7fff);
-		this.activeBus.writeUint16(Encoder.REGISTER.ENCODER, encoder & 0xffff, false);
+		busFor(this).writeUint16(Encoder.REGISTER.ENCODER, encoder & 0xffff, false);
 	}
 
 	resetEncoder(): void {
-		this.activeBus.writeUint8(Encoder.REGISTER.RESET, 1);
+		assertOpen(this);
+		busFor(this).writeUint8(Encoder.REGISTER.RESET, 1);
 	}
 
 	isButtonPressed(): boolean {
-		return this.activeBus.readUint8(Encoder.REGISTER.BUTTON) !== 0;
+		assertOpen(this);
+		return busFor(this).readUint8(Encoder.REGISTER.BUTTON) !== 0;
 	}
 
 	setMode(mode: EncoderMode): void {
-		this.activeBus.writeUint8(Encoder.REGISTER.MODE, integerInRange(mode, "mode", 0, 1));
+		assertOpen(this);
+		this.configure({ mode });
 	}
 
 	setLed(led: number, color: RGBColor): void {
+		assertOpen(this);
 		this.#writeLed(integerInRange(led, "led", 0, Encoder.LED_COUNT - 1) + 1, color);
 	}
 
 	setAllLeds(color: RGBColor): void {
+		assertOpen(this);
 		this.#writeLed(0, color);
 	}
 
 	#writeLed(index: number, color: RGBColor): void {
-		this.activeBus.writeBuffer(
+		busFor(this).writeBuffer(
 			Encoder.REGISTER.RGB_LED,
 			Uint8Array.of(
 				index,

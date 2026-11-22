@@ -58,15 +58,13 @@ joystick.led.rainbow(0); // stop and turn off
 All animations share one timer. Fader flushes animated pixels once per timer tick.
 An animation write failure stops that LED and is reported through `trace`.
 
-Construction does not write to hardware. Logical color starts at black; the first
-property assignment applies it. Getters describe requested state, not a hardware read.
-This differs from the SDK NeoPixel wrapper, which clears its owned strip on construction.
+Constructing a standalone logical LED does not write to hardware. Product constructors explicitly initialize their
+LEDs to black. Getters describe requested state, not a hardware read.
 
 ## Device modes and existing operations
 
-ByteButton/ByteSwitch require explicit `setLedMode(Class.LED_MODE.MANUAL)` for
-manual colors and animations. The library does not change the device-wide mode
-implicitly. State-dependent colors remain available through `setButtonLed` and
+ByteButton/ByteSwitch constructors restore manual LED mode. Use `configure({ ledMode: Class.LED_MODE.MANUAL })`
+(or the `setLedMode` product extension) when returning from automatic mode to manual colors and animations. State-dependent colors remain available through `setButtonLed` and
 `setSwitchLed` in automatic mode.
 
 Existing `setLed`, `getLed`, brightness register access, compact colors, bulk writes,

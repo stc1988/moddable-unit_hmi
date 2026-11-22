@@ -1,29 +1,21 @@
+import SMBus from "embedded:io/smbus";
+import Timer from "timer";
 import ByteSwitch from "unit/byteswitch";
 
 export async function main(): Promise<void> {
-	const byteSwitch = new ByteSwitch();
-
-	byteSwitch.setLedMode(ByteSwitch.LED_MODE.MANUAL);
-	for (let index = 0; index < ByteSwitch.LED_COUNT; index++) {
-		{
-			const led = byteSwitch.leds[index];
-			if (led) led.brightness = 64;
+	const input = new ByteSwitch({ sensor: { io: SMBus, data: 2, clock: 1 } });
+	let previous = "";
+	// Polling and change detection belong to the application. Clear this timer before input.close().
+	Timer.repeat(() => {
+		const sample = input.sample();
+		const { time: _time, ...values } = sample;
+		const current = JSON.stringify(values);
+		if (current === previous) return;
+		previous = current;
+		for (let index = 0; index < 8; index++) {
+			const on = Boolean(sample.switches & (1 << index));
+			input.setLed(index, { r: on ? 64 : 0, g: 0, b: on ? 0 : 16 });
 		}
-		{
-			const led = byteSwitch.leds[index];
-			if (led) led.color = { r: 0, g: 0, b: index === 8 ? 64 : 0 };
-		}
-	}
-
-	byteSwitch.onChanged = ({ switches }) => {
-		trace(`[ByteSwitch] switches=0b${switches.toString(2).padStart(8, "0")}\n`);
-	};
-
-	byteSwitch.onSwitchChanged = (switchIndex, on) => {
-		trace(`[ByteSwitch] switch=${switchIndex}\ton=${on}\n`);
-		{
-			const led = byteSwitch.leds[switchIndex];
-			if (led) led.color = { r: on ? 255 : 0, g: on ? 128 : 0, b: 0 };
-		}
-	};
+		trace(`[ByteSwitch] ${current}\n`);
+	}, 30);
 }

@@ -1,32 +1,18 @@
-import Analog from "embedded:io/analog";
-import AnalogInput, {
-	type AnalogInputChangedCallback,
-	type AnalogInputEventOptions,
-	AnalogInputEvents,
-	type AnalogIO,
-} from "hmi/input/analog";
+import AnalogInput, { type AnalogInputOptions } from "hmi/input/analog";
 import Led, { LedCollection, scaleColor } from "hmi/led";
-import type { RGBColor } from "hmi/util";
-import NeoPixel from "neopixel";
+import Peripheral, { assertOpen, ownResource, type PeripheralOptions } from "hmi/peripheral";
+import { integerInRange, type RGBColor } from "hmi/util";
 
 export interface FaderSample {
 	raw: number;
 	position: number;
+	time: number;
 }
 
-export interface FaderOptions extends AnalogInputEventOptions<FaderSample> {
-	sensor?: {
-		io?: AnalogIO;
-		pin?: number;
-	};
-	leds?: {
-		io?: FaderLedIOConstructor;
-		pin?: number;
-	};
-	brightness?: number;
+export interface FaderOptions extends PeripheralOptions {
+	sensor: AnalogInputOptions;
+	leds: { io: FaderLedIOConstructor; pin: number; [key: string]: unknown };
 }
-
-export type FaderChangedCallback = AnalogInputChangedCallback<FaderSample>;
 export type FaderLedColumn = "left" | "right";
 
 export interface FaderLedIO {
@@ -41,7 +27,7 @@ export interface FaderLedIO {
 export type FaderLedIOConstructor = new (options: { pin: number; length: number; order: string }) => FaderLedIO;
 
 // https://docs.m5stack.com/ja/unit/fader
-export default class Fader {
+export default class Fader extends Peripheral {
 	#flushLeds = () => this.show();
 	readonly leds = new LedCollection(
 		Array.from(
@@ -59,88 +45,57 @@ export default class Fader {
 	static readonly LED_COUNT = 14;
 	static readonly COLUMN_COUNT = 2;
 	static readonly LEVEL_COUNT = 7;
-	static readonly DEFAULT_ANALOG_PIN = 8;
-	static readonly DEFAULT_LED_PIN = 9;
 
 	#sensor: AnalogInput;
 	#leds: FaderLedIO;
-	#closed = false;
-	#input: AnalogInputEvents<FaderSample>;
-
-	set onChanged(callback: FaderChangedCallback | null | undefined) {
-		this.#input.onChanged = callback;
-	}
-	get onChanged(): FaderChangedCallback | null {
-		return this.#input.onChanged;
-	}
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-	set deadband(value: number) {
-		this.#input.deadband = value;
-	}
-	get deadband(): number {
-		return this.#input.deadband;
-	}
-	start(): void {
-		this.#input.start();
-	}
-	stop(): void {
-		this.#input.stop();
-	}
-
-	constructor(options: FaderOptions = {}) {
-		const sensor = new AnalogInput({
-			io: options.sensor?.io ?? Analog,
-			pin: options.sensor?.pin ?? Fader.DEFAULT_ANALOG_PIN,
-			invert: true,
-		});
-		let leds: FaderLedIO | undefined;
+	constructor(options: FaderOptions) {
+		super(options);
 		try {
-			const LedIO = options.leds?.io ?? NeoPixel;
-			leds = new LedIO({
-				length: Fader.LED_COUNT,
-				pin: options.leds?.pin ?? Fader.DEFAULT_LED_PIN,
-				order: "GRB",
-			});
-			leds.brightness = Fader.#colorComponent(options.brightness ?? 128, "brightness");
-			this.#input = new AnalogInputEvents(this, sensor, "Fader", options);
-			this.#sensor = sensor;
-			this.#leds = leds;
+			if (!options.leds || typeof options.leds.io !== "function") throw new TypeError("leds.io must be a constructor");
+			this.#sensor = ownResource(this, new AnalogInput({ ...options.sensor, invert: true }));
+			this.#leds = ownResource(this, new options.leds.io({ ...options.leds, length: Fader.LED_COUNT, order: "GRB" }));
+			ownResource(this, this.leds);
+			this.configure({ brightness: 128 });
+			this.leds.color = { r: 0, g: 0, b: 0 };
+			this.#sensor.read();
 		} catch (error) {
-			leds?.close();
-			sensor.close();
+			this.close();
 			throw error;
 		}
 	}
-
-	close(): void {
-		this.leds.close();
-		if (this.#closed) return;
-		this.#closed = true;
-		this.#input.close();
-		this.#sensor.close();
-		this.#leds.close();
+	configure(options: { brightness?: number }): void {
+		super.configure(options);
+		if ("brightness" in options) {
+			this.#leds.brightness = Fader.#colorComponent(options.brightness as number, "brightness");
+			this.#leds.update();
+		}
+	}
+	get configuration(): { interrupt: boolean; brightness: number } {
+		return { ...super.configuration, brightness: this.#leds.brightness };
+	}
+	sample(): FaderSample {
+		assertOpen(this);
+		return { ...this.#sensor.read(), time: Date.now() };
 	}
 
 	get brightness(): number {
+		assertOpen(this);
 		return this.#leds.brightness;
 	}
 
 	set brightness(value: number) {
-		this.#leds.brightness = Fader.#colorComponent(value, "brightness");
-		this.#leds.update();
+		assertOpen(this);
+		this.configure({ brightness: value });
 	}
 
 	read(): number {
+		assertOpen(this);
 		return this.#sensor.readRaw();
 	}
 
 	readSample(): FaderSample {
-		return this.#sensor.read();
+		assertOpen(this);
+		return this.sample();
 	}
 
 	static ledIndex(column: FaderLedColumn, level: number): number {
@@ -151,10 +106,12 @@ export default class Fader {
 	}
 
 	setLed(column: FaderLedColumn, level: number, color: RGBColor, update = true): void {
+		assertOpen(this);
 		this.setPixel(Fader.ledIndex(column, level), color, update);
 	}
 
 	setLevel(level: number, color: RGBColor, update = true): void {
+		assertOpen(this);
 		Fader.#validateLevel(level);
 		this.setLed("left", level, color, false);
 		this.setLed("right", level, color, false);
@@ -162,11 +119,13 @@ export default class Fader {
 	}
 
 	fillColumn(column: FaderLedColumn, color: RGBColor, update = true): void {
+		assertOpen(this);
 		for (let level = 0; level < Fader.LEVEL_COUNT; level++) this.setLed(column, level, color, false);
 		if (update) this.show();
 	}
 
 	setPixel(index: number, color: RGBColor, update = true): void {
+		assertOpen(this);
 		if (!Number.isInteger(index) || index < 0 || index >= Fader.LED_COUNT)
 			throw new RangeError(`index must be an integer from 0 to ${Fader.LED_COUNT - 1}`);
 
@@ -182,6 +141,7 @@ export default class Fader {
 	}
 
 	fill(color: RGBColor): void {
+		assertOpen(this);
 		this.#leds.fill(
 			this.#leds.makeRGB(
 				Fader.#colorComponent(color.r, "r"),
@@ -193,12 +153,13 @@ export default class Fader {
 	}
 
 	show(): void {
+		assertOpen(this);
 		this.#leds.update();
 	}
 
 	static #colorComponent(value: number, name: string): number {
 		if (!Number.isFinite(value)) throw new RangeError(`${name} must be a finite number`);
-		return Math.round(Math.max(0, Math.min(255, value)));
+		return integerInRange(value, name, 0, 255);
 	}
 
 	static #validateLevel(level: number): void {

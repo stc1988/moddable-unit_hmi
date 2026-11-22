@@ -1,19 +1,20 @@
+import SMBus from "embedded:io/smbus";
 import MiniJoyC from "hat/mini-joyc";
+import Timer from "timer";
 
 export async function main(): Promise<void> {
-	const joystick = new MiniJoyC({ pollingInterval: 30, deadband: 2, readMode: "pos8" });
-	let ledOn = false;
-
-	trace(`[MiniJoyC] firmware=${joystick.getFirmwareVersion()}\taddress=0x${joystick.getI2CAddress().toString(16)}\n`);
-
-	joystick.onChanged = ({ x, y, pressed }) => {
-		trace(`[MiniJoyC] x=${x}\ty=${y}\tpressed=${pressed}\n`);
-	};
-
-	joystick.onButtonChanged = (pressed) => {
-		if (!pressed) return;
-		ledOn = !ledOn;
-		joystick.led.color = { r: 0, g: ledOn ? 128 : 0, b: ledOn ? 255 : 0 };
-		trace("[MiniJoyC] button pressed\n");
-	};
+	const input = new MiniJoyC({
+		sensor: { io: SMBus, data: 0, clock: 26 },
+	});
+	let previous = "";
+	// Polling and change detection belong to the application. Clear this timer before input.close().
+	Timer.repeat(() => {
+		const sample = input.sample();
+		const { time: _time, ...values } = sample;
+		const current = JSON.stringify(values);
+		if (current === previous) return;
+		previous = current;
+		input.led.color = { r: sample.pressed ? 64 : 0, g: 0, b: sample.pressed ? 0 : 16 };
+		trace(`[MiniJoyC] ${current}\n`);
+	}, 30);
 }

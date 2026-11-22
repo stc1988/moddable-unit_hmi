@@ -1,11 +1,13 @@
+import { assertOpen } from "hmi/peripheral";
 import type { RGBColor } from "hmi/util";
 import BytePanel, {
-	BytePanelInput,
-	type BytePanelInputChangedCallback,
-	type BytePanelInputOptions,
 	type BytePanelIO,
 	type BytePanelIOInstance,
 	type BytePanelOptions,
+	getInputLed,
+	readInput,
+	readInputs,
+	setInputLed,
 } from "unit/byte-panel";
 
 export interface ByteButtonIOInstance extends BytePanelIOInstance {}
@@ -19,36 +21,7 @@ export interface ByteButtonState {
 
 export type ByteButtonLedMode = 0 | 1;
 
-export interface ByteButtonOptions extends BytePanelOptions<ByteButtonIO> {
-	pollingInterval?: number;
-	onChanged?: ByteButtonChangedCallback;
-	onButtonChanged?: ByteButtonButtonChangedCallback;
-}
-
-export type ByteButtonChangedCallback = (state: ByteButtonState) => void;
-export type ByteButtonButtonChangedCallback = (button: number, pressed: boolean) => void;
-
-function inputOptions(options: ByteButtonOptions): BytePanelInputOptions<ByteButtonState> {
-	const result: BytePanelInputOptions<ByteButtonState> = {};
-	if (options.pollingInterval !== undefined) result.pollingInterval = options.pollingInterval;
-	if (options.onChanged !== undefined) result.onChanged = options.onChanged;
-	if (options.onButtonChanged !== undefined) result.onInputChanged = options.onButtonChanged;
-	return result;
-}
-
-class ByteButtonInput extends BytePanelInput<ByteButtonState> {
-	constructor(target: object, source: { read(): ByteButtonState }, options: ByteButtonOptions) {
-		super(target, source, "ByteButton", (state) => state.buttons, inputOptions(options));
-	}
-
-	set onButtonChanged(callback: ByteButtonButtonChangedCallback | null | undefined) {
-		this.onInputChanged = callback;
-	}
-
-	get onButtonChanged(): BytePanelInputChangedCallback | null {
-		return this.onInputChanged;
-	}
-}
+export interface ByteButtonOptions extends BytePanelOptions<ByteButtonIO> {}
 
 // https://docs.m5stack.com/ja/unit/Unit%20ByteButton
 export default class ByteButton extends BytePanel<ByteButtonIOInstance> {
@@ -62,80 +35,47 @@ export default class ByteButton extends BytePanel<ByteButtonIOInstance> {
 		BUTTON: 1,
 	} as const;
 
-	#input: ByteButtonInput;
-
-	set onChanged(callback: ByteButtonChangedCallback | null | undefined) {
-		this.#input.onChanged = callback;
-	}
-
-	get onChanged(): ByteButtonChangedCallback | null {
-		return this.#input.onChanged;
-	}
-
-	set onButtonChanged(callback: ByteButtonButtonChangedCallback | null | undefined) {
-		this.#input.onButtonChanged = callback;
-	}
-
-	get onButtonChanged(): ByteButtonButtonChangedCallback | null {
-		return this.#input.onButtonChanged;
-	}
-
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-
-	start(): void {
-		this.#input.start();
-	}
-
-	stop(): void {
-		this.#input.stop();
-	}
-
-	constructor(options: ByteButtonOptions = {}) {
+	constructor(options: ByteButtonOptions) {
 		super(options, ByteButton.DEFAULT_ADDRESS, "bytebutton");
-		try {
-			this.#input = new ByteButtonInput(this, this, options);
-		} catch (error) {
-			super.close();
-			throw error;
-		}
 	}
 
-	close(): void {
-		this.#input.close();
-		super.close();
+	sample(): ByteButtonState & { time: number } {
+		assertOpen(this);
+		return { ...this.read(), time: Date.now() };
 	}
 
 	read(): ByteButtonState {
+		assertOpen(this);
 		return { buttons: this.readButtons() };
 	}
 
 	readButtons(): number {
-		return this.readInputs(true);
+		assertOpen(this);
+		return readInputs(this, true);
 	}
 
 	readButton(button: number): boolean {
-		return this.readInput(button, true);
+		assertOpen(this);
+		return readInput(this, button, true);
 	}
 
 	setButtonLed(button: number, pressed: boolean, color: RGBColor): void {
-		this.setInputLed(button, pressed, color);
+		assertOpen(this);
+		setInputLed(this, button, pressed, color);
 	}
 
 	getButtonLed(button: number, pressed: boolean): RGBColor {
-		return this.getInputLed(button, pressed);
+		assertOpen(this);
+		return getInputLed(this, button, pressed);
 	}
 
 	setLedMode(mode: ByteButtonLedMode): void {
-		this.setLedModeValue(mode);
+		assertOpen(this);
+		this.configure({ ledMode: mode });
 	}
 
 	getLedMode(): ByteButtonLedMode {
-		return this.getLedModeValue();
+		assertOpen(this);
+		return this.configuration.ledMode;
 	}
 }

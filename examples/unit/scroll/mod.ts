@@ -1,14 +1,18 @@
+import SMBus from "embedded:io/smbus";
+import Timer from "timer";
 import Scroll from "unit/scroll";
 
 export async function main(): Promise<void> {
-	const scroll = new Scroll();
-
-	scroll.onChanged = ({ value, pressed }) => {
-		trace(`[Scroll] value=${value}\tpressed=${pressed}\n`);
-	};
-
-	scroll.onButtonChanged = (pressed) => {
-		trace(`[Scroll] button pressed: ${pressed}\n`);
-		scroll.led.color = { r: pressed ? 255 : 0, g: pressed ? 64 : 0, b: pressed ? 0 : 32 };
-	};
+	const input = new Scroll({ sensor: { io: SMBus, data: 2, clock: 1 } });
+	let previous = "";
+	// Polling and change detection belong to the application. Clear this timer before input.close().
+	Timer.repeat(() => {
+		const sample = input.sample();
+		const { time: _time, ...values } = sample;
+		const current = JSON.stringify(values);
+		if (current === previous) return;
+		previous = current;
+		input.led.color = { r: sample.pressed ? 64 : 0, g: 0, b: sample.pressed ? 0 : 16 };
+		trace(`[Scroll] ${current}\n`);
+	}, 30);
 }

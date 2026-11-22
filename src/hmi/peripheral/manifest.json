@@ -1,0 +1,6 @@
+{
+	"modules": {
+		"hmi/peripheral": "./peripheral"
+	},
+	"preload": ["hmi/peripheral"]
+}

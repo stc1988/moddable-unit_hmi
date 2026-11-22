@@ -10,12 +10,6 @@ export function integerInRange(value: number, name: string, minimum: number, max
 	return value;
 }
 
-export function callbackOrNull<Callback>(value: Callback | null | undefined, name: string): Callback | null {
-	if (value === undefined || value === null) return null;
-	if (typeof value !== "function") throw new TypeError(`${name} must be a function`);
-	return value;
-}
-
 export function signed8(value: number): number {
 	return value & 0x80 ? value - 0x100 : value;
 }
@@ -32,4 +26,12 @@ export function signed32(data: DataView, offset: number): number {
 export function signed32ToLittleEndian(value: number, name: string): Uint8Array {
 	const integer = integerInRange(value, name, -0x8000_0000, 0x7fff_ffff);
 	return Uint8Array.of(integer & 0xff, (integer >>> 8) & 0xff, (integer >>> 16) & 0xff, (integer >>> 24) & 0xff);
+}
+
+export interface JoystickPosition {
+	x: number;
+	y: number;
+}
+export interface JoystickState extends JoystickPosition {
+	pressed: boolean;
 }

@@ -3,36 +3,49 @@
 The TypeScript driver in `src/drivers/unit/angle` supports the M5Stack Unit Angle (U005), a 10 kΩ rotary
 potentiometer with a 0–2500 mV analog output.
 
-The default targets the analog input on Port B of M5Stack CoreS3:
+Pass `sensor: { io, pin }` explicitly. `sensor.io` must implement the ECMA-419 analog input operations.
+Optional analog IO settings are forwarded. On the CoreS3 example wiring, the analog signal is connected to GPIO 8.
 
-| Signal                     | CoreS3 GPIO |
-| -------------------------- | ----------- |
-| Analog output (white wire) | 8           |
-
-Pass `sensor: { pin }` to the constructor when using another controller. The yellow wire is not connected by Unit Angle.
-`sensor.io` can inject another analog I/O constructor; Moddable's `embedded:io/analog` implementation is the default.
-
-## API
-
-- `read()` returns the raw ADC value.
-- `readSample()` returns `{ raw, position }`, where `position` normalizes the ADC value from `0` to `1`.
-- `onChanged` receives the same sample when the raw value changes by more than `deadband`. Assigning a callback starts
-  polling; assigning `null` stops it.
-- `pollingInterval` controls the polling period in milliseconds and defaults to `30`.
-- `start()`, `stop()`, and `close()` control polling and the analog input resource explicitly.
+## Basic usage
 
 ```ts
+import Analog from "embedded:io/analog";
 import Angle from "unit/angle";
+import Timer from "timer";
 
-const angle = new Angle({ deadband: 4 });
+const input = new Angle({ sensor: { io: Analog, pin: 8 } });
+const timer = Timer.repeat(() => {
+	const sample = input.sample();
+	trace(`${JSON.stringify(sample)}\n`);
+}, 30);
 
-angle.onChanged = ({ raw, position }) => {
-	trace(`raw=${raw}, position=${position}\n`);
-};
+// When finished, clear the application's timer before releasing the driver:
+// Timer.clear(timer);
+// input.close(); // or input[Symbol.dispose]()
 ```
 
-For a different pin:
+## Common sensor API
 
-```ts
-const angle = new Angle({ sensor: { pin: 36 } });
-```
+`sample()` returns a fresh `{ raw, position, time }` object. `time` records host capture time in milliseconds since the Unix
+epoch. Values are read when requested; there is no cached sample or internal polling timer. Multiple register reads in a
+sample are sequential, so the snapshot is not a hardware-atomic transaction.
+
+`configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
+omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
+provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
+and change detection belong to the caller. See [architecture and migration](../architecture.md).
+
+`target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
+`close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
+from construction, reads, and configuration propagate synchronously.
+
+## Configuration and initialization
+
+There are currently no sensor configuration properties. `configure({})` is valid; unknown properties are ignored.
+
+## Product extensions
+
+- `read()`: returns `number`.
+- `readSample()`: returns `AngleSample`.
+
+`position` is the raw value divided by the maximum for the IO resolution.

@@ -3,38 +3,46 @@
 The TypeScript driver in `src/drivers/unit/encoder` supports the M5Stack Unit Encoder's rotary encoder, push button, and
 two RGB LEDs over I2C.
 
-The defaults use Port A on the selected Moddable device, address `0x40`, and a 200 kHz bus. Pass `data`, `clock`,
-`address`, or `hz` for another compatible configuration. The `io` option accepts an I2C-compatible constructor for
-alternate I/O providers or testing.
+Pass an explicit `sensor` IO constructor and connection options. The device address defaults to `0x40` and
+bus frequency to `200_000` Hz; `sensor.address` and `sensor.hz` override them. Pins and the I/O constructor have no defaults.
+Additional IO options such as `port`, `stop`, and `timeout` are forwarded to `sensor.io`.
 
 ## Basic usage
 
 ```ts
+import SMBus from "embedded:io/smbus";
 import Encoder from "unit/encoder";
+import Timer from "timer";
 
-const encoder = new Encoder();
+const input = new Encoder({ sensor: { io: SMBus, data: 2, clock: 1 } });
+const timer = Timer.repeat(() => {
+	const sample = input.sample();
+	trace(`${JSON.stringify(sample)}\n`);
+}, 30);
 
-encoder.onChanged = ({ value, pressed }) => {
-	trace(`value=${value}, pressed=${pressed}\n`);
-};
-
-encoder.onButtonChanged = (pressed) => {
-	encoder.setLed(1, { r: pressed ? 255 : 0, g: 0, b: pressed ? 0 : 64 });
-};
+// When finished, clear the application's timer before releasing the driver:
+// Timer.clear(timer);
+// input.close(); // or input[Symbol.dispose]()
 ```
 
-## Input and callbacks
+## Common sensor API
 
-- `read()` returns the current `{ value, pressed }` state. The signed 16-bit encoder value and active-high button are read
-  in separate I2C transactions.
-- `readEncoder()` returns the signed 16-bit accumulated encoder value.
-- `isButtonPressed()` returns `true` while the knob is pressed.
-- `onChanged(state)` runs for the first sample and whenever the encoder value or button state changes.
-- `onButtonChanged(pressed)` runs on pressed and released transitions after the initial sample.
+`sample()` returns a fresh `{ value, pressed, time }` object. `time` records host capture time in milliseconds since the Unix
+epoch. Values are read when requested; there is no cached sample or internal polling timer. Multiple register reads in a
+sample are sequential, so the snapshot is not a hardware-atomic transaction.
 
-Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
-`30` milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases
-the I2C resource.
+`configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
+omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
+provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
+and change detection belong to the caller. See [architecture and migration](../architecture.md).
+
+`target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
+`close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
+from construction, reads, and configuration propagate synchronously.
+
+## Configuration and initialization
+
+`configure({ mode: 0 | 1 })` selects pulse or AB mode. `configuration.mode` reports the setting. Construction restores pulse mode and resets the counter.
 
 ## Encoder mode and value
 
@@ -55,14 +63,8 @@ The public LED indices are `0` and `1`; the driver translates them to the protoc
 
 RGB components accept integers from `0` through `255`.
 
-Polling failures are written to the Moddable debug channel without stopping the timer. Direct method calls propagate I/O
-errors to the caller.
-
-## Exported types
-
-The module exports `EncoderOptions`, `EncoderIO`, `EncoderIOInstance`, `EncoderState`, `EncoderMode`,
-`EncoderChangedCallback`, and `EncoderButtonChangedCallback` for TypeScript applications.
-
 ## Common LED objects
 
 See [Common LED interface](../led.md) for `leds[index]`: `color`, `on`, `brightness`, `rainbow()`, and lifecycle behavior.
+
+The counter is signed 16-bit and the button is active-high. `readEncoder()` and `isButtonPressed()` remain product extensions.

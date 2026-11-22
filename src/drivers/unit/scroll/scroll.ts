@@ -1,10 +1,14 @@
-import EncoderInput, {
-	type EncoderInputOptions,
-	type EncoderButtonChangedCallback as InputButtonChangedCallback,
-	type EncoderChangedCallback as InputChangedCallback,
-} from "hmi/input/encoder";
 import Led, { scaleColor } from "hmi/led";
-import { SMBusDevice, type SMBusDeviceOptions, type SMBusInstance, type SMBusIO } from "hmi/smbus";
+import { assertOpen, ownResource } from "hmi/peripheral";
+import {
+	busFor,
+	changeAddress,
+	readAddress,
+	SMBusDevice,
+	type SMBusDeviceOptions,
+	type SMBusInstance,
+	type SMBusIO,
+} from "hmi/smbus";
 import { integerInRange, type RGBColor, signed16 } from "hmi/util";
 
 export interface ScrollIOInstance extends SMBusInstance {
@@ -23,10 +27,7 @@ export interface ScrollState {
 	pressed: boolean;
 }
 
-export interface ScrollOptions extends EncoderInputOptions<ScrollState>, SMBusDeviceOptions<ScrollIO> {}
-
-export type ScrollChangedCallback = InputChangedCallback<ScrollState>;
-export type ScrollButtonChangedCallback = InputButtonChangedCallback;
+export interface ScrollOptions extends SMBusDeviceOptions<ScrollIO> {}
 
 const REGISTER = {
 	ENCODER: 0x10,
@@ -47,50 +48,26 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	static readonly DEFAULT_ADDRESS = 0x40;
 	static readonly DEFAULT_HZ = 400_000;
 
-	#input: EncoderInput<ScrollState>;
-
-	set onChanged(callback: ScrollChangedCallback | null | undefined) {
-		this.#input.onChanged = callback;
-	}
-	get onChanged(): ScrollChangedCallback | null {
-		return this.#input.onChanged;
-	}
-	set onButtonChanged(callback: ScrollButtonChangedCallback | null | undefined) {
-		this.#input.onButtonChanged = callback;
-	}
-	get onButtonChanged(): ScrollButtonChangedCallback | null {
-		return this.#input.onButtonChanged;
-	}
-	set pollingInterval(value: number) {
-		this.#input.pollingInterval = value;
-	}
-	get pollingInterval(): number {
-		return this.#input.pollingInterval;
-	}
-	start(): void {
-		this.#input.start();
-	}
-	stop(): void {
-		this.#input.stop();
-	}
-
-	constructor(options: ScrollOptions = {}) {
-		super(options, { address: Scroll.DEFAULT_ADDRESS, hz: Scroll.DEFAULT_HZ, name: "scroll" });
+	constructor(options: ScrollOptions) {
+		super(options, { address: Scroll.DEFAULT_ADDRESS, hz: Scroll.DEFAULT_HZ, name: "Scroll" });
 		try {
-			this.#input = new EncoderInput(this, this, "Scroll", options);
+			ownResource(this, this.led);
+			this.resetEncoder();
+			this.led.color = { r: 0, g: 0, b: 0 };
+			this.read();
 		} catch (error) {
-			super.close();
+			this.close();
 			throw error;
 		}
 	}
 
-	close(): void {
-		this.led.close();
-		this.#input.close();
-		super.close();
+	sample(): ScrollState & { time: number } {
+		assertOpen(this);
+		return { ...this.read(), time: Date.now() };
 	}
 
 	read(): ScrollState {
+		assertOpen(this);
 		return {
 			value: this.readEncoder(),
 			pressed: this.isButtonPressed(),
@@ -98,28 +75,34 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	}
 
 	readEncoder(): number {
-		return signed16(this.activeBus.readUint16(REGISTER.ENCODER, false));
+		assertOpen(this);
+		return signed16(busFor(this).readUint16(REGISTER.ENCODER, false));
 	}
 
 	readIncrement(): number {
-		return signed16(this.activeBus.readUint16(REGISTER.INCREMENT, false));
+		assertOpen(this);
+		return signed16(busFor(this).readUint16(REGISTER.INCREMENT, false));
 	}
 
 	isButtonPressed(): boolean {
-		return this.activeBus.readUint8(REGISTER.BUTTON) === 0;
+		assertOpen(this);
+		return busFor(this).readUint8(REGISTER.BUTTON) === 0;
 	}
 
 	setEncoder(value: number): void {
+		assertOpen(this);
 		const encoder = integerInRange(value, "value", -0x8000, 0x7fff);
-		this.activeBus.writeUint16(REGISTER.ENCODER, encoder & 0xffff, false);
+		busFor(this).writeUint16(REGISTER.ENCODER, encoder & 0xffff, false);
 	}
 
 	resetEncoder(): void {
-		this.activeBus.writeUint8(REGISTER.RESET, 1);
+		assertOpen(this);
+		busFor(this).writeUint8(REGISTER.RESET, 1);
 	}
 
 	setLed(color: RGBColor): void {
-		this.activeBus.writeBuffer(
+		assertOpen(this);
+		busFor(this).writeBuffer(
 			REGISTER.RGB_LED,
 			Uint8Array.of(
 				0,
@@ -131,28 +114,33 @@ export default class Scroll extends SMBusDevice<ScrollIOInstance> {
 	}
 
 	getLed(): RGBColor {
-		const data = new DataView(this.activeBus.readBuffer(REGISTER.RGB_LED, 4));
+		assertOpen(this);
+		const data = new DataView(busFor(this).readBuffer(REGISTER.RGB_LED, 4));
 		return { r: data.getUint8(1), g: data.getUint8(2), b: data.getUint8(3) };
 	}
 
 	getBootloaderVersion(): number {
-		return this.activeBus.readUint8(REGISTER.BOOTLOADER_VERSION) & 0xff;
+		assertOpen(this);
+		return busFor(this).readUint8(REGISTER.BOOTLOADER_VERSION) & 0xff;
 	}
 
 	getFirmwareVersion(): number {
-		return this.activeBus.readUint8(REGISTER.FIRMWARE_VERSION) & 0xff;
+		assertOpen(this);
+		return busFor(this).readUint8(REGISTER.FIRMWARE_VERSION) & 0xff;
 	}
 
 	getI2CAddress(): number {
-		return this.readAddress(REGISTER.I2C_ADDRESS);
+		assertOpen(this);
+		return readAddress(this, REGISTER.I2C_ADDRESS);
 	}
 
 	setI2CAddress(address: number): void {
-		this.changeAddress(REGISTER.I2C_ADDRESS, address);
+		assertOpen(this);
+		changeAddress(this, REGISTER.I2C_ADDRESS, address);
 	}
 
 	enterBootloader(): void {
-		this.#input.stop();
-		this.activeBus.writeUint8(REGISTER.JUMP_TO_BOOTLOADER, 1);
+		assertOpen(this);
+		busFor(this).writeUint8(REGISTER.JUMP_TO_BOOTLOADER, 1);
 	}
 }

@@ -7,6 +7,13 @@ const directions = [
 	[0, 1, 0, 0, -1, 0, 1, -1],
 ];
 
+// Class constructors are frozen by preload. Keep mutable animation state in the module closure,
+// and allocate collections only when first used at runtime.
+let batching = false;
+let flushes: Set<() => void> | undefined;
+let activeLeds: Set<Led> | undefined;
+let animationTimer: ReturnType<typeof Timer.repeat> | undefined;
+
 export interface LedOptions {
 	write(color: RGBColor, brightness: number): void;
 	flush?: () => void;
@@ -16,14 +23,10 @@ export interface LedOptions {
 export default class Led {
 	#write: LedOptions["write"];
 	#flush: (() => void) | undefined;
-	static #batching = false;
-	static #flushes = new Set<() => void>();
 	#color: RGBColor = { r: 0, g: 0, b: 0 };
 	#brightness = 255;
 	#closed = false;
 	#animation: { rgb: number[]; phase: number; step: number } | undefined;
-	static #active = new Set<Led>();
-	static #timer: ReturnType<typeof Timer.repeat> | undefined;
 
 	constructor(options: LedOptions) {
 		this.#write = options.write;
@@ -72,10 +75,11 @@ export default class Led {
 		}
 		const step = integerInRange(value?.step ?? 3, "step", 1, 255);
 		this.#animation = { rgb: [0, 0, 0], phase: 0, step };
-		Led.#active.add(this);
-		Led.#timer ??= Timer.repeat(() => {
-			Led.#batching = true;
-			for (const led of Led.#active) {
+		activeLeds ??= new Set();
+		activeLeds.add(this);
+		animationTimer ??= Timer.repeat(() => {
+			batching = true;
+			for (const led of activeLeds ?? []) {
 				try {
 					led.#tick();
 				} catch (error) {
@@ -83,15 +87,15 @@ export default class Led {
 					trace(`[LED] animation stopped: ${String(error)}\n`);
 				}
 			}
-			Led.#batching = false;
-			for (const flush of Led.#flushes) {
+			batching = false;
+			for (const flush of flushes ?? []) {
 				try {
 					flush();
 				} catch (error) {
 					trace(`[LED] update failed: ${String(error)}\n`);
 				}
 			}
-			Led.#flushes.clear();
+			flushes?.clear();
 		}, 33);
 	}
 	close(): void {
@@ -102,31 +106,33 @@ export default class Led {
 	/** Apply a collection operation with one flush per output, after checking lifecycle. */
 	static batch(leds: readonly Led[], apply: (led: Led) => void): void {
 		for (const led of leds) led.#assertOpen();
-		const wasBatching = Led.#batching;
-		Led.#batching = true;
+		const wasBatching = batching;
+		batching = true;
 		try {
 			for (const led of leds) apply(led);
 		} finally {
-			Led.#batching = wasBatching;
+			batching = wasBatching;
 			if (!wasBatching) {
-				const flushes = [...Led.#flushes];
-				Led.#flushes.clear();
-				for (const flush of flushes) flush();
+				const pending = [...(flushes ?? [])];
+				flushes?.clear();
+				for (const flush of pending) flush();
 			}
 		}
 	}
 
 	#commit(): void {
 		if (!this.#flush) return;
-		if (Led.#batching) Led.#flushes.add(this.#flush);
-		else this.#flush();
+		if (batching) {
+			flushes ??= new Set();
+			flushes.add(this.#flush);
+		} else this.#flush();
 	}
 	#stop(): void {
 		this.#animation = undefined;
-		Led.#active.delete(this);
-		if (!Led.#active.size && Led.#timer !== undefined) {
-			Timer.clear(Led.#timer);
-			Led.#timer = undefined;
+		activeLeds?.delete(this);
+		if (!activeLeds?.size && animationTimer !== undefined) {
+			Timer.clear(animationTimer);
+			animationTimer = undefined;
 		}
 	}
 	#assertOpen(): void {

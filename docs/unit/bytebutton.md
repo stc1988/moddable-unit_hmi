@@ -3,39 +3,46 @@
 The TypeScript driver in `src/drivers/unit/bytebutton` supports the M5Stack Unit ByteButton's eight capacitive buttons
 and nine RGB LEDs over I2C.
 
-The defaults use Port A on the selected Moddable device, address `0x47`, and a 400 kHz bus. Pass `data`, `clock`,
-`address`, or `hz` for another compatible configuration. The `io` option accepts an I2C-compatible constructor for
-alternate I/O providers or testing.
+Pass an explicit `sensor` IO constructor and connection options. The device address defaults to `0x47` and
+bus frequency to `400_000` Hz; `sensor.address` and `sensor.hz` override them. Pins and the I/O constructor have no defaults.
+Additional IO options such as `port`, `stop`, and `timeout` are forwarded to `sensor.io`.
 
 ## Basic usage
 
 ```ts
+import SMBus from "embedded:io/smbus";
 import ByteButton from "unit/bytebutton";
+import Timer from "timer";
 
-const byteButton = new ByteButton();
+const input = new ByteButton({ sensor: { io: SMBus, data: 2, clock: 1 } });
+const timer = Timer.repeat(() => {
+	const sample = input.sample();
+	trace(`${JSON.stringify(sample)}\n`);
+}, 30);
 
-byteButton.onChanged = ({ buttons }) => {
-	trace(`button mask: 0x${buttons.toString(16)}\n`);
-};
-
-byteButton.onButtonChanged = (button, pressed) => {
-	byteButton.setLed(button, { r: 0, g: pressed ? 255 : 0, b: 0 });
-};
+// When finished, clear the application's timer before releasing the driver:
+// Timer.clear(timer);
+// input.close(); // or input[Symbol.dispose]()
 ```
 
-## Buttons and callbacks
+## Common sensor API
 
-- `read()` returns `{ buttons }`, where bit 0 through bit 7 represent buttons 0 through 7. The hardware's active-low
-  values are normalized so that a set bit means pressed.
-- `readButtons()` returns the button bit mask directly.
-- `readButton(button)` reads an individual button register and returns its pressed state.
-- `onChanged(state)` runs for the first sample and whenever the button mask changes.
-- `onButtonChanged(button, pressed)` runs once for each pressed or released transition after the initial sample. If several
-  buttons change in one sample, callbacks run in ascending button order.
+`sample()` returns a fresh `{ buttons, time }` object. `time` records host capture time in milliseconds since the Unix
+epoch. Values are read when requested; there is no cached sample or internal polling timer. Multiple register reads in a
+sample are sequential, so the snapshot is not a hardware-atomic transaction.
 
-Assigning either callback starts polling automatically. Clearing both callbacks stops it. `pollingInterval` defaults to
-`30` milliseconds. `start()` and `stop()` control polling explicitly, and idempotent `close()` stops polling and releases
-the I2C resource.
+`configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
+omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
+provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
+and change detection belong to the caller. See [architecture and migration](../architecture.md).
+
+`target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
+`close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
+from construction, reads, and configuration propagate synchronously.
+
+## Configuration and initialization
+
+`configure({ ledMode: 0 | 1 })` selects manual or input-linked LED mode; `configuration.ledMode` reports the hardware setting. Construction restores manual mode, brightness `255`, black LEDs, black input-off colors, and white input-on colors. This does not save settings to flash.
 
 ## RGB LEDs
 
@@ -52,20 +59,14 @@ LED indices are `0` through `8`; LEDs 0 through 7 correspond to the buttons and 
 
 - The firmware protocol defines an IRQ mode that repurposes the STM32's SWDIO (PA13) programming signal. SWDIO is
   available only on the internal SWD programming pads and is not routed to either Grove connector. The driver therefore
-  does not expose IRQ configuration and detects button changes by polling.
+  does not expose IRQ configuration; the application polls for button changes.
 - `saveSettings()` writes the supported brightness, mode, automatic colors, and address configuration to flash.
   Call it only when persistence is intended to avoid unnecessary flash writes.
 - `getFirmwareVersion()` reads the firmware version.
-- `getI2CAddress()` reads the configured address. `setI2CAddress(address)` accepts `0x01` through `0x7f` and reconnects
-  the driver at the new address. Use `saveSettings()` if the new address must survive a restart.
+- `getI2CAddress()` reads the configured address. `setI2CAddress(address)` accepts `0x01` through `0x7f` and programs the device address. Use `saveSettings()` if the new address must survive a restart.
 
-Polling failures are written to the Moddable debug channel without stopping the timer. Direct method calls propagate I/O
-errors to the caller.
-
-## Exported types
-
-The module exports `ByteButtonOptions`, `ByteButtonIO`, `ByteButtonIOInstance`, `ByteButtonState`,
-`ByteButtonLedMode`, `ByteButtonChangedCallback`, and `ByteButtonButtonChangedCallback` for TypeScript applications.
+The IO connection itself is fixed for the lifetime of an instance. After `setI2CAddress`, call `close()` and create a new
+instance with `sensor.address` set to the new address before making further device calls.
 
 ## Common LED objects
 
