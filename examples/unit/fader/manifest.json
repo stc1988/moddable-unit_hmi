@@ -2,7 +2,8 @@
 	"include": [
 		"$(MODDABLE)/examples/manifest_mod.json",
 		"$(MODDABLE)/examples/manifest_typings.json",
-		"../../../src/drivers/unit/fader/manifest.json"
+		"../../../src/drivers/unit/fader/manifest.json",
+		"../../../src/hmi/watch"
 	],
 	"modules": {
 		"*": ["./mod"],

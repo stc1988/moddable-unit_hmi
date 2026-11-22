@@ -11,16 +11,17 @@ Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchang
 
 ```ts
 import JoyStick from "unit/joystick";
-import Timer from "timer";
+import watchInput from "hmi/watch";
 
 const input = new JoyStick({});
-const timer = Timer.repeat(() => {
-	const sample = input.sample();
-	trace(`${JSON.stringify(sample)}\n`);
-}, 30);
+const watcher = watchInput(input, {
+	onChanged(sample) {
+		trace(`${JSON.stringify(sample)}\n`);
+	},
+});
 
-// When finished, clear the application's timer before releasing the driver:
-// Timer.clear(timer);
+// When finished, stop watching before releasing the driver:
+// watcher.close();
 // input.close(); // or input[Symbol.dispose]()
 ```
 
@@ -33,7 +34,7 @@ sample are sequential, so the snapshot is not a hardware-atomic transaction.
 `configure(options)` changes only recognized properties present at the root of `options`. Unknown properties are ignored;
 omitted properties are preserved. `configuration` returns a fresh report including `interrupt: false`, since these drivers
 provide no hardware sample-ready notifications. An `onSample` option is therefore not retained or called. Polling, deadband,
-and change detection belong to the caller. See [architecture and migration](../architecture.md).
+and change detection belong to the caller; [watchInput](../watch.md) provides a helper. Include its manifest when using the example. See [architecture and migration](../architecture.md).
 
 `target` is copied from the constructor options when present and remains an ordinary, writable/deletable property.
 `close()` and its `[Symbol.dispose]` alias release resources once. Other driver operations throw after close. IO errors
