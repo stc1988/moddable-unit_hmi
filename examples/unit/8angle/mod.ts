@@ -1,9 +1,8 @@
-import SMBus from "embedded:io/smbus";
 import Timer from "timer";
 import Angle8 from "unit/8angle";
 
 export async function main(): Promise<void> {
-	const input = new Angle8({ sensor: { io: SMBus, data: 2, clock: 1 } });
+	const input = new Angle8({});
 	let previous = "";
 	// Polling and change detection belong to the application. Clear this timer before input.close().
 	Timer.repeat(() => {

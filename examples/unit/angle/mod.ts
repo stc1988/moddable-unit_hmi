@@ -1,9 +1,8 @@
-import Analog from "embedded:io/analog";
 import Timer from "timer";
 import Angle from "unit/angle";
 
 export async function main(): Promise<void> {
-	const input = new Angle({ sensor: { io: Analog, pin: 8 } });
+	const input = new Angle({});
 	let previous = "";
 	// Polling and change detection belong to the application. Clear this timer before input.close().
 	Timer.repeat(() => {

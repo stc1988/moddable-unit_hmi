@@ -27,6 +27,8 @@ globalThis.trace = () => {};
 delete globalThis.device;
 function moduleURL(name) {
 	if (urls.has(name)) return urls.get(name);
+	if (name === "neopixel")
+		return `data:text/javascript,export default class { constructor(options) { return new globalThis.__defaultPixels(options); } }`;
 	const path = mappings[name]?.[0];
 	assert.ok(path, `unresolved module: ${name}`);
 	let source = readFileSync(join(outputDirectory, `${path}.js`), "utf8");
@@ -144,6 +146,8 @@ class Pixels {
 		ledCloseCount++;
 	}
 }
+globalThis.__defaultPixels = Pixels;
+
 function optionsFor(name) {
 	if (name === "unit/angle" || name === "unit/fader") {
 		const options = { sensor: Object.freeze({ io: Analog, pin: 8, resolution: 12, custom: "analog option" }) };
@@ -400,4 +404,96 @@ test("invalid bus settings are rejected before any IO is opened", () => {
 	}
 	assert.equal(openCount, before);
 	assert.equal(live.size, 0);
+});
+
+test("all products select standard IO and product wiring when omitted", () => {
+	globalThis.device = {
+		io: { SMBus: Bus, Analog },
+		i2c: { default: { data: 17, clock: 18, port: 2 }, hat: { data: 19, clock: 20, port: 3 } },
+	};
+	try {
+		for (const [name, Driver] of drivers) {
+			const input = new Driver(Object.freeze({}));
+			if (name === "unit/angle" || name === "unit/fader") {
+				const analog = [...live].find((resource) => resource instanceof Analog);
+				assert.equal(analog.options.pin, 8);
+				if (name === "unit/fader") {
+					const pixels = [...live].find((resource) => resource instanceof Pixels);
+					assert.equal(pixels.options.pin, 9);
+					assert.equal(pixels.options.length, 14);
+					assert.equal(pixels.options.order, "GRB");
+				}
+			} else {
+				const bus = [...live][0];
+				assert.ok(bus instanceof Bus);
+				assert.equal(bus.options.data, name === "hat/mini-joyc" ? 19 : 17);
+				assert.equal(bus.options.clock, name === "hat/mini-joyc" ? 20 : 18);
+				assert.equal(bus.options.address, Driver.DEFAULT_ADDRESS);
+				assert.equal(bus.options.hz, Driver.DEFAULT_HZ);
+			}
+			input.close();
+			assert.equal(live.size, 0);
+		}
+	} finally {
+		delete globalThis.device;
+	}
+});
+test("partial overrides replace only specified IO and connection settings", () => {
+	globalThis.device = {
+		io: { SMBus: Bus, Analog },
+		i2c: { default: { data: 17, clock: 18, port: 2 }, hat: { data: 19, clock: 20 } },
+	};
+	try {
+		const MiniJoyC = drivers.find(([name]) => name === "hat/mini-joyc")[1];
+		class AlternateBus extends Bus {}
+		const mini = new MiniJoyC({ sensor: Object.freeze({ io: AlternateBus, data: 23, address: 0x55, hz: 100_000 }) });
+		const bus = [...live][0];
+		assert.ok(bus instanceof AlternateBus);
+		assert.equal(bus.options.data, 23);
+		assert.equal(bus.options.clock, 20);
+		assert.equal(bus.options.address, 0x55);
+		assert.equal(bus.options.hz, 100_000);
+		mini.close();
+		const explicitPins = new MiniJoyC({ sensor: { data: 5, clock: 6 } });
+		assert.equal([...live][0].options.data, 5);
+		assert.equal([...live][0].options.clock, 6);
+		explicitPins.close();
+		const Angle = drivers.find(([name]) => name === "unit/angle")[1];
+		const angle = new Angle({ sensor: { pin: 36 } });
+		assert.equal([...live][0].options.pin, 36);
+		angle.close();
+		const Fader = drivers.find(([name]) => name === "unit/fader")[1];
+		const fader = new Fader({ leds: { pin: 26 } });
+		assert.equal([...live].find((resource) => resource instanceof Pixels).options.pin, 26);
+		fader.close();
+		assert.throws(() => new MiniJoyC({ sensor: { io: null } }), TypeError);
+		for (const bad of [null, 3, "invalid"]) {
+			assert.throws(() => new MiniJoyC({ sensor: bad }), TypeError);
+			assert.throws(() => new Angle({ sensor: bad }), TypeError);
+			assert.throws(() => new Fader({ sensor: bad }), TypeError);
+			assert.throws(() => new Fader({ leds: bad }), TypeError);
+		}
+		assert.throws(() => new Angle({ sensor: { io: null } }), TypeError);
+		assert.throws(() => new Fader({ leds: { io: null } }), TypeError);
+		assert.equal(live.size, 0);
+	} finally {
+		delete globalThis.device;
+	}
+});
+test("fully injected connections never access the default board provider", () => {
+	Object.defineProperty(globalThis, "device", {
+		configurable: true,
+		get() {
+			throw new Error("unexpected board access");
+		},
+	});
+	try {
+		for (const [name, Driver] of drivers) {
+			const input = new Driver(optionsFor(name));
+			input.close();
+		}
+		assert.equal(live.size, 0);
+	} finally {
+		delete globalThis.device;
+	}
 });

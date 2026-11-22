@@ -1,3 +1,4 @@
+import { optionsObject } from "hmi/peripheral";
 export interface AnalogInputSample {
 	raw: number;
 	position: number;
@@ -23,17 +24,25 @@ export interface AnalogInputOptions extends AnalogIOOptions {
 	invert?: boolean;
 }
 
+/** Public connection overrides; defaults are resolved only when a field is omitted. */
+export type AnalogSensorOptions = Partial<AnalogInputOptions>;
+
 export default class AnalogInput {
 	#io: AnalogIOInstance | undefined;
 	#invert: boolean;
 
-	constructor(options: AnalogInputOptions) {
-		if (typeof options.io !== "function") throw new TypeError("io must be a constructor");
+	constructor(options: AnalogSensorOptions = {}) {
+		optionsObject(options);
+		const IO =
+			options.io === undefined
+				? (globalThis as { device?: { io?: { Analog?: AnalogIO } } }).device?.io?.Analog
+				: options.io;
+		if (typeof IO !== "function") throw new TypeError("sensor.io or device.io.Analog must be a constructor");
 		this.#invert = options.invert ?? false;
-		const ioOptions: AnalogIOOptions = { ...options, pin: options.pin };
+		const ioOptions: AnalogIOOptions = { ...options, pin: options.pin ?? 8 };
 		if (options.resolution !== undefined) ioOptions.resolution = options.resolution;
 		if (options.format !== undefined) ioOptions.format = options.format;
-		this.#io = new options.io(ioOptions);
+		this.#io = new IO(ioOptions);
 	}
 
 	close(): void {

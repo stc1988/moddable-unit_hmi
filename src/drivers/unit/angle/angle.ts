@@ -1,4 +1,4 @@
-import AnalogInput, { type AnalogInputOptions } from "hmi/input/analog";
+import AnalogInput, { type AnalogSensorOptions } from "hmi/input/analog";
 import Peripheral, { assertOpen, ownResource, type PeripheralOptions } from "hmi/peripheral";
 export interface AngleSample {
 	raw: number;
@@ -6,7 +6,7 @@ export interface AngleSample {
 	time: number;
 }
 export interface AngleOptions extends PeripheralOptions {
-	sensor: AnalogInputOptions;
+	sensor?: AnalogSensorOptions;
 }
 export default class Angle extends Peripheral {
 	#sensor: AnalogInput;

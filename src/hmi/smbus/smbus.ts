@@ -1,6 +1,6 @@
 import type I2C from "embedded:io/i2c";
 import type SMBus from "embedded:io/smbus";
-import Peripheral, { assertOpen, ownResource, type PeripheralOptions } from "hmi/peripheral";
+import Peripheral, { assertOpen, optionsObject, ownResource, type PeripheralOptions } from "hmi/peripheral";
 import { integerInRange } from "hmi/util";
 import Timer from "timer";
 export interface SMBusInstance {
@@ -10,13 +10,14 @@ export type I2COptions = ConstructorParameters<typeof I2C>[0];
 type SMBusOptions = ConstructorParameters<typeof SMBus>[0];
 export type SMBusIO<Bus extends SMBusInstance = SMBusInstance> = new (options: SMBusOptions) => Bus;
 export interface SMBusPortOptions<IO extends SMBusIO = SMBusIO> extends PeripheralOptions {
-	sensor: Omit<SMBusOptions, "address" | "hz"> & { io: IO; address?: number; hz?: number };
+	sensor?: Partial<Omit<SMBusOptions, "address" | "hz">> & { io?: IO; address?: number; hz?: number };
 }
 export interface SMBusDeviceOptions<IO extends SMBusIO = SMBusIO> extends SMBusPortOptions<IO> {}
 export interface SMBusDeviceDefaults {
 	address: number;
 	hz: number;
 	name: string;
+	port?: "default" | "hat";
 }
 interface Connection {
 	bus: SMBusInstance | undefined;
@@ -51,14 +52,25 @@ export class SMBusDevice<Bus extends SMBusInstance> extends Peripheral {
 	protected constructor(options: SMBusDeviceOptions<SMBusIO<Bus>>, defaults: SMBusDeviceDefaults) {
 		super(options);
 		try {
-			const sensor = options.sensor;
-			if (!sensor || typeof sensor.io !== "function") throw new TypeError("sensor.io must be a constructor");
+			const sensor = options.sensor === undefined ? {} : options.sensor;
+			optionsObject(sensor);
+			let host: { io?: { SMBus?: SMBusIO<Bus> }; i2c?: Record<string, Partial<SMBusOptions>> } | undefined;
+			if (sensor.io === undefined || sensor.data === undefined || sensor.clock === undefined)
+				host = (globalThis as unknown as { device?: typeof host }).device;
+			const IO = sensor.io === undefined ? host?.io?.SMBus : sensor.io;
+			if (typeof IO !== "function") throw new TypeError("sensor.io or device.io.SMBus must be a constructor");
+			const port =
+				sensor.data === undefined || sensor.clock === undefined ? host?.i2c?.[defaults.port ?? "default"] : undefined;
+			const data = sensor.data === undefined ? port?.data : sensor.data;
+			const clock = sensor.clock === undefined ? port?.clock : sensor.clock;
+			if (data === undefined || clock === undefined)
+				throw new TypeError("sensor.data and sensor.clock require explicit pins or a device I2C provider");
 			const address = integerInRange(sensor.address ?? defaults.address, "address", 1, 0x7f);
 			const hz = integerInRange(sensor.hz ?? defaults.hz, "hz", 1, Number.MAX_SAFE_INTEGER);
 			const connection: Connection = { bus: undefined, address };
 			connections ??= new WeakMap();
 			connections.set(this, connection);
-			connection.bus = new sensor.io({ ...sensor, address, hz });
+			connection.bus = new IO({ ...port, ...sensor, data, clock, address, hz });
 			ownResource(this, {
 				close() {
 					const bus = connection.bus;

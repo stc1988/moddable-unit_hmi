@@ -57,13 +57,12 @@ mcrun -dl -m -p esp32/m5stick_cplus
 ## Sensor API
 
 All drivers share `sample()`, `configure(options)`, `configuration`, `target`, `close()`, and `[Symbol.dispose]`.
-Samples include a capture timestamp. Pass IO explicitly, for example:
+Samples include a capture timestamp. Standard IO and product wiring are used by default; inject replacements when needed:
 
 ```ts
-import SMBus from "embedded:io/smbus";
 import Encoder from "unit/encoder";
 
-const encoder = new Encoder({ sensor: { io: SMBus, data: 2, clock: 1 } });
+const encoder = new Encoder({});
 const sample = encoder.sample();
 encoder.configure({ mode: Encoder.MODE.AB });
 encoder.close();

@@ -3,18 +3,18 @@
 The TypeScript driver in `src/drivers/unit/scroll` supports the M5Stack Unit Scroll rotary encoder, push button, and RGB
 LED over I2C.
 
-Pass an explicit `sensor` IO constructor and connection options. The device address defaults to `0x40` and
-bus frequency to `400_000` Hz; `sensor.address` and `sensor.hz` override them. Pins and the I/O constructor have no defaults.
-Additional IO options such as `port`, `stop`, and `timeout` are forwarded to `sensor.io`.
+IO and wiring overrides are optional. With `{}`, the driver uses `device.io.SMBus` and
+`device.i2c.default` pins. Address defaults to `0x40` and frequency to `400_000` Hz.
+Pass `sensor: { io?, data?, clock?, address?, hz?, ... }` to override only the fields needed.
+Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchanged.
 
 ## Basic usage
 
 ```ts
-import SMBus from "embedded:io/smbus";
 import Scroll from "unit/scroll";
 import Timer from "timer";
 
-const input = new Scroll({ sensor: { io: SMBus, data: 2, clock: 1 } });
+const input = new Scroll({});
 const timer = Timer.repeat(() => {
 	const sample = input.sample();
 	trace(`${JSON.stringify(sample)}\n`);

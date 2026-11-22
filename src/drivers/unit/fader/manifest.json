@@ -1,7 +1,8 @@
 {
 	"include": ["../../../hmi/input/analog/manifest.json", "../../../hmi/led/manifest.json"],
 	"modules": {
-		"unit/fader": "./fader"
+		"unit/fader": "./fader",
+		"neopixel": "$(MODDABLE)/typings/neopixel"
 	},
 	"preload": ["unit/fader"]
 }

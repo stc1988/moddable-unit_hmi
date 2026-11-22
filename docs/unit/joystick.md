@@ -2,18 +2,18 @@
 
 The TypeScript driver in `src/drivers/unit/joystick` supports the M5Stack Unit Joystick v1.1 (U024-C). It reads the X/Y axes and push button over I2C at the device's fixed address, `0x52`.
 
-Pass an explicit `sensor` IO constructor and connection options. The device address defaults to `0x52` and
-bus frequency to `400_000` Hz; `sensor.address` and `sensor.hz` override them. Pins and the I/O constructor have no defaults.
-Additional IO options such as `port`, `stop`, and `timeout` are forwarded to `sensor.io`.
+IO and wiring overrides are optional. With `{}`, the driver uses `device.io.SMBus` and
+`device.i2c.default` pins. Address defaults to `0x52` and frequency to `400_000` Hz.
+Pass `sensor: { io?, data?, clock?, address?, hz?, ... }` to override only the fields needed.
+Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchanged.
 
 ## Basic usage
 
 ```ts
-import SMBus from "embedded:io/smbus";
 import JoyStick from "unit/joystick";
 import Timer from "timer";
 
-const input = new JoyStick({ sensor: { io: SMBus, data: 2, clock: 1 } });
+const input = new JoyStick({});
 const timer = Timer.repeat(() => {
 	const sample = input.sample();
 	trace(`${JSON.stringify(sample)}\n`);

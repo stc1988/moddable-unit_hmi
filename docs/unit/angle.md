@@ -3,17 +3,17 @@
 The TypeScript driver in `src/drivers/unit/angle` supports the M5Stack Unit Angle (U005), a 10 kΩ rotary
 potentiometer with a 0–2500 mV analog output.
 
-Pass `sensor: { io, pin }` explicitly. `sensor.io` must implement the ECMA-419 analog input operations.
-Optional analog IO settings are forwarded. On the CoreS3 example wiring, the analog signal is connected to GPIO 8.
+IO and pin overrides are optional. With `{}`, analog input uses `device.io.Analog` on GPIO 8
+(the CoreS3 example wiring). Pass `sensor: { io?, pin?, ... }` to override only the fields needed.
+Other analog IO settings are forwarded unchanged.
 
 ## Basic usage
 
 ```ts
-import Analog from "embedded:io/analog";
 import Angle from "unit/angle";
 import Timer from "timer";
 
-const input = new Angle({ sensor: { io: Analog, pin: 8 } });
+const input = new Angle({});
 const timer = Timer.repeat(() => {
 	const sample = input.sample();
 	trace(`${JSON.stringify(sample)}\n`);

@@ -2,18 +2,18 @@
 
 The TypeScript driver in `src/drivers/hat/mini-joyc` supports the M5Stack HAT Mini JoyC. It reads the joystick and push button over I2C and controls the built-in RGB LED.
 
-Pass an explicit `sensor` IO constructor and connection options. The device address defaults to `0x54` and
-bus frequency to `200_000` Hz; `sensor.address` and `sensor.hz` override them. Pins and the I/O constructor have no defaults.
-Additional IO options such as `port`, `stop`, and `timeout` are forwarded to `sensor.io`.
+IO and wiring overrides are optional. With `{}`, the driver uses `device.io.SMBus` and
+`device.i2c.hat` pins. Address defaults to `0x54` and frequency to `200_000` Hz.
+Pass `sensor: { io?, data?, clock?, address?, hz?, ... }` to override only the fields needed.
+Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchanged.
 
 ## Basic usage
 
 ```ts
-import SMBus from "embedded:io/smbus";
 import MiniJoyC from "hat/mini-joyc";
 import Timer from "timer";
 
-const input = new MiniJoyC({ sensor: { io: SMBus, data: 0, clock: 26 } });
+const input = new MiniJoyC({});
 const timer = Timer.repeat(() => {
 	const sample = input.sample();
 	trace(`${JSON.stringify(sample)}\n`);

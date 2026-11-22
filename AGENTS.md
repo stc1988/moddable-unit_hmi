@@ -15,15 +15,17 @@ sample fields, LEDs, calibration, and maintenance operations extend that core.
 - `src/hmi/input/analog`: internal analog normalization adapter.
 - `src/hmi/led` and `src/hmi/util`: logical LED extensions and utilities.
 - `src/drivers`: product protocols grouped by Unit and HAT form factor.
-- `examples`: shared mod host and caller-owned polling examples with explicit board IO wiring.
+- `examples`: shared mod host and caller-owned polling examples with optional board IO overrides.
 - `docs`: public API, architecture, and breaking migration instructions.
 - `tests`: hardware-independent regression tests with injected IO.
 
 ## Architecture and lifecycle
 
-Every product requires an options object and injected IO. SMBus products take `sensor: { io, data, clock, ... }`;
-Angle and Fader take analog `sensor: { io, pin }`, and Fader also takes `leds: { io, pin }`. Drivers never import concrete
-IO constructors or resolve board pins from `device`; the application/provider supplies those choices.
+Every product requires an options object; `{}` selects standard IO and product wiring. SMBus products default to
+`device.io.SMBus` and `device.i2c.default` pins (MiniJoyC uses `device.i2c.hat`). Angle/Fader default to
+`device.io.Analog` on GPIO 8; Fader LEDs default to SDK NeoPixel on GPIO 9. Optional `sensor` and `leds` objects override
+individual fields. Fully injected connections work without reading the board provider. Defaults are a library convenience
+extension requested for normal use; preserve constructor injection for alternate IO and tests.
 
 `sample()` returns a fresh object with a host capture `time`. `configure()` changes only known properties present in its
 options object, and `configuration` reports current settings and `interrupt: false`. Drivers do not synthesize sample

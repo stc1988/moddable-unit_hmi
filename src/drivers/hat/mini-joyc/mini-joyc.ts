@@ -97,7 +97,7 @@ export default class MiniJoyC extends SMBusDevice<MiniJoyCIOInstance> {
 	}
 
 	constructor(options: MiniJoyCOptions) {
-		super(options, { address: MiniJoyC.DEFAULT_ADDRESS, hz: MiniJoyC.DEFAULT_HZ, name: "MiniJoyC" });
+		super(options, { address: MiniJoyC.DEFAULT_ADDRESS, hz: MiniJoyC.DEFAULT_HZ, name: "MiniJoyC", port: "hat" });
 		try {
 			ownResource(this, this.led);
 			this.configure({ readMode: "pos8" });

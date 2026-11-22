@@ -1,10 +1,8 @@
-import Analog from "embedded:io/analog";
-import NeoPixel from "neopixel";
 import Timer from "timer";
 import Fader from "unit/fader";
 
 export async function main(): Promise<void> {
-	const input = new Fader({ sensor: { io: Analog, pin: 8 }, leds: { io: NeoPixel, pin: 9 } });
+	const input = new Fader({});
 	let previous = "";
 	// Polling and change detection belong to the application. Clear this timer before input.close().
 	Timer.repeat(() => {

@@ -1,11 +1,8 @@
-import SMBus from "embedded:io/smbus";
 import MiniJoyC from "hat/mini-joyc";
 import Timer from "timer";
 
 export async function main(): Promise<void> {
-	const input = new MiniJoyC({
-		sensor: { io: SMBus, data: 0, clock: 26 },
-	});
+	const input = new MiniJoyC({});
 	let previous = "";
 	// Polling and change detection belong to the application. Clear this timer before input.close().
 	Timer.repeat(() => {

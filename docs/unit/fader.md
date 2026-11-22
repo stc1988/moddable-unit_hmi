@@ -2,19 +2,19 @@
 
 The TypeScript driver in `src/drivers/unit/fader` supports the M5Stack Unit Fader (U123): its analog slider input and the two columns of seven SK6812 RGB LEDs.
 
-Pass `sensor: { io, pin }` explicitly. `sensor.io` must implement the ECMA-419 analog input operations.
-Optional analog IO settings are forwarded. On the CoreS3 example wiring, the analog signal is connected to GPIO 8.
-Fader also requires `leds: { io, pin }`. The example uses GPIO 9 for its 14 SK6812 LEDs.
+IO and pin overrides are optional. With `{}`, analog input uses `device.io.Analog` on GPIO 8
+(the CoreS3 example wiring). Pass `sensor: { io?, pin?, ... }` to override only the fields needed.
+Other analog IO settings are forwarded unchanged.
+
+The LED output defaults to SDK NeoPixel on GPIO 9. Pass `leds: { io?, pin? }` to override either or both.
 
 ## Basic usage
 
 ```ts
-import Analog from "embedded:io/analog";
 import Fader from "unit/fader";
-import NeoPixel from "neopixel";
 import Timer from "timer";
 
-const input = new Fader({ sensor: { io: Analog, pin: 8 }, leds: { io: NeoPixel, pin: 9 } });
+const input = new Fader({});
 const timer = Timer.repeat(() => {
 	const sample = input.sample();
 	trace(`${JSON.stringify(sample)}\n`);

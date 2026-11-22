@@ -1,9 +1,8 @@
-import SMBus from "embedded:io/smbus";
 import Timer from "timer";
 import ByteSwitch from "unit/byteswitch";
 
 export async function main(): Promise<void> {
-	const input = new ByteSwitch({ sensor: { io: SMBus, data: 2, clock: 1 } });
+	const input = new ByteSwitch({});
 	let previous = "";
 	// Polling and change detection belong to the application. Clear this timer before input.close().
 	Timer.repeat(() => {

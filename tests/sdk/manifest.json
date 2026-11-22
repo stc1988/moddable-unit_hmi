@@ -14,7 +14,8 @@
 		"../../src/drivers/hat/mini-joyc"
 	],
 	"modules": {
-		"*": "./main"
+		"*": "./main",
+		"neopixel": "./pixels"
 	},
 	"strip": "[]"
 }

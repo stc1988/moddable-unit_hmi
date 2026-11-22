@@ -1,7 +1,8 @@
-import AnalogInput, { type AnalogInputOptions } from "hmi/input/analog";
+import AnalogInput, { type AnalogSensorOptions } from "hmi/input/analog";
 import Led, { LedCollection, scaleColor } from "hmi/led";
-import Peripheral, { assertOpen, ownResource, type PeripheralOptions } from "hmi/peripheral";
+import Peripheral, { assertOpen, optionsObject, ownResource, type PeripheralOptions } from "hmi/peripheral";
 import { integerInRange, type RGBColor } from "hmi/util";
+import NeoPixel from "neopixel";
 
 export interface FaderSample {
 	raw: number;
@@ -10,8 +11,8 @@ export interface FaderSample {
 }
 
 export interface FaderOptions extends PeripheralOptions {
-	sensor: AnalogInputOptions;
-	leds: { io: FaderLedIOConstructor; pin: number; [key: string]: unknown };
+	sensor?: AnalogSensorOptions;
+	leds?: { io?: FaderLedIOConstructor; pin?: number; [key: string]: unknown };
 }
 export type FaderLedColumn = "left" | "right";
 
@@ -51,9 +52,15 @@ export default class Fader extends Peripheral {
 	constructor(options: FaderOptions) {
 		super(options);
 		try {
-			if (!options.leds || typeof options.leds.io !== "function") throw new TypeError("leds.io must be a constructor");
+			if (options.sensor !== undefined) optionsObject(options.sensor);
+			if (options.leds !== undefined) optionsObject(options.leds);
+			const LedIO = options.leds?.io === undefined ? NeoPixel : options.leds.io;
+			if (typeof LedIO !== "function") throw new TypeError("leds.io must be a constructor");
 			this.#sensor = ownResource(this, new AnalogInput({ ...options.sensor, invert: true }));
-			this.#leds = ownResource(this, new options.leds.io({ ...options.leds, length: Fader.LED_COUNT, order: "GRB" }));
+			this.#leds = ownResource(
+				this,
+				new LedIO({ ...options.leds, pin: options.leds?.pin ?? 9, length: Fader.LED_COUNT, order: "GRB" }),
+			);
 			ownResource(this, this.leds);
 			this.configure({ brightness: 128 });
 			this.leds.color = { r: 0, g: 0, b: 0 };

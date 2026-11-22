@@ -1,4 +1,5 @@
 import MiniJoyC from "hat/mini-joyc";
+import Pixels from "neopixel";
 import Angle8 from "unit/8angle";
 import Encoder8 from "unit/8encoder";
 import Angle from "unit/angle";
@@ -35,16 +36,6 @@ class Analog {
 	read() {
 		return 1024;
 	}
-	close() {}
-}
-class Pixels {
-	brightness = 128;
-	makeRGB() {
-		return 0;
-	}
-	setPixel() {}
-	update() {}
-	fill() {}
 	close() {}
 }
 function verify(input) {

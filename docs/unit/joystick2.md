@@ -3,18 +3,18 @@
 The driver is implemented in TypeScript under `src/drivers/unit/joystick2` and exports `JoyStick2Options`, `JoyStick2IO`,
 `JoyStick2Position` and `JoyStick2State` for typed applications.
 
-Pass an explicit `sensor` IO constructor and connection options. The device address defaults to `0x63` and
-bus frequency to `400_000` Hz; `sensor.address` and `sensor.hz` override them. Pins and the I/O constructor have no defaults.
-Additional IO options such as `port`, `stop`, and `timeout` are forwarded to `sensor.io`.
+IO and wiring overrides are optional. With `{}`, the driver uses `device.io.SMBus` and
+`device.i2c.default` pins. Address defaults to `0x63` and frequency to `400_000` Hz.
+Pass `sensor: { io?, data?, clock?, address?, hz?, ... }` to override only the fields needed.
+Other IO options, including `port`, `stop`, and `timeout`, are forwarded unchanged.
 
 ## Basic usage
 
 ```ts
-import SMBus from "embedded:io/smbus";
 import JoyStick2 from "unit/joystick2";
 import Timer from "timer";
 
-const input = new JoyStick2({ sensor: { io: SMBus, data: 2, clock: 1 } });
+const input = new JoyStick2({});
 const timer = Timer.repeat(() => {
 	const sample = input.sample();
 	trace(`${JSON.stringify(sample)}\n`);

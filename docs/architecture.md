@@ -15,11 +15,17 @@ logical LEDs before their hardware, clears ownership, and is safe to repeat. It 
 one release throws, then propagates the first error. `[Symbol.dispose]` aliases the same close method. All other driver
 methods and configuration accessors reject use after close.
 
-`hmi/smbus` extends this core with injected SMBus ownership. Its imports of concrete IO modules are type-only. The caller
-supplies `sensor: { io, data, clock, ... }`; product address and frequency defaults are overridden by `sensor.address` and
-`sensor.hz`. Other IO options are forwarded. The core imports no board provider and never reads `device`. Bus access and address-register helpers are internal module exports for driver implementations; connection state stays
-module-private. None of these helpers are exposed as protected or public instance members.
-`hmi/input/analog` is an internal resource adapter for injected analog IO, raw readings, and normalized positions.
+`hmi/smbus` extends this core with injected SMBus ownership. The optional `sensor` object overrides IO or wiring
+individually. Missing IO uses `device.io.SMBus`; missing pins come from `device.i2c.default`, or `device.i2c.hat` for MiniJoyC.
+Address and frequency retain their product defaults unless overridden. Other IO options are forwarded. A fully injected
+connection does not access `device`, including MiniJoyC on a board with no HAT provider. Bus access and address helpers
+remain internal module exports rather than instance methods.
+
+`hmi/input/analog` defaults to `device.io.Analog` on GPIO 8 and allows partial `sensor` overrides. Fader additionally
+defaults its LED output to SDK NeoPixel on GPIO 9, with partial `leds` overrides. These convenience defaults extend the
+strict constructor-injection guide at the user's request; the common lifecycle and polled Sensor surface are unchanged.
+An options object is still required, so use `new Encoder({})` to select defaults. The host must provide the omitted IO
+and I2C wiring, or the caller must supply them. Board configuration is resolved only during construction, never preload.
 
 Product constructors probe their hardware and initialize exposed runtime settings. A failure releases all resources
 opened so far. Encoder/Scroll counters reset on construction; RGB LEDs start black. ByteButton/ByteSwitch also restore
@@ -63,8 +69,8 @@ hardware. Fader batches pixel updates through one flush per output. See [LED API
 
 This is a breaking API change:
 
-- Pass an options object and explicit IO: `new Encoder({ sensor: { io: SMBus, data: 2, clock: 1 } })`.
-- Analog products require `sensor: { io: Analog, pin }`; Fader additionally requires `leds: { io: NeoPixel, pin }`.
+- Pass an options object: `new Encoder({})` uses the standard IO and product wiring. Partial `sensor` overrides remain supported.
+- Analog products accept optional `sensor: { io?, pin? }`; Fader also accepts optional `leds: { io?, pin? }`.
 - Use `sample()` for common input access. Product `read()` methods remain available with their existing data shape.
 - Replace driver callbacks, `start`, `stop`, `pollingInterval`, and `deadband` with an application-owned polling loop and
   change comparison. Internal polling/input-controller modules and their callback types have been removed.
@@ -72,7 +78,7 @@ This is a breaking API change:
 - Clear application-owned timers before closing the driver. Close cancels product-owned LED animation timers only.
 - Address changes require close/reopen. Fader color components and hardware brightness now require integers in 0–255.
 
-Each hardware example places IO wiring and a simple change-detecting loop in the application. For analog deadband, compare
+Each hardware example uses default wiring and places its change-detecting loop in the application. For analog deadband, compare
 `Math.abs(sample.raw - previous.raw)`; for joystick deadband, compare each axis and the button. Keep the last delivered
 sample as the baseline so small movements accumulate. Ignore `time` when comparing input values.
 
@@ -90,3 +96,18 @@ mcconfig -dl -m -p sim -o /tmp/unit-hmi-sdk-check tests/sdk/manifest.json
 Look for `ECMA-419 smoke test: 11 drivers PASS`, then enter `quit` in xsdb. This verifies XS/preload behavior but does not
 verify electrical protocols or the real products. Build each hardware example with `mcrun -d -m -p <device> -t build`
 before deploying the corresponding host/mod for hardware verification.
+
+## Optional IO overrides
+
+```ts
+// Normal use: product defaults.
+const joystick = new JoyStick({});
+
+// Different pins, standard SMBus implementation.
+const otherPort = new JoyStick({ sensor: { data: 32, clock: 33 } });
+
+// Test or alternate IO: explicit connection, no board-provider dependency.
+const testJoystick = new JoyStick({ sensor: { io: MockSMBus, data: 1, clock: 2 } });
+```
+
+Close one instance before reusing the same address/pins for another. `MockSMBus` above is an application-supplied constructor.
